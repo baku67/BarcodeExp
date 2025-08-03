@@ -62,6 +62,8 @@ dependencies {
     implementation("com.google.mlkit:barcode-scanning:17.0.2")
     // Nav
     implementation("androidx.navigation:navigation-compose:2.5.3")
+    // AsyncImage
+    implementation("io.coil-kt:coil-compose:2.0.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -35,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import coil.compose.AsyncImage
 import java.net.URL
 
 // MainActivity configure NavController et gère la permission caméra au démarrage
@@ -190,6 +191,8 @@ fun CameraOcrBarCodeScreen() {
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var scannedCode by remember { mutableStateOf("") }
     var productName by remember { mutableStateOf("") }
+    var brandName by remember { mutableStateOf("") }
+    var imageUrl by remember { mutableStateOf("") }
     var lastScanned by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
@@ -218,7 +221,10 @@ fun CameraOcrBarCodeScreen() {
                                             lastScanned = first
                                             scannedCode = first
                                             scope.launch {
-                                                productName = fetchProductName(first)
+                                                val info = fetchProductInfo(first)
+                                                productName = info.first
+                                                brandName = info.second
+                                                imageUrl = info.third
                                             }
                                         }
                                     }
@@ -248,21 +254,36 @@ fun CameraOcrBarCodeScreen() {
                 .background(Color.Black)
                 .padding(8.dp)
         ) {
+            // Affiche l'image du produit si disponible
+            if (imageUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Image du produit",
+                    modifier = Modifier
+                        .size(100.dp)
+                        .padding(bottom = 8.dp)
+                )
+            }
             Text(text = "Code: $scannedCode", color = Color.White)
             Text(text = "Produit: $productName", color = Color.White)
+            Text(text = "Marque: $brandName", color = Color.White)
         }
     }
 }
 
-// Fonction suspendue pour appeler l'API OpenFoodFacts
-suspend fun fetchProductName(code: String): String = withContext(Dispatchers.IO) {
-    return@withContext try {
-        val url = URL("https://world.openfoodfacts.org/api/v0/product/$code.json")
-        val json = url.openConnection().getInputStream().bufferedReader().use { it.readText() }
-        val obj = JSONObject(json)
-        obj.getJSONObject("product").optString("product_name", "Inconnu")
-    } catch (e: Exception) {
-        Log.e("BARCODE", "Erreur API", e)
-        "Erreur connexion"
+// Fonction suspend pour récupérer nom et marque du produit
+suspend fun fetchProductInfo(code: String): Triple<String, String, String> =
+    withContext(Dispatchers.IO) {
+        return@withContext try {
+            val json = URL("https://world.openfoodfacts.org/api/v0/product/$code.json")
+                .openConnection().getInputStream().bufferedReader().use { it.readText() }
+            val obj = JSONObject(json).getJSONObject("product")
+            val name = obj.optString("product_name", "Inconnu")
+            val brand = obj.optString("brands", "Inconnue")
+            val imgUrl = obj.optString("image_url", "")
+            Triple(name, brand, imgUrl)
+        } catch (e: Exception) {
+            Log.e("BARCODE", "Erreur API", e)
+            Triple("Erreur", "Erreur", "")
+        }
     }
-}
