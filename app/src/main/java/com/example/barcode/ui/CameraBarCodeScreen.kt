@@ -28,6 +28,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -64,7 +65,7 @@ fun CameraOcrBarCodeScreen() {
     var lastScanned by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
-    var productInfo by remember { mutableStateOf(ProductInfo("", "", "", "")) }
+    var productInfo by remember { mutableStateOf<ProductInfo?>(null) }
 
     previewView?.let { view ->
         DisposableEffect(view) {
@@ -118,115 +119,148 @@ fun CameraOcrBarCodeScreen() {
         /* ---------- Camera ---------- */
         AndroidView(factory = { c -> PreviewView(c).also { previewView = it } }, modifier = Modifier.fillMaxSize())
 
-        /* ---------- Carte de résultat ---------- */
-        Card(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFE0E0E0)) // fond gris clair
-        ) {
 
-            /* --- Bloc haut : image + infos --- */
-            Row (
+        /* ---------- État « pas de données » ---------- */
+        if (productInfo == null) {
+            Column(
                 modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Color.Black.copy(alpha = .6f),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                CircularProgressIndicator(color = Color.White)
+                Text(
+                    text = "Survolez un code barre pour ajouter un produit",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White
+                )
+            }
+        }
+
+
+        /* ---------- Carte de résultat (todo: composant dédié) ---------- */
+        else {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(24.dp),
+                elevation = CardDefaults.cardElevation(8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE0E0E0)) // fond gris clair
             ) {
 
-                // Image produit
-                if (productInfo.imageUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = productInfo.imageUrl,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(110.dp)
-                            .clip(RoundedCornerShape(16.dp))      // mêmes coins que la carte
-                    )
-                }
-
-                Spacer(Modifier.width(16.dp))
-
-                /* Texte (colonne) */
-                Column(
-                    modifier = Modifier.weight(1f)               // prend toute la place dispo
+                /* --- Bloc haut : image + infos --- */
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = productInfo.name,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Text(
-                        text = productInfo.brand,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = scannedCode,
-                        style = MaterialTheme.typography.bodySmall
-                    )
 
-                    /* Badge Nutri-Score (optionnel) */
-                    val nutriColor = when (productInfo.nutriScore.uppercase()) {
-                        "A" -> Color(0xFF2E7D32)
-                        "B" -> Color(0xFF7CB342)
-                        "C" -> Color(0xFFFDD835)
-                        "D" -> Color(0xFFF4511E)
-                        "E" -> Color(0xFFE53935)
-                        else -> Color.Gray
-                    }
-                    if (productInfo.nutriScore.isNotEmpty()) {
-                        Box(
+                    // Image produit
+                    if (productInfo!!.imageUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = productInfo!!.imageUrl,
+                            contentDescription = null,
                             modifier = Modifier
-                                .padding(start = 8.dp)
-                                .background(nutriColor, RoundedCornerShape(6.dp))
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = productInfo.nutriScore.uppercase(),
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                color = Color.White
-                            )
+                                .size(110.dp)
+                                .clip(RoundedCornerShape(16.dp))      // mêmes coins que la carte
+                        )
+                    }
+
+                    Spacer(Modifier.width(16.dp))
+
+                    /* Texte (colonne) */
+                    Column(
+                        modifier = Modifier.weight(1f)               // prend toute la place dispo
+                    ) {
+                        Text(
+                            text = productInfo!!.name,
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = productInfo!!.brand,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = scannedCode,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        /* Badge Nutri-Score (optionnel) */
+                        val nutriColor = when (productInfo!!.nutriScore.uppercase()) {
+                            "A" -> Color(0xFF2E7D32)
+                            "B" -> Color(0xFF7CB342)
+                            "C" -> Color(0xFFFDD835)
+                            "D" -> Color(0xFFF4511E)
+                            "E" -> Color(0xFFE53935)
+                            else -> Color.Gray
+                        }
+                        if (productInfo!!.nutriScore.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(start = 8.dp)
+                                    .background(nutriColor, RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = productInfo!!.nutriScore.uppercase(),
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = Color.White
+                                )
+                            }
                         }
                     }
+
+
                 }
 
+                Divider(thickness = 1.dp, color = Color.Black.copy(alpha = .15f))
 
-            }
-
-            Divider(thickness = 1.dp, color = Color.Black.copy(alpha = .15f))
-
-            /* --- Bloc bas : boutons --- */
-            Row(
-                modifier = Modifier
-                    .height(56.dp)
-                    .fillMaxWidth()
-            ) {
-                /* Bouton Re-try */
-                Button (
-                    onClick = { /* TODO : implémenter */ },
+                /* --- Bloc 2 boutons --- */
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
-                    shape = RoundedCornerShape(bottomStart = 24.dp)   // coin bas-gauche arrondi
+                        .height(56.dp)
+                        .fillMaxWidth()
                 ) {
-                    Text("Re-try")
-                }
+                    /* Bouton Re-try */
+                    Button(
+                        onClick = {
+                            lastScanned = ""
+                            scannedCode = ""
+                            productInfo = null
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                        shape = RoundedCornerShape(bottomStart = 24.dp)   // coin bas-gauche arrondi
+                    ) {
+                        Text("Re-try")
+                    }
 
-                /* Bouton Valider */
-                Button(
-                    onClick = { /* TODO : implémenter */ },
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF43A047)),
-                    shape = RoundedCornerShape(bottomEnd = 24.dp)      // coin bas-droit arrondi
-                ) {
-                    Text("Valider")
+                    /* Bouton Valider */
+                    Button(
+                        onClick = { /* TODO : implémenter */ },
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF43A047)),
+                        shape = RoundedCornerShape(bottomEnd = 24.dp)      // coin bas-droit arrondi
+                    ) {
+                        Text("Valider")
+                    }
                 }
             }
         }
