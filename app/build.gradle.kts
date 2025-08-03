@@ -66,6 +66,8 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.0.0")
     // Material
     implementation("androidx.compose.material3:material3:1.2.1")
+    // Lottie
+    implementation("com.airbnb.android:lottie-compose:6.1.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
