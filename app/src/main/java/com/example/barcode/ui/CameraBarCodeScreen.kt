@@ -12,14 +12,23 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -106,79 +115,120 @@ fun CameraOcrBarCodeScreen() {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        /* ---------- Camera ---------- */
         AndroidView(factory = { c -> PreviewView(c).also { previewView = it } }, modifier = Modifier.fillMaxSize())
+
         /* ---------- Carte de résultat ---------- */
         Card(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .wrapContentHeight()
-                .padding(16.dp),
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF4CAF50)) // vert profond
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFE0E0E0)) // fond gris clair
         ) {
-            Column(
+
+            /* --- Bloc haut : image + infos --- */
+            Row (
                 modifier = Modifier
                     .padding(16.dp)
                     .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically
             ) {
 
-                // Image du produit
+                // Image produit
                 if (productInfo.imageUrl.isNotEmpty()) {
                     AsyncImage(
                         model = productInfo.imageUrl,
-                        contentDescription = "Image du produit",
+                        contentDescription = null,
                         modifier = Modifier
-                            .size(120.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .size(110.dp)
+                            .clip(RoundedCornerShape(16.dp))      // mêmes coins que la carte
                     )
                 }
 
-                /* Infos texte */
-                Text(
-                    text = "Code : $scannedCode",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
-                )
-                Text(
-                    text = "Produit : ${productInfo.name}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White
-                )
-                Text(
-                    text = "Marque : ${productInfo.brand}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White
-                )
+                Spacer(Modifier.width(16.dp))
 
-                /* Badge Nutri-Score coloré */
-                val nutriLabel = productInfo.nutriScore.uppercase()
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = when (nutriLabel) {
-                                "A" -> Color(0xFF43A047)
-                                "B" -> Color(0xFF7CB342)
-                                "C" -> Color(0xFFFDD835)
-                                "D" -> Color(0xFFF4511E)
-                                "E" -> Color(0xFFE53935)
-                                else -> Color.Gray
-                            },
-                            shape = RoundedCornerShape(6.dp)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                /* Texte (colonne) */
+                Column(
+                    modifier = Modifier.weight(1f)               // prend toute la place dispo
                 ) {
                     Text(
-                        text = "Nutri-Score : $nutriLabel",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        text = productInfo.name,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
+                    Text(
+                        text = productInfo.brand,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = scannedCode,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                    /* Badge Nutri-Score (optionnel) */
+                    val nutriColor = when (productInfo.nutriScore.uppercase()) {
+                        "A" -> Color(0xFF2E7D32)
+                        "B" -> Color(0xFF7CB342)
+                        "C" -> Color(0xFFFDD835)
+                        "D" -> Color(0xFFF4511E)
+                        "E" -> Color(0xFFE53935)
+                        else -> Color.Gray
+                    }
+                    if (productInfo.nutriScore.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .background(nutriColor, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = productInfo.nutriScore.uppercase(),
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
+
+            }
+
+            Divider(thickness = 1.dp, color = Color.Black.copy(alpha = .15f))
+
+            /* --- Bloc bas : boutons --- */
+            Row(
+                modifier = Modifier
+                    .height(56.dp)
+                    .fillMaxWidth()
+            ) {
+                /* Bouton Re-try */
+                Button (
+                    onClick = { /* TODO : implémenter */ },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                    shape = RoundedCornerShape(bottomStart = 24.dp)   // coin bas-gauche arrondi
+                ) {
+                    Text("Re-try")
+                }
+
+                /* Bouton Valider */
+                Button(
+                    onClick = { /* TODO : implémenter */ },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF43A047)),
+                    shape = RoundedCornerShape(bottomEnd = 24.dp)      // coin bas-droit arrondi
+                ) {
+                    Text("Valider")
                 }
             }
         }
-
     }
 }
