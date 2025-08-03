@@ -38,6 +38,14 @@ import org.json.JSONObject
 import coil.compose.AsyncImage
 import java.net.URL
 
+// Data class pour les infos produits
+data class ProductInfo(
+    val name: String,
+    val brand: String,
+    val imageUrl: String,
+    val nutriScore: String
+)
+
 // MainActivity configure NavController et gère la permission caméra au démarrage
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -190,11 +198,10 @@ fun CameraOcrBarCodeScreen() {
     val ctx = LocalContext.current
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var scannedCode by remember { mutableStateOf("") }
-    var productName by remember { mutableStateOf("") }
-    var brandName by remember { mutableStateOf("") }
-    var imageUrl by remember { mutableStateOf("") }
     var lastScanned by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+
+    var productInfo by remember { mutableStateOf(ProductInfo("", "", "", "")) }
 
     previewView?.let { view ->
         DisposableEffect(view) {
@@ -221,11 +228,9 @@ fun CameraOcrBarCodeScreen() {
                                             lastScanned = first
                                             scannedCode = first
                                             scope.launch {
-                                                val info = fetchProductInfo(first)
-                                                productName = info.first
-                                                brandName = info.second
-                                                imageUrl = info.third
+                                                productInfo = fetchProductInfo(first)
                                             }
+
                                         }
                                     }
                                     .addOnFailureListener { e -> Log.e("BARCODE", "Erreur scan", e) }
@@ -255,9 +260,9 @@ fun CameraOcrBarCodeScreen() {
                 .padding(8.dp)
         ) {
             // Affiche l'image du produit si disponible
-            if (imageUrl.isNotEmpty()) {
+            if (productInfo.imageUrl.isNotEmpty()) {
                 AsyncImage(
-                    model = imageUrl,
+                    model = productInfo.imageUrl,
                     contentDescription = "Image du produit",
                     modifier = Modifier
                         .size(100.dp)
@@ -265,14 +270,16 @@ fun CameraOcrBarCodeScreen() {
                 )
             }
             Text(text = "Code: $scannedCode", color = Color.White)
-            Text(text = "Produit: $productName", color = Color.White)
-            Text(text = "Marque: $brandName", color = Color.White)
+            Text(text = "Produit: ${productInfo.name}", color = Color.White)
+            Text(text = "Marque: ${productInfo.brand}", color = Color.White)
+            // Affiche le Nutri-score
+            Text(text = "Nutri-Score: ${productInfo.nutriScore.uppercase()}", color = Color.White)
         }
     }
 }
 
 // Fonction suspend pour récupérer nom et marque du produit
-suspend fun fetchProductInfo(code: String): Triple<String, String, String> =
+suspend fun fetchProductInfo(code: String): ProductInfo =
     withContext(Dispatchers.IO) {
         return@withContext try {
             val json = URL("https://world.openfoodfacts.org/api/v0/product/$code.json")
@@ -281,9 +288,14 @@ suspend fun fetchProductInfo(code: String): Triple<String, String, String> =
             val name = obj.optString("product_name", "Inconnu")
             val brand = obj.optString("brands", "Inconnue")
             val imgUrl = obj.optString("image_url", "")
-            Triple(name, brand, imgUrl)
+            // Récupère le nutri-score, champ nutrition_grade_fr ou nutrition_grades
+            val nutri = obj.optString("nutrition_grade_fr", "").ifEmpty {
+                // fallback sur liste tags Nutriscore
+                obj.optJSONArray("nutrition_grades_tags")?.optString(0)?.substringAfterLast('-') ?: ""
+            }
+            ProductInfo(name, brand, imgUrl, nutri)
         } catch (e: Exception) {
             Log.e("BARCODE", "Erreur API", e)
-            Triple("Erreur", "Erreur", "")
+            ProductInfo("Erreur", "Erreur", "", "?")
         }
     }
