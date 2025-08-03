@@ -27,9 +27,15 @@ import androidx.navigation.compose.rememberNavController
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.URL
 
 // MainActivity configure NavController et gère la permission caméra au démarrage
 class MainActivity : ComponentActivity() {
@@ -52,7 +58,8 @@ class MainActivity : ComponentActivity() {
                     // Définition des routes
                     NavHost(navController, startDestination = "home") {
                         composable("home") { HomeScreen(navController) }
-                        composable("camera") { CameraOcrScreen() }
+                        composable("dateOCR") { CameraDateOcrScreen() }
+                        composable("barCodeOCR") { CameraOcrBarCodeScreen() }
                     }
                 }
             }
@@ -63,12 +70,15 @@ class MainActivity : ComponentActivity() {
 // Écran d'accueil avec un bouton pour accéder à l'OCR
 @Composable
 fun HomeScreen(navController: NavHostController) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Button(onClick = { navController.navigate("camera") }) {
-            Text(text = "OCR Dates")
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Button(onClick = { navController.navigate("barCodeOCR") }) {
+                Text(text = "Scanner code-barres")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = { navController.navigate("dateOCR") }) {
+                Text(text = "OCR Dates")
+            }
         }
     }
 }
@@ -76,7 +86,7 @@ fun HomeScreen(navController: NavHostController) {
 // Autorise l'accès expérimental à imageProxy.image
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
-fun CameraOcrScreen() {
+fun CameraDateOcrScreen() {
     val ctx = LocalContext.current
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
 
@@ -168,5 +178,91 @@ fun CameraOcrScreen() {
             color = Color.White,
             style = MaterialTheme.typography.bodyLarge
         )
+    }
+}
+
+
+// Composable pour scanner un code-barres et récupérer le nom du produit
+@androidx.annotation.OptIn(ExperimentalGetImage::class)
+@Composable
+fun CameraOcrBarCodeScreen() {
+    val ctx = LocalContext.current
+    var previewView by remember { mutableStateOf<PreviewView?>(null) }
+    var scannedCode by remember { mutableStateOf("") }
+    var productName by remember { mutableStateOf("") }
+    var lastScanned by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    previewView?.let { view ->
+        DisposableEffect(view) {
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+            val executor = ContextCompat.getMainExecutor(ctx)
+            val scanner = BarcodeScanning.getClient()
+
+            val listener = Runnable {
+                val cameraProvider = cameraProviderFuture.get()
+                // Preview
+                val preview = Preview.Builder().build().also { it.setSurfaceProvider(view.surfaceProvider) }
+                // Analyse
+                val analysis = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build().also { ia ->
+                        ia.setAnalyzer(executor) { imageProxy ->
+                            imageProxy.image?.let { mediaImage ->
+                                val inputImg = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+                                scanner.process(inputImg)
+                                    .addOnSuccessListener { barcodes ->
+                                        // Prend le premier code non-nul
+                                        val first = barcodes.firstOrNull { it.rawValue != null }?.rawValue
+                                        if (first != null && first != lastScanned) {
+                                            lastScanned = first
+                                            scannedCode = first
+                                            scope.launch {
+                                                productName = fetchProductName(first)
+                                            }
+                                        }
+                                    }
+                                    .addOnFailureListener { e -> Log.e("BARCODE", "Erreur scan", e) }
+                                    .addOnCompleteListener { imageProxy.close() }
+                            } ?: imageProxy.close()
+                        }
+                    }
+                cameraProvider.unbindAll()
+                cameraProvider.bindToLifecycle(
+                    ctx as ComponentActivity,
+                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    preview,
+                    analysis
+                )
+            }
+            cameraProviderFuture.addListener(listener, executor)
+            onDispose { if (cameraProviderFuture.isDone) cameraProviderFuture.get().unbindAll() }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        AndroidView(factory = { c -> PreviewView(c).also { previewView = it } }, modifier = Modifier.fillMaxSize())
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .background(Color.Black)
+                .padding(8.dp)
+        ) {
+            Text(text = "Code: $scannedCode", color = Color.White)
+            Text(text = "Produit: $productName", color = Color.White)
+        }
+    }
+}
+
+// Fonction suspendue pour appeler l'API OpenFoodFacts
+suspend fun fetchProductName(code: String): String = withContext(Dispatchers.IO) {
+    return@withContext try {
+        val url = URL("https://world.openfoodfacts.org/api/v0/product/$code.json")
+        val json = url.openConnection().getInputStream().bufferedReader().use { it.readText() }
+        val obj = JSONObject(json)
+        obj.getJSONObject("product").optString("product_name", "Inconnu")
+    } catch (e: Exception) {
+        Log.e("BARCODE", "Erreur API", e)
+        "Erreur connexion"
     }
 }

@@ -58,6 +58,8 @@ dependencies {
     implementation("androidx.camera:camera-view:1.2.1")
     // ML Kit Text Recognition
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+    // ML Kit barcode
+    implementation("com.google.mlkit:barcode-scanning:17.0.2")
     // Nav
     implementation("androidx.navigation:navigation-compose:2.5.3")
     testImplementation(libs.junit)
