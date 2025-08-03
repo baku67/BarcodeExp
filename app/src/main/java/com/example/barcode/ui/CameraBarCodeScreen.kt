@@ -9,11 +9,18 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -24,8 +31,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -98,27 +107,78 @@ fun CameraOcrBarCodeScreen() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(factory = { c -> PreviewView(c).also { previewView = it } }, modifier = Modifier.fillMaxSize())
-        Column(
+        /* ---------- Carte de résultat ---------- */
+        Card(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .background(Color.Black)
-                .padding(8.dp)
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .padding(16.dp),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF4CAF50)) // vert profond
         ) {
-            // Affiche l'image du produit si disponible
-            if (productInfo.imageUrl.isNotEmpty()) {
-                AsyncImage(
-                    model = productInfo.imageUrl,
-                    contentDescription = "Image du produit",
-                    modifier = Modifier
-                        .size(100.dp)
-                        .padding(bottom = 8.dp)
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+
+                // Image du produit
+                if (productInfo.imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = productInfo.imageUrl,
+                        contentDescription = "Image du produit",
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
+
+                /* Infos texte */
+                Text(
+                    text = "Code : $scannedCode",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White
                 )
+                Text(
+                    text = "Produit : ${productInfo.name}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White
+                )
+                Text(
+                    text = "Marque : ${productInfo.brand}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White
+                )
+
+                /* Badge Nutri-Score coloré */
+                val nutriLabel = productInfo.nutriScore.uppercase()
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = when (nutriLabel) {
+                                "A" -> Color(0xFF43A047)
+                                "B" -> Color(0xFF7CB342)
+                                "C" -> Color(0xFFFDD835)
+                                "D" -> Color(0xFFF4511E)
+                                "E" -> Color(0xFFE53935)
+                                else -> Color.Gray
+                            },
+                            shape = RoundedCornerShape(6.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "Nutri-Score : $nutriLabel",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                }
             }
-            Text(text = "Code: $scannedCode", color = Color.White)
-            Text(text = "Produit: ${productInfo.name}", color = Color.White)
-            Text(text = "Marque: ${productInfo.brand}", color = Color.White)
-            // Affiche le Nutri-score
-            Text(text = "Nutri-Score: ${productInfo.nutriScore.uppercase()}", color = Color.White)
         }
+
     }
 }
