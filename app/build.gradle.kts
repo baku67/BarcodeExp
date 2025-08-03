@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.activity:activity-compose:1.7.2")
+    implementation("androidx.camera:camera-core:1.2.1")
     // CameraX
     implementation("androidx.camera:camera-camera2:1.2.1")
     implementation("androidx.camera:camera-lifecycle:1.2.1")
