@@ -47,7 +47,8 @@ fun CameraDateOcrScreen() {
     val minIntervalMs = 500L
     // Regex pour dd/MM/yyyy ou dd-MM-yyyy
     val dateRegex = remember {
-        Regex("""\b(0[1-9]|[12][0-9]|3[01])\s*[-\/\.]\s*(0[1-9]|1[0-2])\s*[-\/\.]\s*(19\d{2}|20\d{2})\b""")
+        // Regex("""\b(0[1-9]|[12][0-9]|3[01])\s*[-\/\.]\s*(0[1-9]|1[0-2])\s*[-\/\.]\s*(19\d{2}|20\d{2})\b""") // sans espaces comme séparateur
+        Regex("""\b(0[1-9]|[12][0-9]|3[01])\s*([\-\/\. ])\s*(0[1-9]|1[0-2])\s*\2\s*(?:202\d|203\d|204\d|2050|2[0-9]|3[0-9]|4[0-9]|50)\b""") // avec espaces comme séparateur et années en AA ou AAAA (2020-2050)
     }
 
     // Liaison de CameraX + ML Kit dès que PreviewView est prêt
