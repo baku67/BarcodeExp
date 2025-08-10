@@ -84,6 +84,7 @@ fun CameraOcrBarCodeScreen() {
     var rateLimitMsg by remember { mutableStateOf<String?>(null) }
     var lastApiCallAt by remember { mutableStateOf(0L) } // Debouncing
     var productInfo by remember { mutableStateOf<ProductInfo?>(null) }
+    var scanLocked by remember { mutableStateOf(false) } // Verrou pour bloquer detection lorsqu'un produit a été trouvé
 
     previewView?.let { view ->
         DisposableEffect(view) {
@@ -100,6 +101,9 @@ fun CameraOcrBarCodeScreen() {
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build().also { ia ->
                         ia.setAnalyzer(executor) { imageProxy ->
+
+                            if (scanLocked) { imageProxy.close(); return@setAnalyzer } // Si verrou actif (produit trouvé) return
+
                             imageProxy.image?.let { mediaImage ->
                                 val inputImg = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
                                 scanner.process(inputImg)
@@ -121,6 +125,7 @@ fun CameraOcrBarCodeScreen() {
                                                 val res = fetchProductInfo(first)
                                                 rateLimitMsg = if (res.rateLimited) (res.message ?: "Rate limit atteint") else null
                                                 productInfo = res.product
+                                                if (res.product != null) scanLocked = true   // verrouille après succès
                                             }
 
                                         }
@@ -312,6 +317,7 @@ fun CameraOcrBarCodeScreen() {
                                     lastScanned = ""
                                     scannedCode = ""
                                     productInfo = null
+                                    scanLocked = false   // on rouvre la détection
                                 },
                                 modifier = Modifier
                                     .weight(1f)
