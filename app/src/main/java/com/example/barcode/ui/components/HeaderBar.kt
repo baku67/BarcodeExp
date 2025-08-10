@@ -20,6 +20,8 @@ fun HeaderBar(
     icon: ImageVector = Icons.Filled.Home, // icône de navigation par défaut
     onIconClick: () -> Unit = {}           // action au clic
 ) {
+    val primary = MaterialTheme.colorScheme.primary
+
     TopAppBar(
         navigationIcon = {
             IconButton(onClick = onIconClick) {
@@ -54,7 +56,7 @@ fun HeaderBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color(0xFF4CAF50),   // vert « 600 » de la palette Material
+            containerColor = primary,   // vert « 600 » de la palette Material
             titleContentColor = Color.White,
             navigationIconContentColor = Color.White
         ),

@@ -85,6 +85,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 fun CameraOcrBarCodeScreen() {
     val ctx = LocalContext.current
     val haptics = LocalHapticFeedback.current // pour vibartions
+    val primary = MaterialTheme.colorScheme.primary
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var scannedCode by remember { mutableStateOf("") }
     var lastScanned by remember { mutableStateOf("") }
@@ -365,9 +366,7 @@ fun CameraOcrBarCodeScreen() {
                                         .weight(1f)
                                         .fillMaxHeight(),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(
-                                            0xFF43A047
-                                        )
+                                        containerColor = primary
                                     ),
                                     shape = RoundedCornerShape(bottomEnd = 24.dp)      // coin bas-droit arrondi
                                 ) {
@@ -394,7 +393,7 @@ fun CameraOcrBarCodeScreen() {
                     .align(Alignment.TopEnd)       // coin haut-droit DU BOX
                     .padding(top = 8.dp, end = 12.dp) // sous la HeaderBar, collé à droite
                     .zIndex(1f),                   // au-dessus des autres overlays si besoin
-                containerColor = Color(0xFF4CAF50),
+                containerColor = primary,
                 contentColor = Color.White,
                 shape = CircleShape
             ) {
