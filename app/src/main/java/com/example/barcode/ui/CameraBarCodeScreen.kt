@@ -70,6 +70,11 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.launch
 import com.example.barcode.stores.OpenFoodFactsStore
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import com.example.barcode.stores.AppSettingsStore
 
 // Composable pour scanner un code-barres et récupérer le nom du produit
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
@@ -84,6 +89,9 @@ fun CameraOcrBarCodeScreen() {
     var rateLimitMsg by remember { mutableStateOf<String?>(null) }
     var lastApiCallAt by remember { mutableStateOf(0L) } // Debouncing
     var productInfo by remember { mutableStateOf<ProductInfo?>(null) }
+
+    val autoLockEnabled by remember(ctx) { AppSettingsStore.autoLockEnabledFlow(ctx) }
+        .collectAsState(initial = true) // bouton pour toggle le verrou auto
     var scanLocked by remember { mutableStateOf(false) } // Verrou pour bloquer detection lorsqu'un produit a été trouvé
 
     previewView?.let { view ->
@@ -108,9 +116,11 @@ fun CameraOcrBarCodeScreen() {
                                 val inputImg = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
                                 scanner.process(inputImg)
                                     .addOnSuccessListener { barcodes ->
+
+                                        if (scanLocked) return@addOnSuccessListener    // ⬅️ ignore résultat si verrou activé entre-temps
+
                                         // Prend le premier code non-nul
                                         val first = barcodes.firstOrNull { it.rawValue != null }?.rawValue
-
                                         if (first != null && first != lastScanned) {
 
                                             lastScanned = first
@@ -125,7 +135,7 @@ fun CameraOcrBarCodeScreen() {
                                                 val res = fetchProductInfo(first)
                                                 rateLimitMsg = if (res.rateLimited) (res.message ?: "Rate limit atteint") else null
                                                 productInfo = res.product
-                                                if (res.product != null) scanLocked = true   // verrouille après succès
+                                                if (res.product != null && autoLockEnabled) scanLocked = true   // verrouille après succès si autoLockEnabled (bouton)
                                             }
 
                                         }
@@ -153,8 +163,9 @@ fun CameraOcrBarCodeScreen() {
     ) { innerPadding ->
         Column(Modifier.padding(innerPadding).fillMaxSize()) {
 
-            /* ---------- Compteur de requetes ---------- */
+            /* ---------- Compteur de requetes (compteur stored) ---------- */
             Text("Req: $fetchCount")
+
             /* ---------- Erreur "rate limit" ---------- */
             if (rateLimitMsg != null) {
                 Text(
@@ -163,6 +174,23 @@ fun CameraOcrBarCodeScreen() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
+                )
+            }
+
+
+            /* ---------- Bouton auto-lock (état stored) -----------*/
+            IconButton(onClick = {
+                // Toggle persistant + si on désactive, on lève le verrou courant
+                scope.launch {
+                    val newEnabled = !autoLockEnabled
+                    AppSettingsStore.setAutoLockEnabled(ctx, newEnabled)
+                    // 🔒 Si on active, on verrouille tout de suite (évite "une dernière détection")
+                    scanLocked = newEnabled
+                }
+            }) {
+                Icon(
+                    imageVector = if (autoLockEnabled) Icons.Filled.Lock else Icons.Filled.LockOpen,
+                    contentDescription = if (autoLockEnabled) "Auto-lock activé" else "Auto-lock désactivé"
                 )
             }
 

@@ -70,6 +70,7 @@ dependencies {
     implementation("com.airbnb.android:lottie-compose:6.1.0")
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.compose.material:material-icons-extended")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
