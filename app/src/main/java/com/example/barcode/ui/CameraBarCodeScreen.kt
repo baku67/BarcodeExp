@@ -81,7 +81,8 @@ fun CameraOcrBarCodeScreen() {
     var lastScanned by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val fetchCount by remember(ctx) { OpenFoodFactsStore.countFlow(ctx) }.collectAsState(initial = 0)
-
+    var rateLimitMsg by remember { mutableStateOf<String?>(null) }
+    var lastApiCallAt by remember { mutableStateOf(0L) } // Debouncing
     var productInfo by remember { mutableStateOf<ProductInfo?>(null) }
 
     previewView?.let { view ->
@@ -105,12 +106,21 @@ fun CameraOcrBarCodeScreen() {
                                     .addOnSuccessListener { barcodes ->
                                         // Prend le premier code non-nul
                                         val first = barcodes.firstOrNull { it.rawValue != null }?.rawValue
+
                                         if (first != null && first != lastScanned) {
+
                                             lastScanned = first
                                             scannedCode = first
+
+                                            val now = System.currentTimeMillis()
+                                            if (now - lastApiCallAt < 1000) return@addOnSuccessListener  // bloque si < 1s
+                                            lastApiCallAt = now
+
                                             scope.launch {
                                                 OpenFoodFactsStore.counterIncrement(ctx)
-                                                productInfo = fetchProductInfo(first)
+                                                val res = fetchProductInfo(first)
+                                                rateLimitMsg = if (res.rateLimited) (res.message ?: "Rate limit atteint") else null
+                                                productInfo = res.product
                                             }
 
                                         }
@@ -140,6 +150,16 @@ fun CameraOcrBarCodeScreen() {
 
             /* ---------- Compteur de requetes ---------- */
             Text("Req: $fetchCount")
+            /* ---------- Erreur "rate limit" ---------- */
+            if (rateLimitMsg != null) {
+                Text(
+                    text = rateLimitMsg!!,
+                    color = Color(0xFFD32F2F), // rouge discret
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp)
+                )
+            }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 /* ---------- Camera ---------- */
