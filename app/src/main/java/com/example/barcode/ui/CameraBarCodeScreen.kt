@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
@@ -72,8 +73,11 @@ import kotlinx.coroutines.launch
 import com.example.barcode.stores.OpenFoodFactsStore
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.ui.zIndex
 import com.example.barcode.stores.AppSettingsStore
 
 // Composable pour scanner un code-barres et récupérer le nom du produit
@@ -161,223 +165,239 @@ fun CameraOcrBarCodeScreen() {
     Scaffold(
         topBar = { HeaderBar(title = "Mon Frigo", "Scan du produit", Icons.Filled.AddCircle) }
     ) { innerPadding ->
-        Column(Modifier.padding(innerPadding).fillMaxSize()) {
 
-            /* ---------- Compteur de requetes (compteur stored) ---------- */
-            Text("Req: $fetchCount")
+        // Un seul grand Box "relatif" pour pouvoir positionner en absolu
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding) // sous la HeaderBar
+        ) {
+            Column(Modifier.fillMaxSize()) {
 
-            /* ---------- Erreur "rate limit" ---------- */
-            if (rateLimitMsg != null) {
-                Text(
-                    text = rateLimitMsg!!,
-                    color = Color(0xFFD32F2F), // rouge discret
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                )
+                /* ---------- Compteur de requetes (compteur stored) ---------- */
+                Text("Req: $fetchCount")
+
+                /* ---------- Erreur "rate limit" ---------- */
+                if (rateLimitMsg != null) {
+                    Text(
+                        text = rateLimitMsg!!,
+                        color = Color(0xFFD32F2F), // rouge discret
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp)
+                    )
+                }
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    /* ---------- Camera ---------- */
+                    AndroidView(
+                        factory = { c -> PreviewView(c).also { previewView = it } },
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+
+                    /* ---------- État « pas de données » (todo: composant dédié, props icon ou Lottie) ---------- */
+                    if (productInfo == null) {
+                        /* Charge la composition Lottie une seule fois */
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.RawRes(R.raw.barcode_scanner)   // ton fichier .json dans res/raw
+                        )
+                        /* Anime-la en boucle infinie */
+                        val progress by animateLottieCompositionAsState(
+                            composition = composition,
+                            iterations = LottieConstants.IterateForever
+                        )
+
+
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .background(
+                                    Color.White.copy(alpha = .4f),
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(0.dp)
+                        ) {
+                            // CircularProgressIndicator(color = Color.White) // Spinner
+                            LottieAnimation(
+                                composition = composition,
+                                progress = progress,
+                                modifier = Modifier.size(200.dp).alpha(0.55f)  // ajuste la taille
+                            )
+
+                            Text(
+                                text = "Survolez un code-barre pour ajouter un produit",
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = 16.sp,
+                                fontStyle = FontStyle.Italic,
+                                color = Color.Black,
+                                modifier = Modifier.fillMaxWidth().alpha(0.6f)
+                            )
+                        }
+                    }
+
+
+                    /* ---------- Carte de résultat (todo: composant dédié générique mais props de config d'affichage) ---------- */
+                    else {
+                        Card(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(24.dp),
+                            elevation = CardDefaults.cardElevation(8.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE0E0E0)) // fond gris clair
+                        ) {
+
+                            /* --- Bloc haut : image + infos --- */
+                            Row(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+
+                                // Image produit
+                                if (productInfo!!.imageUrl.isNotEmpty()) {
+                                    AsyncImage(
+                                        model = productInfo!!.imageUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(110.dp)
+                                            .clip(RoundedCornerShape(16.dp))      // mêmes coins que la carte
+                                    )
+                                }
+
+                                Spacer(Modifier.width(16.dp))
+
+                                /* Texte (colonne) */
+                                Column(
+                                    modifier = Modifier.weight(1f)               // prend toute la place dispo
+                                ) {
+                                    Text(
+                                        text = productInfo!!.name,
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                                    )
+                                    Text(
+                                        text = productInfo!!.brand,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = scannedCode,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+
+                                    /* Badge Nutri-Score (optionnel) */
+                                    val nutriColor = when (productInfo!!.nutriScore.uppercase()) {
+                                        "A" -> Color(0xFF2E7D32)
+                                        "B" -> Color(0xFF7CB342)
+                                        "C" -> Color(0xFFFDD835)
+                                        "D" -> Color(0xFFF4511E)
+                                        "E" -> Color(0xFFE53935)
+                                        else -> Color.Gray
+                                    }
+                                    if (productInfo!!.nutriScore.isNotEmpty()) {
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(start = 8.dp)
+                                                .background(nutriColor, RoundedCornerShape(6.dp))
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = productInfo!!.nutriScore.uppercase(),
+                                                style = MaterialTheme.typography.labelLarge.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                color = Color.White
+                                            )
+                                        }
+                                    }
+                                }
+
+
+                            }
+
+                            Divider(thickness = 1.dp, color = Color.Black.copy(alpha = .15f))
+
+                            /* --- Bloc 2 boutons --- */
+                            Row(
+                                modifier = Modifier
+                                    .height(56.dp)
+                                    .fillMaxWidth()
+                            ) {
+                                /* Bouton Re-try */
+                                Button(
+                                    onClick = {
+                                        lastScanned = ""
+                                        scannedCode = ""
+                                        productInfo = null
+                                        scanLocked = false   // on rouvre la détection
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(
+                                            0xFFD32F2F
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(bottomStart = 24.dp)   // coin bas-gauche arrondi
+                                ) {
+                                    Text("Re-try")
+                                }
+
+                                /* Bouton Valider */
+                                Button(
+                                    onClick = { /* TODO : implémenter */ },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(
+                                            0xFF43A047
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(bottomEnd = 24.dp)      // coin bas-droit arrondi
+                                ) {
+                                    Text("Valider")
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
-
             /* ---------- Bouton auto-lock (état stored) -----------*/
-            IconButton(onClick = {
-                // Toggle persistant + si on désactive, on lève le verrou courant
-                scope.launch {
-                    val newEnabled = !autoLockEnabled
-                    AppSettingsStore.setAutoLockEnabled(ctx, newEnabled)
-                    // 🔒 Si on active, on verrouille tout de suite (évite "une dernière détection")
-                    scanLocked = newEnabled
-                }
-            }) {
+            FloatingActionButton(
+                onClick = {
+                    // Toggle persistant + si on désactive, on lève le verrou courant
+                    scope.launch {
+                        val newEnabled = !autoLockEnabled
+                        AppSettingsStore.setAutoLockEnabled(ctx, newEnabled)
+                        // 🔒 Si on active, on verrouille tout de suite (évite "une dernière détection")
+                        scanLocked = newEnabled
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)       // coin haut-droit DU BOX
+                    .padding(top = 8.dp, end = 12.dp) // sous la HeaderBar, collé à droite
+                    .zIndex(1f),                   // au-dessus des autres overlays si besoin
+                containerColor = Color(0xFF4CAF50),
+                contentColor = Color.White,
+                shape = CircleShape
+            ) {
                 Icon(
                     imageVector = if (autoLockEnabled) Icons.Filled.Lock else Icons.Filled.LockOpen,
                     contentDescription = if (autoLockEnabled) "Auto-lock activé" else "Auto-lock désactivé"
                 )
-            }
-
-            Box(modifier = Modifier.fillMaxSize()) {
-                /* ---------- Camera ---------- */
-                AndroidView(
-                    factory = { c -> PreviewView(c).also { previewView = it } },
-                    modifier = Modifier.fillMaxSize()
-                )
-
-
-                /* ---------- État « pas de données » (todo: composant dédié, props icon ou Lottie) ---------- */
-                if (productInfo == null) {
-                    /* Charge la composition Lottie une seule fois */
-                    val composition by rememberLottieComposition(
-                        LottieCompositionSpec.RawRes(R.raw.barcode_scanner)   // ton fichier .json dans res/raw
-                    )
-                    /* Anime-la en boucle infinie */
-                    val progress by animateLottieCompositionAsState(
-                        composition = composition,
-                        iterations = LottieConstants.IterateForever
-                    )
-
-
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .background(
-                                Color.White.copy(alpha = .4f),
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(0.dp)
-                    ) {
-                        // CircularProgressIndicator(color = Color.White) // Spinner
-                        LottieAnimation(
-                            composition = composition,
-                            progress = progress,
-                            modifier = Modifier.size(200.dp).alpha(0.55f)  // ajuste la taille
-                        )
-
-                        Text(
-                            text = "Survolez un code-barre pour ajouter un produit",
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontSize = 16.sp,
-                            fontStyle = FontStyle.Italic,
-                            color = Color.Black,
-                            modifier = Modifier.fillMaxWidth().alpha(0.6f)
-                        )
-                    }
-                }
-
-
-                /* ---------- Carte de résultat (todo: composant dédié générique mais props de config d'affichage) ---------- */
-                else {
-                    Card(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        elevation = CardDefaults.cardElevation(8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE0E0E0)) // fond gris clair
-                    ) {
-
-                        /* --- Bloc haut : image + infos --- */
-                        Row(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-
-                            // Image produit
-                            if (productInfo!!.imageUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = productInfo!!.imageUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(110.dp)
-                                        .clip(RoundedCornerShape(16.dp))      // mêmes coins que la carte
-                                )
-                            }
-
-                            Spacer(Modifier.width(16.dp))
-
-                            /* Texte (colonne) */
-                            Column(
-                                modifier = Modifier.weight(1f)               // prend toute la place dispo
-                            ) {
-                                Text(
-                                    text = productInfo!!.name,
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                                )
-                                Text(
-                                    text = productInfo!!.brand,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = scannedCode,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-
-                                /* Badge Nutri-Score (optionnel) */
-                                val nutriColor = when (productInfo!!.nutriScore.uppercase()) {
-                                    "A" -> Color(0xFF2E7D32)
-                                    "B" -> Color(0xFF7CB342)
-                                    "C" -> Color(0xFFFDD835)
-                                    "D" -> Color(0xFFF4511E)
-                                    "E" -> Color(0xFFE53935)
-                                    else -> Color.Gray
-                                }
-                                if (productInfo!!.nutriScore.isNotEmpty()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(start = 8.dp)
-                                            .background(nutriColor, RoundedCornerShape(6.dp))
-                                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                                    ) {
-                                        Text(
-                                            text = productInfo!!.nutriScore.uppercase(),
-                                            style = MaterialTheme.typography.labelLarge.copy(
-                                                fontWeight = FontWeight.Bold
-                                            ),
-                                            color = Color.White
-                                        )
-                                    }
-                                }
-                            }
-
-
-                        }
-
-                        Divider(thickness = 1.dp, color = Color.Black.copy(alpha = .15f))
-
-                        /* --- Bloc 2 boutons --- */
-                        Row(
-                            modifier = Modifier
-                                .height(56.dp)
-                                .fillMaxWidth()
-                        ) {
-                            /* Bouton Re-try */
-                            Button(
-                                onClick = {
-                                    lastScanned = ""
-                                    scannedCode = ""
-                                    productInfo = null
-                                    scanLocked = false   // on rouvre la détection
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(
-                                        0xFFD32F2F
-                                    )
-                                ),
-                                shape = RoundedCornerShape(bottomStart = 24.dp)   // coin bas-gauche arrondi
-                            ) {
-                                Text("Re-try")
-                            }
-
-                            /* Bouton Valider */
-                            Button(
-                                onClick = { /* TODO : implémenter */ },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(
-                                        0xFF43A047
-                                    )
-                                ),
-                                shape = RoundedCornerShape(bottomEnd = 24.dp)      // coin bas-droit arrondi
-                            ) {
-                                Text("Valider")
-                            }
-                        }
-                    }
-                }
             }
         }
     }
