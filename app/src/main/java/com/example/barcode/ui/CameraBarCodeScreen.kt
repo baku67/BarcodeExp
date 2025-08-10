@@ -31,7 +31,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -74,17 +73,18 @@ import com.example.barcode.stores.OpenFoodFactsStore
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.ui.zIndex
 import com.example.barcode.stores.AppSettingsStore
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 
 // Composable pour scanner un code-barres et récupérer le nom du produit
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
 fun CameraOcrBarCodeScreen() {
     val ctx = LocalContext.current
+    val haptics = LocalHapticFeedback.current // pour vibartions
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var scannedCode by remember { mutableStateOf("") }
     var lastScanned by remember { mutableStateOf("") }
@@ -139,7 +139,11 @@ fun CameraOcrBarCodeScreen() {
                                                 val res = fetchProductInfo(first)
                                                 rateLimitMsg = if (res.rateLimited) (res.message ?: "Rate limit atteint") else null
                                                 productInfo = res.product
-                                                if (res.product != null && autoLockEnabled) scanLocked = true   // verrouille après succès si autoLockEnabled (bouton)
+
+                                                if (res.product != null) {
+                                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress) // petite vibration
+                                                    if (autoLockEnabled) scanLocked = true // verrouille après succès si autoLockEnabled (bouton)
+                                                }
                                             }
 
                                         }
@@ -175,7 +179,7 @@ fun CameraOcrBarCodeScreen() {
             Column(Modifier.fillMaxSize()) {
 
                 /* ---------- Compteur de requetes (compteur stored) ---------- */
-                Text("Req: $fetchCount")
+                Text("API: $fetchCount")
 
                 /* ---------- Erreur "rate limit" ---------- */
                 if (rateLimitMsg != null) {
