@@ -19,7 +19,7 @@ data class FetchResult(
 // Fonction suspend pour récupérer nom et marque du produit
 suspend fun fetchProductInfo(code: String): FetchResult =
     withContext(Dispatchers.IO) {
-        val url = URL("https://world.openfoodfacts.org/api/v0/product/$code.json")
+        val url = URL("https://world.openfoodfacts.org/api/v9/product/$code.json")
         var conn: HttpURLConnection? = null
         try {
             conn = (url.openConnection() as HttpURLConnection).apply {
