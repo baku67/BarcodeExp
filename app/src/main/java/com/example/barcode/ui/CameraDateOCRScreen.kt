@@ -48,7 +48,22 @@ fun CameraDateOcrScreen() {
     // Regex pour dd/MM/yyyy ou dd-MM-yyyy
     val dateRegex = remember {
         // Regex("""\b(0[1-9]|[12][0-9]|3[01])\s*[-\/\.]\s*(0[1-9]|1[0-2])\s*[-\/\.]\s*(19\d{2}|20\d{2})\b""") // sans espaces comme séparateur
-        Regex("""\b(0[1-9]|[12][0-9]|3[01])\s*([\-\/\. ])\s*(0[1-9]|1[0-2])\s*\2\s*(?:202\d|203\d|204\d|2050|2[0-9]|3[0-9]|4[0-9]|50)\b""") // avec espaces comme séparateur et années en AA ou AAAA (2020-2050)
+        Regex("""\b(0[1-9]|[12][0-9]|3[01])\s*([\-\/\. ])\s*(0[1-9]|1[0-2])\s*\2\s*(202\d|203\d|204\d|2050|2[0-9]|3[0-9]|4[0-9]|50)\b""") // avec espaces comme séparateur et années en AA ou AAAA (2020-2050)
+    }
+
+    fun normalizeYear(twoOrFour: String): Int? {
+        return when (twoOrFour.length) {
+            2 -> {
+                val yy = twoOrFour.toInt()
+                val year = 2000 + yy       // 20 -> 2020 ... 50 -> 2050
+                if (year in 2020..2050) year else null
+            }
+            4 -> {
+                val year = twoOrFour.toInt()
+                if (year in 2020..2050) year else null
+            }
+            else -> null
+        }
     }
 
     // Liaison de CameraX + ML Kit dès que PreviewView est prêt
@@ -84,10 +99,16 @@ fun CameraDateOcrScreen() {
                                 recognizer.process(inputImage)
                                     .addOnSuccessListener { visionText ->
                                         // Extraction des dates
-                                        val match = dateRegex.find(visionText.text)?.value
-                                        if (match != null && match != lastDetectedDate) {
-                                            lastDetectedDate = match
-                                            detectedDate = match
+                                        val m = dateRegex.find(visionText.text)
+                                        if (m != null && m.groupValues.size >= 5) {
+                                            val (d, sep, mo, yRaw) = m.destructured
+                                            normalizeYear(yRaw)?.let { y ->
+                                                val normalized = "$d$sep$mo$sep$y"
+                                                if (normalized != lastDetectedDate) {
+                                                    lastDetectedDate = normalized
+                                                    detectedDate = normalized
+                                                }
+                                            }
                                         }
                                     }
                                     .addOnFailureListener { e -> Log.e("OCR", "Erreur", e) }
