@@ -37,6 +37,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,6 +69,7 @@ import com.example.barcode.util.fetchProductInfo
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.launch
+import com.example.barcode.stores.OpenFoodFactsStore
 
 // Composable pour scanner un code-barres et récupérer le nom du produit
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
@@ -78,6 +80,7 @@ fun CameraOcrBarCodeScreen() {
     var scannedCode by remember { mutableStateOf("") }
     var lastScanned by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val fetchCount by remember(ctx) { OpenFoodFactsStore.countFlow(ctx) }.collectAsState(initial = 0)
 
     var productInfo by remember { mutableStateOf<ProductInfo?>(null) }
 
@@ -106,6 +109,7 @@ fun CameraOcrBarCodeScreen() {
                                             lastScanned = first
                                             scannedCode = first
                                             scope.launch {
+                                                OpenFoodFactsStore.counterIncrement(ctx)
                                                 productInfo = fetchProductInfo(first)
                                             }
 
@@ -132,7 +136,10 @@ fun CameraOcrBarCodeScreen() {
     Scaffold(
         topBar = { HeaderBar(title = "Mon Frigo", "Scan du produit", Icons.Filled.AddCircle) }
     ) { innerPadding ->
-        Column(Modifier.padding(innerPadding)) {
+        Column(Modifier.padding(innerPadding).fillMaxSize()) {
+
+            /* ---------- Compteur de requetes ---------- */
+            Text("Req: $fetchCount")
 
             Box(modifier = Modifier.fillMaxSize()) {
                 /* ---------- Camera ---------- */

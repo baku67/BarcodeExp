@@ -2,7 +2,6 @@ package com.example.barcode.util
 
 import android.util.Log
 import com.example.barcode.model.ProductInfo
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
