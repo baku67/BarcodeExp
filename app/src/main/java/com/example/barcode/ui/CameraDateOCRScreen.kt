@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -28,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.example.barcode.ui.components.HeaderBar
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -131,23 +135,28 @@ fun CameraDateOcrScreen() {
         }
     }
 
-    // UI Compose : flux caméra + overlay date en bas
-    Box(modifier = Modifier.fillMaxSize()) {
-        AndroidView(
-            factory = { c -> PreviewView(c).also { previewView = it } },
-            modifier = Modifier.fillMaxSize()
-        )
-        Text(
-            text = detectedDate,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                // ajoute un padding équivalent à la hauteur de la nav. bar
-                .navigationBarsPadding()
-                // puis votre padding interne
-                .background(Color.Black)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            color = Color.White,
-            style = MaterialTheme.typography.bodyLarge
-        )
+    Scaffold(
+        topBar = { HeaderBar(title = "FrigoZen", "Scan d'une date", Icons.Filled.AddCircle) }
+    ) { innerPadding ->
+
+        // UI Compose : flux caméra + overlay date en bas
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            AndroidView(
+                factory = { c -> PreviewView(c).also { previewView = it } },
+                modifier = Modifier.fillMaxSize()
+            )
+            Text(
+                text = detectedDate,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    // ajoute un padding équivalent à la hauteur de la nav. bar
+                    .navigationBarsPadding()
+                    // puis votre padding interne
+                    .background(Color.Black)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                color = Color.White,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
     }
 }

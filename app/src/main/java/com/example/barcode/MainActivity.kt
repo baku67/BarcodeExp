@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.barcode.ui.HomeScreen
 import com.example.barcode.ui.CameraDateOcrScreen
 import com.example.barcode.ui.CameraOcrBarCodeScreen
+import com.example.barcode.ui.GlobalLoaderScreen
 import com.example.barcode.ui.theme.AppPrimary
 
 private val LightColors = lightColorScheme(
@@ -44,7 +45,8 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
                     // Définition des routes
-                    NavHost(navController, startDestination = "home") {
+                    NavHost(navController, startDestination = "splash") {
+                        composable("splash") { GlobalLoaderScreen(navController) }
                         composable("home") { HomeScreen(navController) }
                         composable("dateOCR") { CameraDateOcrScreen() }
                         composable("barCodeOCR") { CameraOcrBarCodeScreen() }

@@ -22,7 +22,7 @@ import com.example.barcode.ui.components.HeaderBar
 @Composable
 fun HomeScreen(navController: NavHostController) {
     Scaffold(
-        topBar = { HeaderBar(title = "Mon Frigo", null, Icons.Filled.Home) }
+        topBar = { HeaderBar(title = "FrigoZen", null, Icons.Filled.Home) }
     ) { innerPadding ->
         Column(Modifier.padding(innerPadding)) {
             // Contenu de ton écran

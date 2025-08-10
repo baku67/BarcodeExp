@@ -168,7 +168,7 @@ fun CameraOcrBarCodeScreen() {
     }
 
     Scaffold(
-        topBar = { HeaderBar(title = "Mon Frigo", "Scan du produit", Icons.Filled.AddCircle) }
+        topBar = { HeaderBar(title = "FrigoZen", "Scan du produit", Icons.Filled.AddCircle) }
     ) { innerPadding ->
 
         // Un seul grand Box "relatif" pour pouvoir positionner en absolu
