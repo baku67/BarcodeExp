@@ -21,10 +21,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 
 
 @Composable
-fun ItemsScreen(vm: ItemsViewModel = viewModel()) {
+fun ItemsScreen(navController: NavHostController, vm: ItemsViewModel = viewModel()) {
     val list by vm.items.collectAsState(initial = emptyList())
     val primary = MaterialTheme.colorScheme.primary
 
@@ -44,5 +45,8 @@ fun ItemsScreen(vm: ItemsViewModel = viewModel()) {
             val in7days = System.currentTimeMillis() + 7L*24*60*60*1000
             vm.addItem(name = "Chipssss", brand = "Nutella")
         }) { Text("Ajouter item de test") }
+
+        // Bouton pour lancer le parcours d'ajout
+        Button(onClick = { navController.navigate("barCodeOCR") }) { Text("+") }
     }
 }

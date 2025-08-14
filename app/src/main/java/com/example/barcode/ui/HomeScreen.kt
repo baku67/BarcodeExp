@@ -39,7 +39,7 @@ fun HomeScreen(navController: NavHostController) {
                     //Button(onClick = { navController.navigate("items") }) {
                     //    Text(text = "Frigo")
                     //}
-                    ItemsScreen()
+                    ItemsScreen(navController = navController)
                 }
 
             }

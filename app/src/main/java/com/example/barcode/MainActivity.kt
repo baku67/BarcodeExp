@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
                         composable("home") { HomeScreen(navController) }
                         composable("dateOCR") { CameraDateOcrScreen() }
                         composable("barCodeOCR") { CameraOcrBarCodeScreen() }
-                        composable("items") { ItemsScreen() }
+                        composable("items") { ItemsScreen(navController) }
                     }
                 }
             }
