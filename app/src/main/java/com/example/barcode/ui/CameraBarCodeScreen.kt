@@ -82,7 +82,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 // Composable pour scanner un code-barres et récupérer le nom du produit
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
-fun CameraOcrBarCodeScreen() {
+fun CameraOcrBarCodeScreen( onValidated: ((product: ProductInfo, barcode: String) -> Unit)? = null ) {
     val ctx = LocalContext.current
     val haptics = LocalHapticFeedback.current // pour vibartions
     val primary = MaterialTheme.colorScheme.primary
@@ -361,7 +361,7 @@ fun CameraOcrBarCodeScreen() {
 
                                 /* Bouton Valider */
                                 Button(
-                                    onClick = { /* TODO : implémenter */ },
+                                    onClick = { productInfo?.let { p -> onValidated?.invoke(p, scannedCode) } },
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight(),
