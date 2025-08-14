@@ -8,14 +8,26 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,12 +38,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import coil.compose.rememberAsyncImagePainter
 import com.example.barcode.ui.components.HeaderBar
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -41,6 +57,9 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
 fun CameraDateOcrScreen(
+    productName: String? = null,
+    productBrand: String? = null,
+    productImageUrl: String? = null,
     onValidated: ((expiryEpochMs: Long) -> Unit)? = null,
     onCancel: (() -> Unit)? = null
 ) {
@@ -50,9 +69,10 @@ fun CameraDateOcrScreen(
 
     var detectedDate by remember { mutableStateOf("") }
     var lastDetectedDate by remember { mutableStateOf("") }
+    var detectedDateMs by remember { mutableStateOf<Long?>(null) }
+    var frozen by remember { mutableStateOf(false) }
     var lastAnalyseTime by remember { mutableStateOf(0L) }
     val minIntervalMs = 500L
-    var detectedDateMs by remember { mutableStateOf<Long?>(null) }
 
     // 👉 Mémorise les use-cases liés par CET écran
     var boundPreview by remember { mutableStateOf<Preview?>(null) }
@@ -83,6 +103,49 @@ fun CameraDateOcrScreen(
                 onRelease = { previewView = null } // important
             )
 
+            // 🧊 Card produit (étape 1) + date détectée
+            if (productName != null || productBrand != null || productImageUrl != null) {
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(12.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (!productImageUrl.isNullOrBlank()) {
+                            Image(
+                                painter = rememberAsyncImagePainter(productImageUrl),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(Modifier.width(12.dp))
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(productName ?: "(sans nom)", fontWeight = FontWeight.SemiBold)
+                            if (!productBrand.isNullOrBlank()) {
+                                Text(productBrand, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                            }
+                            if (detectedDate.isNotBlank()) {
+                                Text(
+                                    "DLUO/DLC : $detectedDate",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Bandeau de la date brute détectée (toujours visible)
             Text(
                 text = detectedDate,
                 modifier = Modifier
@@ -93,6 +156,45 @@ fun CameraDateOcrScreen(
                 color = Color.White,
                 style = MaterialTheme.typography.bodyLarge
             )
+
+            // Actions bas d’écran (Retry / Valider)
+            if (detectedDateMs != null) {
+                BottomAppBar(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            // 🔄 relance l’analyse
+                            frozen = false
+                            lastDetectedDate = ""
+                            detectedDate = ""
+                            detectedDateMs = null
+                            lastAnalyseTime = 0L
+                        },
+                        modifier = Modifier.padding(8.dp)
+                    ) { Text("Réessayer") }
+
+                    Spacer(Modifier.weight(1f))
+
+                    Button(
+                        onClick = { detectedDateMs?.let { onValidated?.invoke(it) } },
+                        modifier = Modifier.padding(8.dp)
+                    ) { Text("Valider") }
+                }
+            }
+
+/*            Text(
+                text = detectedDate,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .background(Color.Black)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                color = Color.White,
+                style = MaterialTheme.typography.bodyLarge
+            )*/
         }
     }
 
@@ -113,6 +215,8 @@ fun CameraDateOcrScreen(
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build().also { ia ->
                     ia.setAnalyzer(executor) { imageProxy ->
+                        if (frozen) { imageProxy.close(); return@setAnalyzer } // ⬅️ stop tant que non relancé
+
                         val now = System.currentTimeMillis()
                         if (now - lastAnalyseTime < minIntervalMs) { imageProxy.close(); return@setAnalyzer }
                         lastAnalyseTime = now
@@ -130,6 +234,7 @@ fun CameraDateOcrScreen(
                                                     lastDetectedDate = normalized
                                                     detectedDate = normalized
                                                     detectedDateMs = parseToEpochMs(d, mo, y)
+                                                    frozen = true // ⬅️ on fige après détection
                                                 }
                                             }
                                         }

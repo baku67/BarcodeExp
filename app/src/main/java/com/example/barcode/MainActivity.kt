@@ -90,10 +90,14 @@ class MainActivity : ComponentActivity() {
                             composable("addItem/date") { backStackEntry ->
                                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("addItem") }
                                 val addVm: AddItemViewModel = viewModel(parentEntry)
+                                val draft by addVm.draft.collectAsState()
 
                                 DateStepScreen(
+                                    productName = draft.name,
+                                    productBrand = draft.brand,
+                                    productImageUrl = draft.imageUrl,
                                     onValidated = { expiryMs ->
-                                        addVm.setExpiryDate(expiryMs)   // ⬅️ on remplit le draft ici
+                                        addVm.setExpiryDate(expiryMs)
                                         navController.navigate("addItem/details")
                                     },
                                     onCancel = { navController.popBackStack() }
