@@ -17,6 +17,7 @@ import com.example.barcode.ui.HomeScreen
 import com.example.barcode.ui.CameraDateOcrScreen
 import com.example.barcode.ui.CameraOcrBarCodeScreen
 import com.example.barcode.ui.GlobalLoaderScreen
+import com.example.barcode.ui.ItemsScreen
 import com.example.barcode.ui.theme.AppPrimary
 
 private val LightColors = lightColorScheme(
@@ -50,6 +51,7 @@ class MainActivity : ComponentActivity() {
                         composable("home") { HomeScreen(navController) }
                         composable("dateOCR") { CameraDateOcrScreen() }
                         composable("barCodeOCR") { CameraOcrBarCodeScreen() }
+                        composable("items") { ItemsScreen() }
                     }
                 }
             }

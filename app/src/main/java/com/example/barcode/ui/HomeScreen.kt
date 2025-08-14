@@ -35,6 +35,10 @@ fun HomeScreen(navController: NavHostController) {
                     Button(onClick = { navController.navigate("dateOCR") }) {
                         Text(text = "OCR Dates")
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { navController.navigate("items") }) {
+                        Text(text = "Frigo")
+                    }
                 }
             }
         }

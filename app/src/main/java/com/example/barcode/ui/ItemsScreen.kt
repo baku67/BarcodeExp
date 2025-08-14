@@ -1,0 +1,41 @@
+package com.example.barcode.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.barcode.ui.components.ItemsViewModel
+import java.util.Date
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+
+
+@Composable
+fun ItemsScreen(vm: ItemsViewModel = viewModel()) {
+    val list by vm.items.collectAsState(initial = emptyList())
+
+    Column {
+        LazyColumn {
+            items(list) { it ->
+                Row (Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("${it.name ?: "(sans nom)"} • ${it.expiryDate?.let { d -> Date(d) } ?: "—"}")
+                    TextButton(onClick = { vm.deleteItem(it.id) }) { Text("Suppr") }
+                }
+            }
+        }
+
+        // Bouton d’exemple pour ajouter un item
+        Button(onClick = {
+            val in7days = System.currentTimeMillis() + 7L*24*60*60*1000
+            vm.addItem(name = "3017620422003", brand = "Nutella")
+        }) { Text("Ajouter item de test") }
+    }
+}
