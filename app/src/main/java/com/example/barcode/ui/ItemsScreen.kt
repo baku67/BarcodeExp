@@ -40,12 +40,6 @@ fun ItemsScreen(navController: NavHostController, vm: ItemsViewModel = viewModel
             }
         }
 
-        // Bouton d’exemple pour ajouter un item
-        Button(onClick = {
-            val in7days = System.currentTimeMillis() + 7L*24*60*60*1000
-            vm.addItem(name = "Chipssss", brand = "Nutella")
-        }) { Text("test") }
-
         // Bouton pour lancer le parcours d'ajout
         Button(onClick = { navController.navigate("addItem") }) {
             Text("+ Ajouter un produit")

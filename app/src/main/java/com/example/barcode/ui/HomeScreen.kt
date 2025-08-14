@@ -28,17 +28,6 @@ fun HomeScreen(navController: NavHostController) {
             // Contenu de ton écran
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Button(onClick = { navController.navigate("barCodeOCR") }) {
-                        Text(text = "Scanner code-barres")
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { navController.navigate("dateOCR") }) {
-                        Text(text = "OCR Dates")
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    //Button(onClick = { navController.navigate("items") }) {
-                    //    Text(text = "Frigo")
-                    //}
                     ItemsScreen(navController = navController)
                 }
 
