@@ -16,10 +16,44 @@ data class FetchResult(
     val message: String? = null    // message optionnel pour l'UI
 )
 
+
+private fun firstNonBlank(obj: JSONObject, keys: List<String>): String? =
+    keys.firstNotNullOfOrNull { k ->
+        obj.optString(k).takeIf { it.isNotBlank() }
+    }
+
+private fun pickProductName(obj: JSONObject, lang: String): String {
+    val candidates = buildList {
+        add("product_name")                           // déjà localisé si lc=...
+        add("product_name_${lang}")                  // langue du device
+        addAll(listOf("product_name_fr","product_name_en","product_name_es"))
+        add("generic_name_${lang}")
+        add("generic_name")
+    }
+
+    return firstNonBlank(obj, candidates)
+        ?: obj.optString("brands").takeIf { it.isNotBlank() }
+        ?: "Produit sans nom"
+}
+
+
 // Fonction suspend pour récupérer nom et marque du produit
 suspend fun fetchProductInfo(code: String): FetchResult =
     withContext(Dispatchers.IO) {
-        val url = URL("https://world.openfoodfacts.org/api/v9/product/$code.json")
+
+        val lang = Locale.getDefault().language.lowercase(Locale.ROOT)
+
+        // Champs strictement nécessaires (→ + rapide)
+        val fields = listOf(
+            "product_name",
+            "product_name_$lang",
+            "product_name_fr","product_name_en","product_name_es",
+            "generic_name","generic_name_$lang",
+            "brands","image_url","languages_tags","lang",
+            "nutrition_grade_fr","nutrition_grades_tags"
+        ).joinToString(",")
+
+        val url = URL("https://world.openfoodfacts.org/api/v2/product/$code.json?lc=fr&fields=product_name,product_name_fr,product_name_en,product_name_es,generic_name,generic_name_fr,brands,image_url,languages_tags,lang")
         var conn: HttpURLConnection? = null
         try {
             conn = (url.openConnection() as HttpURLConnection).apply {
@@ -58,11 +92,14 @@ suspend fun fetchProductInfo(code: String): FetchResult =
             }
 
             val obj = JSONObject(json).getJSONObject("product")
-            val name = obj.optString("product_name", "Inconnu")
+
+            // ✅ Fallbacks robustes
+            val name = pickProductName(obj, lang)
             val brand = obj.optString("brands", "Inconnue")
             val imgUrl = obj.optString("image_url", "")
             val nutri = obj.optString("nutrition_grade_fr", "").ifEmpty {
-                obj.optJSONArray("nutrition_grades_tags")?.optString(0)?.substringAfterLast('-') ?: ""
+                obj.optJSONArray("nutrition_grades_tags")?.optString(0)?.substringAfterLast('-')
+                    ?: ""
             }
 
             FetchResult(
