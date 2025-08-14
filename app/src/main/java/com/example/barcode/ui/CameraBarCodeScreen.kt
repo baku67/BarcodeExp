@@ -27,6 +27,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -99,6 +101,10 @@ fun CameraOcrBarCodeScreen( onValidated: ((product: ProductInfo, barcode: String
     var boundPreview by remember { mutableStateOf<Preview?>(null) }
     var boundAnalysis by remember { mutableStateOf<ImageAnalysis?>(null) }
 
+    // Flash
+    var boundCamera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
+    var torchOn by remember { mutableStateOf(false) }
+
     val autoLockEnabled by remember(ctx) { AppSettingsStore.autoLockEnabledFlow(ctx) }
         .collectAsState(initial = true) // bouton pour toggle le verrou auto
     var scanLocked by remember { mutableStateOf(false) } // Verrou pour bloquer detection lorsqu'un produit a été trouvé
@@ -158,15 +164,21 @@ fun CameraOcrBarCodeScreen( onValidated: ((product: ProductInfo, barcode: String
                             } ?: imageProxy.close()
                         }
                     }
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
+                val camera = cameraProvider.bindToLifecycle(
                     lifecycleOwner,
                     CameraSelector.DEFAULT_BACK_CAMERA,
                     preview,
                     analysis
                 )
+                boundCamera = camera
                 boundPreview = preview
                 boundAnalysis = analysis
+
+                // (optionnel) si tu veux refléter l’état système du flash :
+                val torchLiveData = camera.cameraInfo.torchState
+                torchLiveData.observe(lifecycleOwner) { state ->
+                    torchOn = (state == androidx.camera.core.TorchState.ON)
+                }
             }
             cameraProviderFuture.addListener(listener, executor)
             onDispose {
@@ -192,6 +204,22 @@ fun CameraOcrBarCodeScreen( onValidated: ((product: ProductInfo, barcode: String
                 .padding(innerPadding) // sous la HeaderBar
         ) {
             Column(Modifier.fillMaxSize()) {
+
+                // FAB flash
+                FloatingActionButton(
+                    onClick = {
+                        boundCamera?.cameraControl?.enableTorch(!torchOn)
+                        torchOn = !torchOn   // synchronisation locale immédiate
+                    },
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = Color.White,
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        imageVector = if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                        contentDescription = if (torchOn) "Flash ON" else "Flash OFF"
+                    )
+                }
 
                 /* ---------- Compteur de requetes (compteur stored) ---------- */
                 Text("API: $fetchCount")
