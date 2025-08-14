@@ -31,6 +31,7 @@ import com.example.barcode.add.AddItemDraft
 import com.example.barcode.add.ScanStepScreen
 import com.example.barcode.add.DetailsStepScreen
 import com.example.barcode.add.ConfirmStepScreen
+import com.example.barcode.add.DateStepScreen
 import com.example.barcode.ui.components.ItemsViewModel
 
 private val LightColors = lightColorScheme(
@@ -78,6 +79,20 @@ class MainActivity : ComponentActivity() {
                                         addVm.setBarcode(code)
                                         addVm.setDetails(product.name, product.brand)
                                         addVm.setImage(product.imageUrl)
+                                        navController.navigate("addItem/date")
+                                    },
+                                    onCancel = { navController.popBackStack() }
+                                )
+                            }
+
+                            // ⬇️ NOUVEL ÉCRAN DATE
+                            composable("addItem/date") { backStackEntry ->
+                                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("addItem") }
+                                val addVm: AddItemViewModel = viewModel(parentEntry)
+
+                                DateStepScreen(
+                                    onValidated = { expiryMs ->
+                                        addVm.setExpiryDate(expiryMs)   // ⬅️ on remplit le draft ici
                                         navController.navigate("addItem/details")
                                     },
                                     onCancel = { navController.popBackStack() }

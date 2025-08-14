@@ -39,7 +39,10 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 // Autorise l'accès expérimental à imageProxy.image
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
-fun CameraDateOcrScreen() {
+fun CameraDateOcrScreen(
+    onValidated: ((expiryEpochMs: Long) -> Unit)? = null, // ⬅️ nouveau
+    onCancel: (() -> Unit)? = null
+) {
     val ctx = LocalContext.current
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
 
