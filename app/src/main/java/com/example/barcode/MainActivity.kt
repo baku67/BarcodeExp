@@ -66,6 +66,7 @@ class MainActivity : ComponentActivity() {
                         composable("dateOCR") { CameraDateOcrScreen() }
                         composable("barCodeOCR") { CameraOcrBarCodeScreen() }
                         composable("items") { ItemsScreen(navController) }
+
                         navigation(startDestination = "addItem/scan", route = "addItem") {
 
                             composable("addItem/scan") { backStackEntry ->
