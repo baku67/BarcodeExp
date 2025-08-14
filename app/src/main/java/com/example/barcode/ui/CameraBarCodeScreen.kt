@@ -78,6 +78,7 @@ import androidx.compose.ui.zIndex
 import com.example.barcode.stores.AppSettingsStore
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLifecycleOwner
 
 // Composable pour scanner un code-barres et récupérer le nom du produit
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
@@ -94,13 +95,16 @@ fun CameraOcrBarCodeScreen( onValidated: ((product: ProductInfo, barcode: String
     var rateLimitMsg by remember { mutableStateOf<String?>(null) }
     var lastApiCallAt by remember { mutableStateOf(0L) } // Debouncing
     var productInfo by remember { mutableStateOf<ProductInfo?>(null) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var boundPreview by remember { mutableStateOf<Preview?>(null) }
+    var boundAnalysis by remember { mutableStateOf<ImageAnalysis?>(null) }
 
     val autoLockEnabled by remember(ctx) { AppSettingsStore.autoLockEnabledFlow(ctx) }
         .collectAsState(initial = true) // bouton pour toggle le verrou auto
     var scanLocked by remember { mutableStateOf(false) } // Verrou pour bloquer detection lorsqu'un produit a été trouvé
 
     previewView?.let { view ->
-        DisposableEffect(view) {
+        DisposableEffect(view, lifecycleOwner) {
             val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
             val executor = ContextCompat.getMainExecutor(ctx)
             val scanner = BarcodeScanning.getClient()
@@ -156,14 +160,24 @@ fun CameraOcrBarCodeScreen( onValidated: ((product: ProductInfo, barcode: String
                     }
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
-                    ctx as ComponentActivity,
+                    lifecycleOwner,
                     CameraSelector.DEFAULT_BACK_CAMERA,
                     preview,
                     analysis
                 )
+                boundPreview = preview
+                boundAnalysis = analysis
             }
             cameraProviderFuture.addListener(listener, executor)
-            onDispose { if (cameraProviderFuture.isDone) cameraProviderFuture.get().unbindAll() }
+            onDispose {
+                if (cameraProviderFuture.isDone) {
+                    val provider = cameraProviderFuture.get()
+                    val toUnbind = listOfNotNull(boundAnalysis, boundPreview).toTypedArray()
+                    if (toUnbind.isNotEmpty()) provider.unbind(*toUnbind)   // ✅ unbind local
+                    boundAnalysis = null
+                    boundPreview = null
+                }
+            }
         }
     }
 
@@ -196,8 +210,12 @@ fun CameraOcrBarCodeScreen( onValidated: ((product: ProductInfo, barcode: String
                 Box(modifier = Modifier.fillMaxSize()) {
                     /* ---------- Camera ---------- */
                     AndroidView(
-                        factory = { c -> PreviewView(c).also { previewView = it } },
-                        modifier = Modifier.fillMaxSize()
+                        factory = { c -> PreviewView(c).also {
+                            // it.preferredImplementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                            previewView = it
+                        } },
+                        modifier = Modifier.fillMaxSize(),
+                        onRelease = { previewView = null }
                     )
 
 
