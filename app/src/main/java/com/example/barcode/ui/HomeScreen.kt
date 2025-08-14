@@ -36,12 +36,15 @@ fun HomeScreen(navController: NavHostController) {
                         Text(text = "OCR Dates")
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { navController.navigate("items") }) {
-                        Text(text = "Frigo")
-                    }
+                    //Button(onClick = { navController.navigate("items") }) {
+                    //    Text(text = "Frigo")
+                    //}
+                    ItemsScreen()
                 }
+
             }
         }
+
     }
 
 }
