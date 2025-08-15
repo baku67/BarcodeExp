@@ -118,8 +118,10 @@ class MainActivity : ComponentActivity() {
                                         // ✅ commit direct
                                         itemsVm.addItem(
                                             name = (name ?: draft.name ?: "(sans nom)"),
-                                            brand = (brand ?: draft.brand ?: "(sans brand)")
+                                            brand = (brand ?: draft.brand ?: "(sans brand)"),
                                             // ajoute expiry si ton ItemsViewModel le supporte
+                                            expiry   = (expiry ?: draft.expiryDate),
+                                            imageUrl = draft.imageUrl
                                         )
 
                                         addVm.reset()
