@@ -4,10 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
+import java.time.*
+
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import androidx.compose.material3.rememberDatePickerState
@@ -16,20 +16,22 @@ import androidx.compose.material3.rememberDatePickerState
 @Composable
 fun DetailsStepScreen(
     draft: AddItemDraft,
-    onNext: (name: String?, brand: String?, expiry: Long?) -> Unit,
+    onConfirm: (name: String?, brand: String?, expiry: Long?) -> Unit,
     onBack: () -> Unit
 ) {
     var name by remember { mutableStateOf(draft.name.orEmpty()) }
     var brand by remember { mutableStateOf(draft.brand.orEmpty()) }
-    var expiry by remember { mutableStateOf(draft.expiryDate) } // epoch ms
+    var expiry by remember { mutableStateOf(draft.expiryDate) } // epoch ms (minuit local)
     var showPicker by remember { mutableStateOf(false) }
 
-    // Texte “dans 2 j / il y a 3 j / …”
-    val relativeExpiry by remember(expiry) {
-        mutableStateOf(expiry?.let { formatRelativeDays(it) } ?: "—")
-    }
+    val relative = remember(expiry) { expiry?.let { formatRelativeDaysAnyDistance(it) } ?: "—" }
+    val absolute = remember(expiry) { expiry?.let { formatAbsoluteDate(it) } ?: "—" }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Ajouter le produit", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(12.dp))
+
+        // —— Édition ——
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
@@ -45,42 +47,49 @@ fun DetailsStepScreen(
         )
 
         Spacer(Modifier.height(16.dp))
-        // Bloc Date d’expiration
-        Column {
-            Text("Date d’expiration : $relativeExpiry")
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = { showPicker = true }) {
-                Text(if (expiry == null) "Choisir une date" else "Modifier la date")
-            }
+        Text("Date d’expiration : $relative${if (absolute != "—") " ($absolute)" else ""}")
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = { showPicker = true }) {
+            Text(if (expiry == null) "Choisir une date" else "Modifier la date")
         }
 
-        // DatePicker Material 3
+        // —— DatePicker ——
         if (showPicker) {
             val initial = expiry ?: System.currentTimeMillis()
             val state = rememberDatePickerState(initialSelectedDateMillis = initial)
-
             DatePickerDialog(
                 onDismissRequest = { showPicker = false },
                 confirmButton = {
                     TextButton(onClick = {
                         val selectedUtc = state.selectedDateMillis
-                        expiry = selectedUtc?.let { utcMillisToLocalMidnight(it) } // normalise à minuit local
+                        expiry = selectedUtc?.let { utcMillisToLocalMidnight(it) }
                         showPicker = false
                     }) { Text("OK") }
                 },
-                dismissButton = {
-                    TextButton(onClick = { showPicker = false }) { Text("Annuler") }
-                }
+                dismissButton = { TextButton(onClick = { showPicker = false }) { Text("Annuler") } }
             ) {
                 DatePicker(state = state, showModeToggle = false)
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
+
+        // —— Récap rapide (optionnel) ——
+        Text("Récapitulatif", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(6.dp))
+        Text("Nom : ${name.ifBlank { draft.name ?: "—" }}")
+        Text("Marque : ${brand.ifBlank { draft.brand ?: "—" }}")
+        Text("Code-barres : ${draft.barcode ?: "—"}")
+        Text("Date : ${if (expiry != null) absolute else "—"}")
+
+        Spacer(Modifier.height(24.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onBack) { Text("Retour") }
-            Button(onClick = { onNext(name.ifBlank { null }, brand.ifBlank { null }, expiry) }) {
-                Text("Suivant")
+            Button(
+                onClick = { onConfirm(name.ifBlank { null }, brand.ifBlank { null }, expiry) },
+                enabled = (name.isNotBlank() || (draft.name?.isNotBlank() == true))
+            ) {
+                Text("Confirmer")
             }
         }
     }
@@ -93,19 +102,22 @@ private fun utcMillisToLocalMidnight(utcMillis: Long): Long {
     return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 }
 
-private fun formatRelativeDays(targetMillis: Long): String {
+private fun formatAbsoluteDate(ms: Long): String =
+    Instant.ofEpochMilli(ms)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+        .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+
+private fun formatRelativeDaysAnyDistance(targetMillis: Long): String {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now(zone)
     val target = Instant.ofEpochMilli(targetMillis).atZone(zone).toLocalDate()
     val days = ChronoUnit.DAYS.between(today, target).toInt()
-    return when (days) {
-        0 -> "aujourd'hui"
-        1 -> "demain"
-        2 -> "après-demain"
-        -1 -> "hier"
-        -2 -> "avant-hier"
-        in 2..60 -> "dans ${days} j"
-        in -30..-2 -> "il y a ${-days} j"
-        else -> target.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+    return when {
+        days == 0 -> "aujourd'hui"
+        days == 1 -> "demain"
+        days == -1 -> "hier"
+        days > 1 -> "dans $days j"
+        else -> "il y a ${-days} j"
     }
 }

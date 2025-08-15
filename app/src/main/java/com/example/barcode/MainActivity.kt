@@ -105,39 +105,27 @@ class MainActivity : ComponentActivity() {
                             }
 
                             composable("addItem/details") { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry("addItem")
-                                }
+                                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry("addItem") }
                                 val addVm: AddItemViewModel = viewModel(parentEntry)
                                 val draft by addVm.draft.collectAsState()
+
+                                // ✅ partage la même instance que ItemsScreen via l’entrée "home"
+                                val homeEntry = remember(backStackEntry) { navController.getBackStackEntry("home") }
+                                val itemsVm: ItemsViewModel = viewModel(homeEntry)
 
                                 DetailsStepScreen(
                                     draft = draft,
-                                    onNext = { name, brand, expiry ->
+                                    onConfirm = { name, brand, expiry ->
                                         addVm.setDetails(name, brand)
                                         addVm.setExpiryDate(expiry)
-                                        navController.navigate("addItem/confirm")
-                                    },
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
 
-                            composable("addItem/confirm") { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry("addItem")
-                                }
-                                val addVm: AddItemViewModel = viewModel(parentEntry)
-
-                                val itemsVm: ItemsViewModel = viewModel(LocalContext.current as ComponentActivity)
-                                val draft by addVm.draft.collectAsState()
-
-                                ConfirmStepScreen(
-                                    draft = draft,
-                                    onConfirm = {
+                                        // ✅ commit direct
                                         itemsVm.addItem(
-                                            name = draft.name ?: "(sans nom)",
-                                            brand = draft.brand ?: "(sans marque)"
+                                            name = (name ?: draft.name ?: "(sans nom)"),
+                                            brand = (brand ?: draft.brand ?: "(sans brand)")
+                                            // ajoute expiry si ton ItemsViewModel le supporte
                                         )
+
                                         addVm.reset()
                                         navController.popBackStack("home", false)
                                     },
