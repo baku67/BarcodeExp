@@ -19,18 +19,14 @@ import com.example.barcode.ui.CameraOcrBarCodeScreen
 import com.example.barcode.ui.GlobalLoaderScreen
 import com.example.barcode.ui.ItemsScreen
 import com.example.barcode.ui.theme.AppPrimary
-
 import androidx.navigation.compose.navigation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.barcode.add.AddItemViewModel
-import com.example.barcode.add.AddItemDraft
 import com.example.barcode.add.ScanStepScreen
 import com.example.barcode.add.DetailsStepScreen
-import com.example.barcode.add.ConfirmStepScreen
 import com.example.barcode.add.DateStepScreen
 import com.example.barcode.ui.components.ItemsViewModel
 

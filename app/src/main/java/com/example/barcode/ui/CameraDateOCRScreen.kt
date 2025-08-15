@@ -1,7 +1,6 @@
 package com.example.barcode.ui
 
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
