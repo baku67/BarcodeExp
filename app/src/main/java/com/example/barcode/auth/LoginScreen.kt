@@ -1,6 +1,9 @@
 package com.example.barcode.auth
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SyncDisabled
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -9,6 +12,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.barcode.ui.components.HeaderBar
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -67,7 +71,14 @@ fun LoginScreen(
                 Text("Créer un compte")
             }
 
-            TextButton(onClick = { viewModel.onUseLocalMode() }) {
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = { viewModel.onUseLocalMode() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.SyncDisabled, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
                 Text("Mode local")
             }
 

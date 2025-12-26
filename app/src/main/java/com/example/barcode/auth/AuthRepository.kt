@@ -31,4 +31,18 @@ class AuthRepository(private val api: AuthApi) {
             Result.failure(e)
         }
     }
+
+    suspend fun me(token: String): Result<UserProfile> {
+        return try {
+            val response = api.me("Bearer $token")
+            if (response.isSuccessful) {
+                response.body()?.let { Result.success(it) }
+                    ?: Result.failure(Exception("Réponse vide"))
+            } else {
+                Result.failure(Exception("HTTP ${response.code()} - ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

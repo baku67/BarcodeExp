@@ -19,11 +19,14 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.barcode.auth.AppMode
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
+import com.example.barcode.auth.ApiClient
+import com.example.barcode.auth.AuthRepository
 
 @Composable
 fun SettingsScreen(navController: NavHostController) {
@@ -34,6 +37,19 @@ fun SettingsScreen(navController: NavHostController) {
     val snack = remember { SnackbarHostState() }
 
     val mode = session.appMode.collectAsState(initial = AppMode.AUTH).value
+
+    // Si User en cache, on affiche ses infos
+    val repo = remember { AuthRepository(ApiClient.authApi) }
+    val token = session.token.collectAsState(initial = null).value
+    val cachedEmail = session.userEmail.collectAsState(initial = null).value
+    val cachedId = session.userId.collectAsState(initial = null).value
+    LaunchedEffect(mode, token) {
+        if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
+            repo.me(token)
+                .onSuccess { session.saveUser(it) }
+                .onFailure { snack.showSnackbar("Impossible de charger le profil : ${it.message ?: it}") }
+        }
+    }
 
     Scaffold(
         topBar = { HeaderBar(title = "FrigoZen", null, Icons.Filled.Home) },
@@ -58,8 +74,7 @@ fun SettingsScreen(navController: NavHostController) {
                 .padding(16.dp)
         ) {
 
-            // Bloc : Mode actuel
-
+            // Bloc : Affichage du Mode actuel (LOCAL ou AUTH)
             ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Mode d’utilisation", style = MaterialTheme.typography.titleMedium)
@@ -67,7 +82,7 @@ fun SettingsScreen(navController: NavHostController) {
 
                     val modeLabel = when (mode) {
                         AppMode.LOCAL -> "Local (sur ce téléphone)"
-                        AppMode.AUTH -> "Connecté (API + synchronisation)"
+                        AppMode.AUTH -> "Connecté (synchronisation cloud)"
                     }
 
                     Text(modeLabel, style = MaterialTheme.typography.bodyLarge)
@@ -78,6 +93,36 @@ fun SettingsScreen(navController: NavHostController) {
                             "Tes données restent uniquement sur ton appareil. Pas de partage, pas de sync multi-appareils.",
                             style = MaterialTheme.typography.bodyMedium
                         )
+                    }
+                }
+            }
+
+            // Si User en cache on affiche ses infos
+            if (mode == AppMode.AUTH) {
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Compte", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(6.dp))
+
+                        Text("Email : ${cachedEmail ?: "Chargement..."}", style = MaterialTheme.typography.bodyLarge)
+                        // Text("Id : ${cachedId ?: "Chargement..."}", style = MaterialTheme.typography.bodyMedium)
+
+                        Spacer(Modifier.height(10.dp))
+
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    if (!token.isNullOrBlank()) {
+                                        repo.me(token)
+                                            .onSuccess { session.saveUser(it); snack.showSnackbar("Profil mis à jour") }
+                                            .onFailure { snack.showSnackbar("Erreur : ${it.message ?: it}") }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Rafraîchir le profil")
+                        }
                     }
                 }
             }
