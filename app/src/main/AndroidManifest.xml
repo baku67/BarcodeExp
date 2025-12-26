@@ -4,7 +4,10 @@
 
     <!-- Permission caméra -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Permission appels API REST -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Facultatif : indiquer que l’app a besoin d’un appareil photo -->
+
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />

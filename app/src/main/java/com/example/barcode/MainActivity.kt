@@ -28,7 +28,19 @@ import com.example.barcode.add.AddItemViewModel
 import com.example.barcode.add.ScanStepScreen
 import com.example.barcode.add.DetailsStepScreen
 import com.example.barcode.add.DateStepScreen
+import com.example.barcode.auth.LoginScreen
 import com.example.barcode.ui.components.ItemsViewModel
+
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.barcode.auth.*
 
 private val LightColors = lightColorScheme(
     primary = AppPrimary,
@@ -62,6 +74,53 @@ class MainActivity : ComponentActivity() {
                         composable("dateOCR") { CameraDateOcrScreen() }
                         composable("barCodeOCR") { CameraOcrBarCodeScreen() }
                         composable("items") { ItemsScreen(navController) }
+
+                        composable("auth") {
+                            val appContext = LocalContext.current.applicationContext
+
+                            val session = remember { SessionManager(appContext) }
+                            val repo = remember { AuthRepository(ApiClient.authApi) }
+
+                            val authVm: AuthViewModel = viewModel(
+                                factory = object : ViewModelProvider.Factory {
+                                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                        if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
+                                            @Suppress("UNCHECKED_CAST")
+                                            return AuthViewModel(repo, session) as T
+                                        }
+                                        throw IllegalArgumentException("Unknown ViewModel: $modelClass")
+                                    }
+                                }
+                            )
+
+                            val state by authVm.uiState.collectAsState()
+                            LaunchedEffect(state.authenticated) {
+                                if (state.authenticated) {
+                                    navController.navigate("home") {
+                                        popUpTo("auth") { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            }
+
+                            LoginScreen(
+                                navController = navController,
+                                viewModel = authVm,
+                                onNavigateToRegister = { navController.navigate("register") },
+                                onTricheNavigateToHome = { navController.navigate("home") }
+                            )
+                        }
+
+                        composable("register") {
+                            Surface(modifier = Modifier.fillMaxSize()) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    androidx.compose.material3.Text("TODO: écran Register")
+                                    androidx.compose.material3.TextButton(onClick = { navController.popBackStack() }) {
+                                        androidx.compose.material3.Text("Retour")
+                                    }
+                                }
+                            }
+                        }
 
                         navigation(startDestination = "addItem/scan", route = "addItem") {
 

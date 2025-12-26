@@ -85,6 +85,11 @@ dependencies {
     // Bibliothèque de compat’ pour java.time sur API < 26
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
+    // RetroFit pour appel API Auth
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.5.0")
+
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

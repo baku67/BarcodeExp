@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -25,10 +26,14 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.delay
 import com.example.barcode.R
+import com.example.barcode.auth.SessionManager
+import kotlinx.coroutines.flow.first
 
 
 @Composable
 fun GlobalLoaderScreen(nav: NavHostController) {
+
+    val appContext = LocalContext.current.applicationContext
 
     val gradient = remember {
         Brush.horizontalGradient(
@@ -41,6 +46,9 @@ fun GlobalLoaderScreen(nav: NavHostController) {
 
     // ⏳ Simule le chargement sans bloquer l’UI
     LaunchedEffect(Unit) {
+
+        val session = SessionManager(appContext)
+
         // TODO: remplace ce delay par tes vrais chargements (préfetch, DB, etc.)
         delay(3000)
         // exemple : pré-initialiser MLKit, charger prefs, réhydrater cache, ping API…
@@ -48,9 +56,17 @@ fun GlobalLoaderScreen(nav: NavHostController) {
         // repository.prefetch()
         // database.warmup()
 
-        nav.navigate("home") {
-            popUpTo("splash") { inclusive = true } // retire l’écran de la back stack
+        val token = session.token.first() // String? :contentReference[oaicite:2]{index=2}
+        val target = if (!token.isNullOrBlank()) "home" else "auth"
+
+        nav.navigate(target) {
+            popUpTo("splash") { inclusive = true }
+            launchSingleTop = true
         }
+
+        // nav.navigate("home") {
+        //     popUpTo("splash") { inclusive = true } // retire l’écran de la back stack
+        // }
     }
 
     // UI
