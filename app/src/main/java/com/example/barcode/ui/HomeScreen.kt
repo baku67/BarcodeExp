@@ -17,8 +17,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -26,10 +30,15 @@ import androidx.navigation.NavHostController
 import com.example.barcode.ui.components.HeaderBar
 import com.example.barcode.ui.components.NavBar
 import com.example.barcode.ui.components.NavBarItem
+import kotlinx.coroutines.launch
 
 // Écran d'accueil avec un bouton pour accéder à l'OCR
 @Composable
 fun HomeScreen(navController: NavHostController) {
+
+    val scope = rememberCoroutineScope()
+    val snack = remember { SnackbarHostState() }
+
     Scaffold(
         topBar = { HeaderBar(title = "FrigoZen", null, Icons.Filled.Home) },
         bottomBar = {
@@ -42,7 +51,8 @@ fun HomeScreen(navController: NavHostController) {
                     // NavBarItem("Ajouter", Icons.Filled.AddCircle, "addItem/scan", matchPrefix = true)
                 )
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snack) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -92,9 +102,9 @@ fun HomeScreen(navController: NavHostController) {
                             Spacer(Modifier.height(10.dp))
                             Button(
                                 onClick = {
-                                    // scope.launch {
-                                    //    snack.showSnackbar("Fonction “Proposer une recette” : à venir 🙂")
-                                    // }
+                                    scope.launch {
+                                        snack.showSnackbar("Fonction “Proposer une recette” : à venir 🙂")
+                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
