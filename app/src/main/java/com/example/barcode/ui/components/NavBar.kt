@@ -23,7 +23,8 @@ data class NavBarItem(
 fun NavBar(
     navController: NavHostController,
     items: List<NavBarItem>,
-    containerColor: Color = MaterialTheme.colorScheme.primary
+    containerColor: Color = MaterialTheme.colorScheme.primary,
+    onItemClick: ((NavBarItem) -> Unit)? = null // ✅ si fourni, on ne navigate pas ici
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -42,12 +43,19 @@ fun NavBar(
             NavigationBarItem(
                 selected = selected,
                 onClick = {
-                    if (!selected) {
-                        navController.navigate(item.route) {
-                            launchSingleTop = true
-                            restoreState = true
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        }
+                    if (selected) return@NavigationBarItem
+
+                    // ✅ Mode "pager": AppScaffoldWithBars gère le click
+                    if (onItemClick != null) {
+                        onItemClick(item)
+                        return@NavigationBarItem
+                    }
+
+                    // ✅ Mode normal: NavController navigate
+                    navController.navigate(item.route) {
+                        launchSingleTop = true
+                        restoreState = true
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
                     }
                 },
                 icon = { Icon(imageVector = item.icon, contentDescription = item.label) },

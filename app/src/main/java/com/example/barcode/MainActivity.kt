@@ -13,11 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.barcode.ui.HomeScreen
+import com.example.barcode.ui.HomeContent
 import com.example.barcode.ui.CameraDateOcrScreen
 import com.example.barcode.ui.CameraOcrBarCodeScreen
 import com.example.barcode.ui.GlobalLoaderScreen
-import com.example.barcode.ui.ItemsScreen
+import com.example.barcode.ui.ItemsContent
 import com.example.barcode.ui.theme.AppPrimary
 import androidx.navigation.compose.navigation
 import androidx.compose.runtime.getValue
@@ -41,7 +41,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.barcode.auth.*
-import com.example.barcode.ui.SettingsScreen
+import com.example.barcode.ui.MainTabsScreen
+import com.example.barcode.ui.SettingsContent
 
 private val LightColors = lightColorScheme(
     primary = AppPrimary,
@@ -71,11 +72,9 @@ class MainActivity : ComponentActivity() {
                     // Définition des routes
                     NavHost(navController, startDestination = "splash") {
                         composable("splash") { GlobalLoaderScreen(navController) }
-                        composable("home") { HomeScreen(navController) }
                         composable("dateOCR") { CameraDateOcrScreen() }
                         composable("barCodeOCR") { CameraOcrBarCodeScreen() }
-                        composable("items") { ItemsScreen(navController) }
-                        composable("settings") { SettingsScreen(navController) }
+                        composable("tabs") { MainTabsScreen(navController) } // contient la navigation au Swipe (Home/Items/Settings)
 
                         navigation(startDestination = "auth/login", route = "auth") {
 
@@ -105,7 +104,7 @@ class MainActivity : ComponentActivity() {
                                 val state by authVm.uiState.collectAsState()
                                 LaunchedEffect(state.authenticated) {
                                     if (state.authenticated) {
-                                        navController.navigate("home") {
+                                        navController.navigate("tabs") {
                                             popUpTo("auth") { inclusive = true } // ✅ enlève login/register du backstack
                                             launchSingleTop = true
                                         }
@@ -142,7 +141,7 @@ class MainActivity : ComponentActivity() {
                                 val state by authVm.uiState.collectAsState()
                                 LaunchedEffect(state.authenticated) {
                                     if (state.authenticated) {
-                                        navController.navigate("home") {
+                                        navController.navigate("tabs") {
                                             popUpTo("auth") { inclusive = true }
                                             launchSingleTop = true
                                         }
@@ -200,7 +199,7 @@ class MainActivity : ComponentActivity() {
                                 val draft by addVm.draft.collectAsState()
 
                                 // ✅ partage la même instance que ItemsScreen via l’entrée "home"
-                                val homeEntry = remember(backStackEntry) { navController.getBackStackEntry("home") }
+                                val homeEntry = remember(backStackEntry) { navController.getBackStackEntry("tabs") }
                                 val itemsVm: ItemsViewModel = viewModel(homeEntry)
 
                                 DetailsStepScreen(
@@ -219,7 +218,7 @@ class MainActivity : ComponentActivity() {
                                         )
 
                                         addVm.reset()
-                                        navController.popBackStack("home", false)
+                                        navController.popBackStack("tabs", false)
                                     },
                                     onBack = { navController.popBackStack() }
                                 )

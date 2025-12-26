@@ -61,8 +61,8 @@ fun GlobalLoaderScreen(nav: NavHostController) {
         val token = session.token.first() // String? :contentReference[oaicite:2]{index=2}
 
         val target = when (mode) {
-            AppMode.LOCAL -> "home"
-            AppMode.AUTH -> if (!token.isNullOrBlank()) "home" else "auth/login"
+            AppMode.LOCAL -> "tabs"
+            AppMode.AUTH -> if (!token.isNullOrBlank()) "tabs" else "auth/login"
         }
 
         nav.navigate(target) {

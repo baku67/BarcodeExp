@@ -52,7 +52,7 @@ fun HeaderBar(
                 subtitle?.let {
                     // Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "[$subtitle]",
+                        text = "- $subtitle",
                         fontSize = 14.sp,
                         color = Color.White.copy(alpha = .85f),
                         modifier = Modifier.absoluteOffset(x = 15.dp, y = -7.dp)
