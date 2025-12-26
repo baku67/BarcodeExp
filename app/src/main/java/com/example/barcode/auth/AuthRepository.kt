@@ -2,12 +2,17 @@ package com.example.barcode.auth
 
 class AuthRepository(private val api: AuthApi) {
     suspend fun login(email: String, password: String): Result<LoginResponse> {
-        val response = api.login(LoginRequest(email, password))
-        return if (response.isSuccessful) {
-            response.body()?.let { Result.success(it) }
-                ?: Result.failure(Exception("Réponse vide"))
-        } else {
-            Result.failure(Exception(response.message()))
+        return try {
+            val response = api.login(LoginRequest(email, password))
+
+            if (response.isSuccessful) {
+                response.body()?.let { Result.success(it) }
+                    ?: Result.failure(Exception("Réponse vide"))
+            } else {
+                Result.failure(Exception("HTTP ${response.code()} - ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e) // <-- empêche le crash, et tu affiches e.message dans l'UI
         }
     }
 
