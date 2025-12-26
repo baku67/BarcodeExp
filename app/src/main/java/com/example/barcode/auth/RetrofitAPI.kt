@@ -5,7 +5,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
-    private const val BASE_URL = "https://ton-domaine.tld/" // doit finir par /
+    // private const val BASE_URL = "https://ton-domaine.tld/" // doit finir par /
+    private const val BASE_URL = "http://127.0.0.1:8080/" // doit finir par /
 
     private val okHttp = OkHttpClient.Builder()
         .build()
