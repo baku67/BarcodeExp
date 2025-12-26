@@ -75,50 +75,84 @@ class MainActivity : ComponentActivity() {
                         composable("barCodeOCR") { CameraOcrBarCodeScreen() }
                         composable("items") { ItemsScreen(navController) }
 
-                        composable("auth") {
-                            val appContext = LocalContext.current.applicationContext
+                        navigation(startDestination = "auth/login", route = "auth") {
 
-                            val session = remember { SessionManager(appContext) }
-                            val repo = remember { AuthRepository(ApiClient.authApi) }
+                            composable("auth/login") { backStackEntry ->
+                                val appContext = LocalContext.current.applicationContext
 
-                            val authVm: AuthViewModel = viewModel(
-                                factory = object : ViewModelProvider.Factory {
-                                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                                        if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
-                                            @Suppress("UNCHECKED_CAST")
-                                            return AuthViewModel(repo, session) as T
+                                // ✅ même owner pour login + register
+                                val authGraphEntry = remember(backStackEntry) { navController.getBackStackEntry("auth") }
+
+                                // ✅ objets partagés (liés au graph auth)
+                                val session = remember(authGraphEntry) { SessionManager(appContext) }
+                                val repo = remember(authGraphEntry) { AuthRepository(ApiClient.authApi) }
+
+                                val authVm: AuthViewModel = viewModel(
+                                    authGraphEntry,
+                                    factory = object : ViewModelProvider.Factory {
+                                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                            if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
+                                                @Suppress("UNCHECKED_CAST")
+                                                return AuthViewModel(repo, session) as T
+                                            }
+                                            throw IllegalArgumentException("Unknown ViewModel: $modelClass")
                                         }
-                                        throw IllegalArgumentException("Unknown ViewModel: $modelClass")
                                     }
-                                }
-                            )
+                                )
 
-                            val state by authVm.uiState.collectAsState()
-                            LaunchedEffect(state.authenticated) {
-                                if (state.authenticated) {
-                                    navController.navigate("home") {
-                                        popUpTo("auth") { inclusive = true }
-                                        launchSingleTop = true
+                                val state by authVm.uiState.collectAsState()
+                                LaunchedEffect(state.authenticated) {
+                                    if (state.authenticated) {
+                                        navController.navigate("home") {
+                                            popUpTo("auth") { inclusive = true } // ✅ enlève login/register du backstack
+                                            launchSingleTop = true
+                                        }
                                     }
                                 }
+
+                                LoginScreen(
+                                    navController = navController,
+                                    viewModel = authVm,
+                                    onNavigateToRegister = { navController.navigate("auth/register") },
+                                    onTricheNavigateToHome = { navController.navigate("home") }
+                                )
                             }
 
-                            LoginScreen(
-                                navController = navController,
-                                viewModel = authVm,
-                                onNavigateToRegister = { navController.navigate("register") },
-                                onTricheNavigateToHome = { navController.navigate("home") }
-                            )
-                        }
+                            composable("auth/register") { backStackEntry ->
+                                val appContext = LocalContext.current.applicationContext
+                                val authGraphEntry = remember(backStackEntry) { navController.getBackStackEntry("auth") }
 
-                        composable("register") {
-                            Surface(modifier = Modifier.fillMaxSize()) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    androidx.compose.material3.Text("TODO: écran Register")
-                                    androidx.compose.material3.TextButton(onClick = { navController.popBackStack() }) {
-                                        androidx.compose.material3.Text("Retour")
+                                val session = remember(authGraphEntry) { SessionManager(appContext) }
+                                val repo = remember(authGraphEntry) { AuthRepository(ApiClient.authApi) }
+
+                                val authVm: AuthViewModel = viewModel(
+                                    authGraphEntry,
+                                    factory = object : ViewModelProvider.Factory {
+                                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                            if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
+                                                @Suppress("UNCHECKED_CAST")
+                                                return AuthViewModel(repo, session) as T
+                                            }
+                                            throw IllegalArgumentException("Unknown ViewModel: $modelClass")
+                                        }
+                                    }
+                                )
+
+                                val state by authVm.uiState.collectAsState()
+                                LaunchedEffect(state.authenticated) {
+                                    if (state.authenticated) {
+                                        navController.navigate("home") {
+                                            popUpTo("auth") { inclusive = true }
+                                            launchSingleTop = true
+                                        }
                                     }
                                 }
+
+                                RegisterScreen(
+                                    navController = navController,
+                                    viewModel = authVm,
+                                    onNavigateToLogin = { navController.popBackStack() }
+                                )
                             }
                         }
 

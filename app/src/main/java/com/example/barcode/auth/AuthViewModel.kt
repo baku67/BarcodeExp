@@ -25,4 +25,25 @@ class AuthViewModel(
                 }
         }
     }
+
+    fun onRegister(email: String, password: String, confirmPassword: String) {
+        // petit garde-fou front (évite un call inutile)
+        if (password != confirmPassword) {
+            uiState.value = uiState.value.copy(error = "Les mots de passe ne correspondent pas")
+            return
+        }
+
+        viewModelScope.launch {
+            uiState.value = uiState.value.copy(loading = true, error = null)
+
+            repo.register(email, password, confirmPassword)
+                .onSuccess { res ->
+                    session.saveToken(res.token)
+                    uiState.value = uiState.value.copy(authenticated = true, loading = false)
+                }
+                .onFailure { err ->
+                    uiState.value = uiState.value.copy(error = err.message ?: "Erreur", loading = false)
+                }
+        }
+    }
 }
