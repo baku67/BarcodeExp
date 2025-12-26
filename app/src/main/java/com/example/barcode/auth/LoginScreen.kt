@@ -15,7 +15,6 @@ fun LoginScreen(
     navController: NavHostController,
     viewModel: AuthViewModel,
     onNavigateToRegister: () -> Unit,
-    onTricheNavigateToHome: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -68,8 +67,8 @@ fun LoginScreen(
                 Text("Créer un compte")
             }
 
-            TextButton(onClick = onTricheNavigateToHome) {
-                Text("TRICHE home")
+            TextButton(onClick = { viewModel.onUseLocalMode() }) {
+                Text("Mode local")
             }
 
             state.error?.let {

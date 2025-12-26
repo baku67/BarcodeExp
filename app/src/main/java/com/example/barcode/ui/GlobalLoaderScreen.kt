@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.delay
 import com.example.barcode.R
+import com.example.barcode.auth.AppMode
 import com.example.barcode.auth.SessionManager
 import kotlinx.coroutines.flow.first
 
@@ -56,8 +57,13 @@ fun GlobalLoaderScreen(nav: NavHostController) {
         // repository.prefetch()
         // database.warmup()
 
+        val mode = session.appMode.first()
         val token = session.token.first() // String? :contentReference[oaicite:2]{index=2}
-        val target = if (!token.isNullOrBlank()) "home" else "auth"
+
+        val target = when (mode) {
+            AppMode.LOCAL -> "home"
+            AppMode.AUTH -> if (!token.isNullOrBlank()) "home" else "auth/login"
+        }
 
         nav.navigate(target) {
             popUpTo("splash") { inclusive = true }

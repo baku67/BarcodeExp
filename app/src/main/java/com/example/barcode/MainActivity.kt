@@ -116,7 +116,6 @@ class MainActivity : ComponentActivity() {
                                     navController = navController,
                                     viewModel = authVm,
                                     onNavigateToRegister = { navController.navigate("auth/register") },
-                                    onTricheNavigateToHome = { navController.navigate("home") }
                                 )
                             }
 

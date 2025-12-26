@@ -46,4 +46,13 @@ class AuthViewModel(
                 }
         }
     }
+
+
+    fun onUseLocalMode() {
+        viewModelScope.launch {
+            session.setAppMode(AppMode.LOCAL)
+            session.clear() // au cas où un ancien token traîne
+            uiState.value = uiState.value.copy(authenticated = true, loading = false, error = null)
+        }
+    }
 }
