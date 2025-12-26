@@ -41,6 +41,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.barcode.auth.*
+import com.example.barcode.ui.SettingsScreen
 
 private val LightColors = lightColorScheme(
     primary = AppPrimary,
@@ -74,6 +75,7 @@ class MainActivity : ComponentActivity() {
                         composable("dateOCR") { CameraDateOcrScreen() }
                         composable("barCodeOCR") { CameraOcrBarCodeScreen() }
                         composable("items") { ItemsScreen(navController) }
+                        composable("settings") { SettingsScreen(navController) }
 
                         navigation(startDestination = "auth/login", route = "auth") {
 

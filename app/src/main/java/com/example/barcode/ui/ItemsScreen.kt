@@ -9,6 +9,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +24,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
+import com.example.barcode.ui.components.HeaderBar
 import com.example.barcode.ui.components.ItemsViewModel
+import com.example.barcode.ui.components.NavBar
+import com.example.barcode.ui.components.NavBarItem
 import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -42,36 +48,56 @@ fun ItemsScreen(
         )
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Frigo", fontSize = 22.sp, color = primary, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(12.dp))
-
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(sorted, key = { it.id }) { it ->
-                ItemCard(
-                    name = it.name ?: "(sans nom)",
-                    brand = it.brand,
-                    expiry = it.expiryDate,
-                    imageUrl = it.imageUrl, // ⚠️ suppose que ton Item a bien imageUrl
-                    onDelete = { vm.deleteItem(it.id) }
+    Scaffold(
+        topBar = { HeaderBar(title = "FrigoZen", null, Icons.Filled.Home) },
+        bottomBar = {
+            NavBar(
+                navController = navController,
+                items = listOf(
+                    NavBarItem("Home", Icons.Filled.Home, "home"),
+                    NavBarItem("Items", Icons.Filled.List, "items"),
+                    NavBarItem("Settings", Icons.Filled.Settings, "settings"),
+                    // NavBarItem("Ajouter", Icons.Filled.AddCircle, "addItem/scan", matchPrefix = true)
                 )
-            }
-            item { Spacer(Modifier.height(4.dp)) }
+            )
         }
-
-        Spacer(Modifier.height(8.dp))
-        Button(
-            onClick = { navController.navigate("addItem") },
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
-            Icon(Icons.Filled.Add, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Ajouter un produit")
+            Text("Frigo", fontSize = 22.sp, color = primary, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(12.dp))
+
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(sorted, key = { it.id }) { it ->
+                    ItemCard(
+                        name = it.name ?: "(sans nom)",
+                        brand = it.brand,
+                        expiry = it.expiryDate,
+                        imageUrl = it.imageUrl, // ⚠️ suppose que ton Item a bien imageUrl
+                        onDelete = { vm.deleteItem(it.id) }
+                    )
+                }
+                item { Spacer(Modifier.height(4.dp)) }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { navController.navigate("addItem") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Ajouter un produit")
+            }
         }
     }
 }
