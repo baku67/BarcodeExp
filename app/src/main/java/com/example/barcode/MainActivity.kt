@@ -101,16 +101,6 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
 
-                                val state by authVm.uiState.collectAsState()
-                                LaunchedEffect(state.authenticated) {
-                                    if (state.authenticated) {
-                                        navController.navigate("tabs") {
-                                            popUpTo("auth") { inclusive = true } // ✅ enlève login/register du backstack
-                                            launchSingleTop = true
-                                        }
-                                    }
-                                }
-
                                 LoginScreen(
                                     navController = navController,
                                     viewModel = authVm,
@@ -137,16 +127,6 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 )
-
-                                val state by authVm.uiState.collectAsState()
-                                LaunchedEffect(state.authenticated) {
-                                    if (state.authenticated) {
-                                        navController.navigate("tabs") {
-                                            popUpTo("auth") { inclusive = true }
-                                            launchSingleTop = true
-                                        }
-                                    }
-                                }
 
                                 RegisterScreen(
                                     navController = navController,

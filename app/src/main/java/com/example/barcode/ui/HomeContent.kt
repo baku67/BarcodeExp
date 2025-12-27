@@ -65,6 +65,19 @@ fun HomeContent(navController: NavHostController, innerPadding: PaddingValues, s
                             "Nombre de produits en DLC: $dlcProductsCount",
                             style = MaterialTheme.typography.bodyLarge
                         )
+                        Text(
+                            "Recevoir des alertes (toggle)",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "Si toggle: Combien de jours avant (options)",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "Si pas autorisation: need autorisation notifs",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
 
