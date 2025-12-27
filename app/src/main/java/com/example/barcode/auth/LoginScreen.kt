@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.SyncDisabled
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -40,7 +41,8 @@ fun LoginScreen(
                 onValueChange = { email = it },
                 label = { Text("Email") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.loading
             )
 
             Spacer(Modifier.height(12.dp))
@@ -51,35 +53,44 @@ fun LoginScreen(
                 label = { Text("Mot de passe") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.loading
             )
 
             Spacer(Modifier.height(16.dp))
 
             if (state.loading) {
-                CircularProgressIndicator()
+
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    CircularProgressIndicator()
+                }
+
             } else {
+
                 Button(
                     onClick = { viewModel.onLogin(email, password) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Se connecter")
                 }
-            }
 
-            TextButton(onClick = onNavigateToRegister) {
-                Text("Créer un compte")
-            }
+                TextButton(onClick = onNavigateToRegister) {
+                    Text("Créer un compte")
+                }
 
-            Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(12.dp))
 
-            OutlinedButton(
-                onClick = { viewModel.onUseLocalMode() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Filled.SyncDisabled, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Mode local")
+                OutlinedButton(
+                    onClick = { viewModel.onUseLocalMode() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.SyncDisabled, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Mode local")
+                }
             }
 
             state.error?.let {

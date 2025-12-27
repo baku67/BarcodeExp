@@ -36,7 +36,8 @@ fun RegisterScreen(
                 onValueChange = { email = it },
                 label = { Text("Email") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.loading
             )
 
             Spacer(Modifier.height(12.dp))
@@ -47,7 +48,8 @@ fun RegisterScreen(
                 label = { Text("Mot de passe") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.loading
             )
 
             Spacer(Modifier.height(12.dp))
@@ -58,24 +60,33 @@ fun RegisterScreen(
                 label = { Text("Confirmer le mot de passe") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.loading
             )
 
             Spacer(Modifier.height(16.dp))
 
             if (state.loading) {
-                CircularProgressIndicator()
+
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    CircularProgressIndicator()
+                }
+
             } else {
+
                 Button(
                     onClick = { viewModel.onRegister(email, password, confirmPassword) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Créer le compte")
                 }
-            }
 
-            TextButton(onClick = onNavigateToLogin) {
-                Text("J’ai déjà un compte")
+                TextButton(onClick = onNavigateToLogin) {
+                    Text("J’ai déjà un compte")
+                }
             }
 
             state.error?.let {
