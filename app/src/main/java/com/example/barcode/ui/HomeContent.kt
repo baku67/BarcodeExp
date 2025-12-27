@@ -86,6 +86,10 @@ fun HomeContent(navController: NavHostController, innerPadding: PaddingValues, s
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Recettes", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(10.dp))
+                        Text("(publicité)", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(10.dp))
+                        Text("(pré-prompt) définir alergies, gouts etc...", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(10.dp))
                         Button(
                             onClick = {
                                 scope.launch {
