@@ -15,6 +15,7 @@ import com.example.barcode.ui.components.HeaderBar
 import com.example.barcode.ui.components.NavBar
 import com.example.barcode.ui.components.NavBarItem
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.Color
 import com.example.barcode.ui.components.SnackbarBus
 
 @Composable
@@ -45,6 +46,7 @@ fun AppContentWithBars(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             HeaderBar(
                 title = title,

@@ -2,7 +2,6 @@ package com.example.barcode.ui.components
 
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,8 +22,8 @@ data class NavBarItem(
 fun NavBar(
     navController: NavHostController,
     items: List<NavBarItem>,
-    containerColor: Color = MaterialTheme.colorScheme.primary,
-    onItemClick: ((NavBarItem) -> Unit)? = null // ✅ si fourni, on ne navigate pas ici
+    containerColor: Color = Color.Transparent, // ou "MaterialTheme.colorScheme.primary"
+    onItemClick: ((NavBarItem) -> Unit)? = null // si fourni, on ne navigate pas ici
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route

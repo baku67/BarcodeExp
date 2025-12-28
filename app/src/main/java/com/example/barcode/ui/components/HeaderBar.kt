@@ -14,17 +14,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import com.example.barcode.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeaderBar(
-    title: String,                         // titre principal obligatoire
-    subtitle: String? = null,              // sous-titre facultatif
+    title: String,
+    subtitle: String? = null,
     icon: ImageVector? = Icons.Filled.Home, // icône de navigation par défaut
-    onIconClick: () -> Unit = {}           // action au clic
+    onIconClick: () -> Unit = {}            // action au clic
 ) {
-    val primary = MaterialTheme.colorScheme.primary
 
     TopAppBar(
         navigationIcon = {
@@ -32,7 +32,7 @@ fun HeaderBar(
                 Image(
                     painter = painterResource(id = R.drawable.frigozen_icon),
                     contentDescription = "Logo",
-                    modifier = Modifier.size(35.dp),     // ajuste la taille ici
+                    modifier = Modifier.size(35.dp),
                     contentScale = ContentScale.Fit
                 )
             }
@@ -44,24 +44,23 @@ fun HeaderBar(
             ) {
                 Text(
                     text = title,
-                    fontSize = 20.sp,
-                    color = Color.White,
-                    modifier = Modifier.absoluteOffset(x = 0.dp, y = -8.dp)
+                    fontSize = 25.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.absoluteOffset(x = 0.dp, y = -4.dp)
                 )
-                // Sous-titre plus petit si fourni
                 subtitle?.let {
-                    // Spacer(Modifier.width(4.dp))
                     Text(
                         text = "- $subtitle",
                         fontSize = 14.sp,
                         color = Color.White.copy(alpha = .85f),
-                        modifier = Modifier.absoluteOffset(x = 15.dp, y = -7.dp)
+                        modifier = Modifier.absoluteOffset(x = 15.dp, y = -2.dp)
                     )
                 }
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = primary,   // vert « 600 » de la palette Material
+            containerColor = Color.Transparent,   // ou "MaterialTheme.colorScheme.primary"
             titleContentColor = Color.White,
             navigationIconContentColor = Color.White
         ),

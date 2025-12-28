@@ -24,6 +24,7 @@ import androidx.navigation.compose.navigation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.barcode.add.AddItemViewModel
 import com.example.barcode.add.ScanStepScreen
@@ -32,6 +33,7 @@ import com.example.barcode.add.DateStepScreen
 import com.example.barcode.auth.LoginScreen
 import com.example.barcode.ui.components.ItemsViewModel
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.barcode.auth.*
@@ -39,6 +41,7 @@ import com.example.barcode.ui.MainTabsScreen
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import com.example.barcode.ui.components.SnackbarBus
+import com.example.barcode.ui.theme.AppBackground
 
 private val LightColors = lightColorScheme(
     primary = AppPrimary,
@@ -72,183 +75,190 @@ class MainActivity : ComponentActivity() {
 
         // Configuration de l'UI Compose avec Navigation
         setContent {
-            MaterialTheme(
-                colorScheme = LightColors,
-            ) {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    val navController = rememberNavController()
 
-                    // Si ouverture app suite a click lien email verification (page dédiée ou ici juste snack):
-                    LaunchedEffect(Unit) {
-                        DeepLinkBus.links.collect { uri ->
-                            if (uri.scheme == "frigozen" && uri.host == "email-verified") {
-                                val userId = uri.getQueryParameter("id") // optionnel
-
-                                // ✅ 1) UX: naviguer vers l'écran principal (ou settings)
-                                navController.navigate("tabs") {
-                                    launchSingleTop = true
-                                }
-
-                                // ✅ 2) UX: afficher un message (todo: centraliser le Scaffold SnackBar ici ?)
-                                SnackbarBus.show("Email vérifié ✅")
-
-                                // ✅ 3) (optionnel) rafraîchir /me pour récupérer isVerified=true
-                                // scope.launch { repo.me(token)... }
-                            }
-                        }
-                    }
-
-
-                    // Définition des routes
-                    NavHost(
-                        navController,
-                        startDestination = "splash",
+            AppBackground {
+                MaterialTheme(
+                    colorScheme = LightColors,
+                ) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = Color.Transparent,
+                        tonalElevation = 0.dp
                     ) {
-                        composable("splash") { GlobalLoaderScreen(navController) }
-                        composable("dateOCR") { CameraDateOcrScreen() }
-                        composable("barCodeOCR") { CameraOcrBarCodeScreen() }
-                        composable("tabs") { MainTabsScreen(navController) } // contient la navigation au Swipe (Home/Items/Settings)
+                        val navController = rememberNavController()
 
-                        navigation(startDestination = "auth/login", route = "auth") {
+                        // Si ouverture app suite a click lien email verification (page dédiée ou ici juste snack):
+                        LaunchedEffect(Unit) {
+                            DeepLinkBus.links.collect { uri ->
+                                if (uri.scheme == "frigozen" && uri.host == "email-verified") {
+                                    val userId = uri.getQueryParameter("id") // optionnel
 
-                            composable("auth/login") { backStackEntry ->
-                                val appContext = LocalContext.current.applicationContext
-
-                                // ✅ même owner pour login + register
-                                val authGraphEntry =
-                                    remember(backStackEntry) { navController.getBackStackEntry("auth") }
-
-                                // ✅ objets partagés (liés au graph auth)
-                                val session =
-                                    remember(authGraphEntry) { SessionManager(appContext) }
-                                val repo =
-                                    remember(authGraphEntry) { AuthRepository(ApiClient.authApi) }
-
-                                val authVm: AuthViewModel = viewModel(
-                                    authGraphEntry,
-                                    factory = object : ViewModelProvider.Factory {
-                                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                                            if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
-                                                @Suppress("UNCHECKED_CAST")
-                                                return AuthViewModel(repo, session) as T
-                                            }
-                                            throw IllegalArgumentException("Unknown ViewModel: $modelClass")
-                                        }
+                                    // ✅ 1) UX: naviguer vers l'écran principal (ou settings)
+                                    navController.navigate("tabs") {
+                                        launchSingleTop = true
                                     }
-                                )
 
-                                LoginScreen(
-                                    navController = navController,
-                                    viewModel = authVm,
-                                    onNavigateToRegister = { navController.navigate("auth/register") },
-                                )
-                            }
+                                    // ✅ 2) UX: afficher un message (todo: centraliser le Scaffold SnackBar ici ?)
+                                    SnackbarBus.show("Email vérifié ✅")
 
-                            composable("auth/register") { backStackEntry ->
-                                val appContext = LocalContext.current.applicationContext
-                                val authGraphEntry =
-                                    remember(backStackEntry) { navController.getBackStackEntry("auth") }
-
-                                val session =
-                                    remember(authGraphEntry) { SessionManager(appContext) }
-                                val repo =
-                                    remember(authGraphEntry) { AuthRepository(ApiClient.authApi) }
-
-                                val authVm: AuthViewModel = viewModel(
-                                    authGraphEntry,
-                                    factory = object : ViewModelProvider.Factory {
-                                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                                            if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
-                                                @Suppress("UNCHECKED_CAST")
-                                                return AuthViewModel(repo, session) as T
-                                            }
-                                            throw IllegalArgumentException("Unknown ViewModel: $modelClass")
-                                        }
-                                    }
-                                )
-
-                                RegisterScreen(
-                                    navController = navController,
-                                    viewModel = authVm,
-                                    onNavigateToLogin = { navController.popBackStack() }
-                                )
+                                    // ✅ 3) (optionnel) rafraîchir /me pour récupérer isVerified=true
+                                    // scope.launch { repo.me(token)... }
+                                }
                             }
                         }
 
-                        navigation(startDestination = "addItem/scan", route = "addItem") {
 
-                            composable("addItem/scan") { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry("addItem")
+                        // Définition des routes
+                        NavHost(
+                            navController,
+                            startDestination = "splash",
+                        ) {
+                            composable("splash") { GlobalLoaderScreen(navController) }
+                            composable("dateOCR") { CameraDateOcrScreen() }
+                            composable("barCodeOCR") { CameraOcrBarCodeScreen() }
+                            composable("tabs") { MainTabsScreen(navController) } // contient la navigation au Swipe (Home/Items/Settings)
+
+                            navigation(startDestination = "auth/login", route = "auth") {
+
+                                composable("auth/login") { backStackEntry ->
+                                    val appContext = LocalContext.current.applicationContext
+
+                                    // ✅ même owner pour login + register
+                                    val authGraphEntry =
+                                        remember(backStackEntry) { navController.getBackStackEntry("auth") }
+
+                                    // ✅ objets partagés (liés au graph auth)
+                                    val session =
+                                        remember(authGraphEntry) { SessionManager(appContext) }
+                                    val repo =
+                                        remember(authGraphEntry) { AuthRepository(ApiClient.authApi) }
+
+                                    val authVm: AuthViewModel = viewModel(
+                                        authGraphEntry,
+                                        factory = object : ViewModelProvider.Factory {
+                                            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                                if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
+                                                    @Suppress("UNCHECKED_CAST")
+                                                    return AuthViewModel(repo, session) as T
+                                                }
+                                                throw IllegalArgumentException("Unknown ViewModel: $modelClass")
+                                            }
+                                        }
+                                    )
+
+                                    LoginScreen(
+                                        navController = navController,
+                                        viewModel = authVm,
+                                        onNavigateToRegister = { navController.navigate("auth/register") },
+                                    )
                                 }
-                                val addVm: AddItemViewModel = viewModel(parentEntry)
 
-                                ScanStepScreen(
-                                    onValidated = { product, code ->
-                                        addVm.setBarcode(code)
-                                        addVm.setDetails(product.name, product.brand)
-                                        addVm.setImage(product.imageUrl)
-                                        navController.navigate("addItem/date")
-                                    },
-                                    onCancel = { navController.popBackStack() }
-                                )
+                                composable("auth/register") { backStackEntry ->
+                                    val appContext = LocalContext.current.applicationContext
+                                    val authGraphEntry =
+                                        remember(backStackEntry) { navController.getBackStackEntry("auth") }
+
+                                    val session =
+                                        remember(authGraphEntry) { SessionManager(appContext) }
+                                    val repo =
+                                        remember(authGraphEntry) { AuthRepository(ApiClient.authApi) }
+
+                                    val authVm: AuthViewModel = viewModel(
+                                        authGraphEntry,
+                                        factory = object : ViewModelProvider.Factory {
+                                            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                                if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
+                                                    @Suppress("UNCHECKED_CAST")
+                                                    return AuthViewModel(repo, session) as T
+                                                }
+                                                throw IllegalArgumentException("Unknown ViewModel: $modelClass")
+                                            }
+                                        }
+                                    )
+
+                                    RegisterScreen(
+                                        navController = navController,
+                                        viewModel = authVm,
+                                        onNavigateToLogin = { navController.popBackStack() }
+                                    )
+                                }
                             }
 
-                            // ⬇️ NOUVEL ÉCRAN DATE
-                            composable("addItem/date") { backStackEntry ->
-                                val parentEntry =
-                                    remember(backStackEntry) { navController.getBackStackEntry("addItem") }
-                                val addVm: AddItemViewModel = viewModel(parentEntry)
-                                val draft by addVm.draft.collectAsState()
+                            navigation(startDestination = "addItem/scan", route = "addItem") {
 
-                                DateStepScreen(
-                                    productName = draft.name,
-                                    productBrand = draft.brand,
-                                    productImageUrl = draft.imageUrl,
-                                    onValidated = { expiryMs ->
-                                        addVm.setExpiryDate(expiryMs)
-                                        navController.navigate("addItem/details")
-                                    },
-                                    onCancel = { navController.popBackStack() }
-                                )
-                            }
+                                composable("addItem/scan") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addItem")
+                                    }
+                                    val addVm: AddItemViewModel = viewModel(parentEntry)
 
-                            composable("addItem/details") { backStackEntry ->
-                                val parentEntry =
-                                    remember(backStackEntry) { navController.getBackStackEntry("addItem") }
-                                val addVm: AddItemViewModel = viewModel(parentEntry)
-                                val draft by addVm.draft.collectAsState()
+                                    ScanStepScreen(
+                                        onValidated = { product, code ->
+                                            addVm.setBarcode(code)
+                                            addVm.setDetails(product.name, product.brand)
+                                            addVm.setImage(product.imageUrl)
+                                            navController.navigate("addItem/date")
+                                        },
+                                        onCancel = { navController.popBackStack() }
+                                    )
+                                }
 
-                                // ✅ partage la même instance que ItemsScreen via l’entrée "home"
-                                val homeEntry =
-                                    remember(backStackEntry) { navController.getBackStackEntry("tabs") }
-                                val itemsVm: ItemsViewModel = viewModel(homeEntry)
+                                // ⬇️ NOUVEL ÉCRAN DATE
+                                composable("addItem/date") { backStackEntry ->
+                                    val parentEntry =
+                                        remember(backStackEntry) { navController.getBackStackEntry("addItem") }
+                                    val addVm: AddItemViewModel = viewModel(parentEntry)
+                                    val draft by addVm.draft.collectAsState()
 
-                                DetailsStepScreen(
-                                    draft = draft,
-                                    onConfirm = { name, brand, expiry ->
-                                        addVm.setDetails(name, brand)
-                                        addVm.setExpiryDate(expiry)
+                                    DateStepScreen(
+                                        productName = draft.name,
+                                        productBrand = draft.brand,
+                                        productImageUrl = draft.imageUrl,
+                                        onValidated = { expiryMs ->
+                                            addVm.setExpiryDate(expiryMs)
+                                            navController.navigate("addItem/details")
+                                        },
+                                        onCancel = { navController.popBackStack() }
+                                    )
+                                }
 
-                                        // ✅ commit direct
-                                        itemsVm.addItem(
-                                            name = (name ?: draft.name ?: "(sans nom)"),
-                                            brand = (brand ?: draft.brand ?: "(sans brand)"),
-                                            // ajoute expiry si ton ItemsViewModel le supporte
-                                            expiry = (expiry ?: draft.expiryDate),
-                                            imageUrl = draft.imageUrl
-                                        )
+                                composable("addItem/details") { backStackEntry ->
+                                    val parentEntry =
+                                        remember(backStackEntry) { navController.getBackStackEntry("addItem") }
+                                    val addVm: AddItemViewModel = viewModel(parentEntry)
+                                    val draft by addVm.draft.collectAsState()
 
-                                        addVm.reset()
-                                        navController.popBackStack("tabs", false)
-                                    },
-                                    onBack = { navController.popBackStack() }
-                                )
+                                    // ✅ partage la même instance que ItemsScreen via l’entrée "home"
+                                    val homeEntry =
+                                        remember(backStackEntry) { navController.getBackStackEntry("tabs") }
+                                    val itemsVm: ItemsViewModel = viewModel(homeEntry)
+
+                                    DetailsStepScreen(
+                                        draft = draft,
+                                        onConfirm = { name, brand, expiry ->
+                                            addVm.setDetails(name, brand)
+                                            addVm.setExpiryDate(expiry)
+
+                                            // ✅ commit direct
+                                            itemsVm.addItem(
+                                                name = (name ?: draft.name ?: "(sans nom)"),
+                                                brand = (brand ?: draft.brand ?: "(sans brand)"),
+                                                // ajoute expiry si ton ItemsViewModel le supporte
+                                                expiry = (expiry ?: draft.expiryDate),
+                                                imageUrl = draft.imageUrl
+                                            )
+
+                                            addVm.reset()
+                                            navController.popBackStack("tabs", false)
+                                        },
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
+                }
             }
         }
     }
