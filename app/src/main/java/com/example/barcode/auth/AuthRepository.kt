@@ -45,4 +45,14 @@ class AuthRepository(private val api: AuthApi) {
             Result.failure(e)
         }
     }
+
+    suspend fun deleteMe(token: String): Result<Unit> {
+        return try {
+            val response = api.deleteMe("Bearer $token")
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("HTTP ${response.code()} - ${response.message()}"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

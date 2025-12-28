@@ -18,6 +18,11 @@ import com.example.barcode.auth.AppMode
 import kotlinx.coroutines.launch
 import com.example.barcode.auth.ApiClient
 import com.example.barcode.auth.AuthRepository
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 
 @Composable
 fun SettingsContent(navController: NavHostController, innerPadding: PaddingValues, snackbarHostState: SnackbarHostState) {
@@ -40,6 +45,10 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
                 .onFailure { snackbarHostState.showSnackbar("Impossible de charger le profil : ${it.message ?: it}") }
         }
     }
+
+    // Suppression de compte
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var deleting by rememberSaveable { mutableStateOf(false) }
 
 
     Column(
@@ -72,7 +81,7 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
             }
         }
 
-        // Si User en cache on affiche ses infos
+        // Si MODE AUTH (User en cache) on affiche ses infos
         if (mode == AppMode.AUTH) {
             ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -80,23 +89,102 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
                     Spacer(Modifier.height(6.dp))
 
                     Text("Email : ${cachedEmail ?: "Chargement..."}", style = MaterialTheme.typography.bodyLarge)
+                    // Email vérifié
                     // Text("Id : ${cachedId ?: "Chargement..."}", style = MaterialTheme.typography.bodyMedium)
 
                     Spacer(Modifier.height(10.dp))
 
-                    OutlinedButton(
+                    // Déconnexion
+                    Button(
                         onClick = {
                             scope.launch {
-                                if (!token.isNullOrBlank()) {
-                                    repo.me(token)
-                                        .onSuccess { session.saveUser(it); snackbarHostState.showSnackbar("Profil mis à jour") }
-                                        .onFailure { snackbarHostState.showSnackbar("Erreur : ${it.message ?: it}") }
+                                session.logout()
+                                navController.navigate("auth/login") {
+                                    popUpTo(0)
+                                    launchSingleTop = true
                                 }
                             }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Rafraîchir le profil")
+                        Text("Se déconnecter")
+                    }
+
+                    // Suppression compte
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !deleting,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text(if (deleting) "Suppression..." else "Supprimer mon compte")
+                    }
+
+                    if (showDeleteDialog) {
+                        AlertDialog(
+                            onDismissRequest = { if (!deleting) showDeleteDialog = false },
+                            title = { Text("Supprimer le compte ?") },
+                            text = {
+                                Text("Cette action est définitive. Tes données cloud seront supprimées.")
+                            },
+                            confirmButton = {
+                                Button(
+                                    enabled = !deleting,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ),
+                                    onClick = {
+                                        scope.launch {
+                                            if (token.isNullOrBlank()) {
+                                                snackbarHostState.showSnackbar("Token manquant")
+                                                return@launch
+                                            }
+
+                                            deleting = true
+                                            repo.deleteMe(token)
+                                                .onSuccess {
+                                                    snackbarHostState.showSnackbar("Compte supprimé")
+                                                    session.logout()
+                                                    navController.navigate("auth/login") {
+                                                        popUpTo(0)
+                                                        launchSingleTop = true
+                                                    }
+                                                }
+                                                .onFailure {
+                                                    snackbarHostState.showSnackbar("Suppression impossible : ${it.message ?: it}")
+                                                }
+                                            deleting = false
+                                            showDeleteDialog = false
+                                        }
+                                    }
+                                ) {
+                                    if (deleting) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(18.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.onError
+                                            )
+                                            Spacer(Modifier.width(10.dp))
+                                            Text("Suppression…")
+                                        }
+                                    } else {
+                                        Text("Supprimer définitivement")
+                                    }
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(
+                                    enabled = !deleting,
+                                    onClick = { showDeleteDialog = false }
+                                ) { Text("Annuler") }
+                            }
+                        )
                     }
                 }
             }
@@ -130,22 +218,6 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
                     }
                 }
             }
-        }
-
-        // Déconnexion
-        Button(
-            onClick = {
-                scope.launch {
-                    session.logout()
-                    navController.navigate("auth/login") {
-                        popUpTo(0)
-                        launchSingleTop = true
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Se déconnecter")
         }
     }
 
