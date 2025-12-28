@@ -29,7 +29,6 @@ import java.time.temporal.ChronoUnit
 fun ItemsContent(
     navController: NavHostController,
     innerPadding: PaddingValues,
-    snackbarHostState: SnackbarHostState,
     vm: ItemsViewModel = viewModel()
 ) {
     val list by vm.items.collectAsState(initial = emptyList())

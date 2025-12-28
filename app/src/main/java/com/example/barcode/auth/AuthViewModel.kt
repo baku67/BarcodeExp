@@ -53,7 +53,7 @@ class AuthViewModel(
                 .onSuccess { res ->
                     // res.token vient de /auth/register
                     session.saveToken(res.token)
-                    session.saveUser(UserProfile(id = res.id, email = email))
+                    session.saveUser(UserProfile(id = res.id, email = email, isVerified = false))
                     session.setAppMode(AppMode.AUTH)
 
                     _events.emit(AuthEvent.GoHome)

@@ -44,9 +44,9 @@ fun MainTabsScreen(navController: NavHostController) {
         ) { page ->
 
             when (tabs[page]) {
-                "home" -> HomeContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues(), snackbarHostState )
-                "items" -> ItemsContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues(), snackbarHostState )
-                "settings" -> SettingsContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues(), snackbarHostState )
+                "home" -> HomeContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues())
+                "items" -> ItemsContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues())
+                "settings" -> SettingsContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues())
             }
         }
     }

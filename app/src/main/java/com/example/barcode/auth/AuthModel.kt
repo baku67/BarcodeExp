@@ -9,5 +9,6 @@ data class RegisterResponse(val id: String, val token: String)
 data class UserProfile(
     val id: String,
     val email: String,
-    val roles: List<String> = emptyList()
+    val roles: List<String> = emptyList(),
+    val isVerified: Boolean
 )

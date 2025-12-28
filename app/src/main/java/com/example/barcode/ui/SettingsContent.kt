@@ -23,9 +23,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import com.example.barcode.ui.components.SnackbarBus
 
 @Composable
-fun SettingsContent(navController: NavHostController, innerPadding: PaddingValues, snackbarHostState: SnackbarHostState) {
+fun SettingsContent(navController: NavHostController, innerPadding: PaddingValues) {
 
     val appContext = LocalContext.current.applicationContext
     val session = remember { SessionManager(appContext) }
@@ -37,18 +38,21 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
     val repo = remember { AuthRepository(ApiClient.authApi) }
     val token = session.token.collectAsState(initial = null).value
     val cachedEmail = session.userEmail.collectAsState(initial = null).value
+    val cachedIsVerified = session.userIsVerified.collectAsState(initial = null).value
     val cachedId = session.userId.collectAsState(initial = null).value
     LaunchedEffect(mode, token) {
         if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
             repo.me(token)
                 .onSuccess { session.saveUser(it) }
-                .onFailure { snackbarHostState.showSnackbar("Impossible de charger le profil : ${it.message ?: it}") }
+                .onFailure { SnackbarBus.show("Impossible de charger le profil : ${it.message ?: it}") }
         }
     }
 
     // Suppression de compte
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var deleting by rememberSaveable { mutableStateOf(false) }
+
+    var resending by rememberSaveable { mutableStateOf(false) }
 
 
     Column(
@@ -89,8 +93,64 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
                     Spacer(Modifier.height(6.dp))
 
                     Text("Email : ${cachedEmail ?: "Chargement..."}", style = MaterialTheme.typography.bodyLarge)
-                    // Email vérifié
-                    // Text("Id : ${cachedId ?: "Chargement..."}", style = MaterialTheme.typography.bodyMedium)
+
+                    val verifiedLabel = when (cachedIsVerified) {
+                        true -> "Oui ✅"
+                        false -> "Non ❌"
+                        null -> "Chargement..."
+                    }
+
+                    Text(
+                        "Email vérifié : $verifiedLabel",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    if (cachedIsVerified == false) {
+                        Spacer(Modifier.height(10.dp))
+
+                        Text(
+                            "Tu n’as pas encore confirmé ton email. Vérifie tes spams si besoin.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        OutlinedButton(
+                            enabled = !resending,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                scope.launch {
+                                    if (token.isNullOrBlank()) {
+                                        SnackbarBus.show("Token manquant")
+                                        return@launch
+                                    }
+
+                                    resending = true
+                                    repo.resendVerifyEmail(token)
+                                        .onSuccess {
+                                            SnackbarBus.show("Email de confirmation renvoyé ✅")
+                                        }
+                                        .onFailure {
+                                            SnackbarBus.show("Impossible de renvoyer : ${it.message ?: it}")
+                                        }
+                                    resending = false
+                                }
+                            }
+                        ) {
+                            if (resending) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(Modifier.width(10.dp))
+                                    Text("Envoi…")
+                                }
+                            } else {
+                                Text("Renvoyer l’email de confirmation")
+                            }
+                        }
+                    }
 
                     Spacer(Modifier.height(10.dp))
 
@@ -141,14 +201,14 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
                                     onClick = {
                                         scope.launch {
                                             if (token.isNullOrBlank()) {
-                                                snackbarHostState.showSnackbar("Token manquant")
+                                                SnackbarBus.show("Token manquant")
                                                 return@launch
                                             }
 
                                             deleting = true
                                             repo.deleteMe(token)
                                                 .onSuccess {
-                                                    snackbarHostState.showSnackbar("Compte supprimé")
+                                                    SnackbarBus.show("Compte supprimé")
                                                     session.logout()
                                                     navController.navigate("auth/login") {
                                                         popUpTo(0)
@@ -156,7 +216,7 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
                                                     }
                                                 }
                                                 .onFailure {
-                                                    snackbarHostState.showSnackbar("Suppression impossible : ${it.message ?: it}")
+                                                    SnackbarBus.show("Suppression impossible : ${it.message ?: it}")
                                                 }
                                             deleting = false
                                             showDeleteDialog = false
@@ -206,9 +266,7 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
 
                     OutlinedButton(
                         onClick = {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("À venir : création de compte + partage du frigo")
-                            }
+                            SnackbarBus.show("À venir : création de compte + partage du frigo")
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {

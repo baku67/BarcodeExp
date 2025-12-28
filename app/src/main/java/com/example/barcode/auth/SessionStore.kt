@@ -1,6 +1,7 @@
 package com.example.barcode.auth
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -18,6 +19,7 @@ enum class AppMode { LOCAL, AUTH }
 // Mise en cache de l'utilisateur en cours
 private val USER_ID_KEY = stringPreferencesKey("user_id")
 private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
+private val USER_IS_VERIFIED_KEY = booleanPreferencesKey("user_is_verified")
 
 class SessionManager(private val context: Context) {
 
@@ -32,6 +34,7 @@ class SessionManager(private val context: Context) {
 
     val userId: Flow<String?> = context.dataStore.data.map { it[USER_ID_KEY] }
     val userEmail: Flow<String?> = context.dataStore.data.map { it[USER_EMAIL_KEY] }
+    val userIsVerified: Flow<Boolean?> = context.dataStore.data.map { it[USER_IS_VERIFIED_KEY] }
 
     suspend fun setAppMode(mode: AppMode) {
         context.dataStore.edit { prefs -> prefs[APP_MODE_KEY] = mode.name }
@@ -45,13 +48,7 @@ class SessionManager(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[USER_ID_KEY] = profile.id
             prefs[USER_EMAIL_KEY] = profile.email
-        }
-    }
-
-    suspend fun clearUser() {
-        context.dataStore.edit { prefs ->
-            prefs.remove(USER_ID_KEY)
-            prefs.remove(USER_EMAIL_KEY)
+            prefs[USER_IS_VERIFIED_KEY] = profile.isVerified
         }
     }
 
@@ -63,6 +60,7 @@ class SessionManager(private val context: Context) {
             prefs.remove(TOKEN_KEY)
             prefs.remove(USER_ID_KEY)
             prefs.remove(USER_EMAIL_KEY)
+            prefs.remove(USER_IS_VERIFIED_KEY)
             // en général, tu repasses en AUTH pour forcer login
             prefs[APP_MODE_KEY] = AppMode.AUTH.name
         }

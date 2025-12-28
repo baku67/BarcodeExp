@@ -12,22 +12,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import kotlinx.coroutines.launch
+import com.example.barcode.ui.components.SnackbarBus
 
 // Écran d'accueil avec un bouton pour accéder à l'OCR
 @Composable
-fun HomeContent(navController: NavHostController, innerPadding: PaddingValues, snackbarHostState: SnackbarHostState) {
-
-    val scope = rememberCoroutineScope()
+fun HomeContent(navController: NavHostController, innerPadding: PaddingValues) {
 
     Column(
         modifier = Modifier
@@ -92,9 +87,7 @@ fun HomeContent(navController: NavHostController, innerPadding: PaddingValues, s
                         Spacer(Modifier.height(10.dp))
                         Button(
                             onClick = {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Fonction “Proposer une recette” : à venir 🙂")
-                                }
+                                SnackbarBus.show("Fonction “Proposer une recette” : à venir 🙂")
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {

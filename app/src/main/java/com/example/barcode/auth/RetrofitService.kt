@@ -19,4 +19,7 @@ interface AuthApi {
 
     @DELETE("me")
     suspend fun deleteMe(@Header("Authorization") token: String): Response<Unit>
+
+    @POST("auth/verify/resend")
+    suspend fun resendEmailVerification(@Header("Authorization") token: String): Response<Unit>
 }

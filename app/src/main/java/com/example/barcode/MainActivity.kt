@@ -9,9 +9,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.LaunchedEffect
@@ -41,7 +38,7 @@ import com.example.barcode.auth.*
 import com.example.barcode.ui.MainTabsScreen
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import androidx.compose.runtime.remember
+import com.example.barcode.ui.components.SnackbarBus
 
 private val LightColors = lightColorScheme(
     primary = AppPrimary,
@@ -80,7 +77,6 @@ class MainActivity : ComponentActivity() {
             ) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
-                    val snackbarHostState = remember { SnackbarHostState() }
 
                     // Si ouverture app suite a click lien email verification (page dédiée ou ici juste snack):
                     LaunchedEffect(Unit) {
@@ -94,7 +90,7 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 // ✅ 2) UX: afficher un message (todo: centraliser le Scaffold SnackBar ici ?)
-                                snackbarHostState.showSnackbar("Email vérifié ✅")
+                                SnackbarBus.show("Email vérifié ✅")
 
                                 // ✅ 3) (optionnel) rafraîchir /me pour récupérer isVerified=true
                                 // scope.launch { repo.me(token)... }

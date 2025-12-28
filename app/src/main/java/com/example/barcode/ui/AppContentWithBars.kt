@@ -10,11 +10,12 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavHostController
 import com.example.barcode.ui.components.HeaderBar
 import com.example.barcode.ui.components.NavBar
 import com.example.barcode.ui.components.NavBarItem
+import androidx.compose.runtime.LaunchedEffect
+import com.example.barcode.ui.components.SnackbarBus
 
 @Composable
 fun AppContentWithBars(
@@ -37,6 +38,11 @@ fun AppContentWithBars(
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        SnackbarBus.messages.collect { msg ->
+            snackbarHostState.showSnackbar(msg)
+        }
+    }
 
     Scaffold(
         topBar = {
