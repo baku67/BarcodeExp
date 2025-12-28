@@ -53,8 +53,11 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("androidx.activity:activity-compose:1.7.2")
     implementation("androidx.camera:camera-core:1.2.1")
+
+    implementation(platform("androidx.compose:compose-bom:2025.12.00"))
+    implementation("androidx.compose.material3:material3")
+
     // CameraX
     implementation("androidx.camera:camera-camera2:1.2.1")
     implementation("androidx.camera:camera-lifecycle:1.2.1")
@@ -67,8 +70,6 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.5.3")
     // AsyncImage
     implementation("io.coil-kt:coil-compose:2.0.0")
-    // Material
-    implementation("androidx.compose.material3:material3:1.2.1")
     // Lottie
     implementation("com.airbnb.android:lottie-compose:6.1.0")
     // DataStore

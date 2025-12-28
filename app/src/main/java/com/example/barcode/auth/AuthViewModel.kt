@@ -74,4 +74,27 @@ class AuthViewModel(
             uiState.value = uiState.value.copy(authenticated = true, loading = false, error = null)
         }
     }
+
+    private suspend fun refreshProfile(
+        token: String?,
+        repo: AuthRepository,
+        session: SessionManager,
+        onError: suspend (String) -> Unit,
+        setRefreshing: (Boolean) -> Unit
+    ) {
+        if (token.isNullOrBlank()) return
+        setRefreshing(true)
+
+        try {
+            repo.me(token)
+                .onSuccess { profile -> session.saveUser(profile) }
+                .onFailure { e ->
+                    if (e !is kotlinx.coroutines.CancellationException) {
+                        onError("Impossible de charger le profil : ${e.message ?: e}")
+                    }
+                }
+        } finally {
+            setRefreshing(false)
+        }
+    }
 }
