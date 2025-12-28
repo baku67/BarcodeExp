@@ -104,8 +104,6 @@ fun CameraOcrBarCodeScreen( onValidated: ((product: ProductInfo, barcode: String
     var boundCamera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
     var torchOn by remember { mutableStateOf(false) }
 
-    val autoLockEnabled by remember(ctx) { AppSettingsStore.autoLockEnabledFlow(ctx) }
-        .collectAsState(initial = true) // bouton pour toggle le verrou auto
     var scanLocked by remember { mutableStateOf(false) } // Verrou pour bloquer detection lorsqu'un produit a été trouvé
 
     previewView?.let { view ->
@@ -151,8 +149,8 @@ fun CameraOcrBarCodeScreen( onValidated: ((product: ProductInfo, barcode: String
                                                 productInfo = res.product
 
                                                 if (res.product != null) {
-                                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress) // petite vibration
-                                                    if (autoLockEnabled) scanLocked = true // verrouille après succès si autoLockEnabled (bouton)
+                                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    scanLocked = true // 🔒 toujours verrouiller après succès
                                                 }
                                             }
 
@@ -421,31 +419,6 @@ fun CameraOcrBarCodeScreen( onValidated: ((product: ProductInfo, barcode: String
                         }
                     }
                 }
-            }
-
-            /* ---------- Bouton auto-lock (état stored) -----------*/
-            FloatingActionButton(
-                onClick = {
-                    // Toggle persistant + si on désactive, on lève le verrou courant
-                    scope.launch {
-                        val newEnabled = !autoLockEnabled
-                        AppSettingsStore.setAutoLockEnabled(ctx, newEnabled)
-                        // 🔒 Si on active, on verrouille tout de suite (évite "une dernière détection")
-                        scanLocked = newEnabled
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)       // coin haut-droit DU BOX
-                    .padding(top = 8.dp, end = 12.dp) // sous la HeaderBar, collé à droite
-                    .zIndex(1f),                   // au-dessus des autres overlays si besoin
-                containerColor = primary,
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(
-                    imageVector = if (autoLockEnabled) Icons.Filled.Lock else Icons.Filled.LockOpen,
-                    contentDescription = if (autoLockEnabled) "Auto-lock activé" else "Auto-lock désactivé"
-                )
             }
         }
     }
