@@ -33,21 +33,21 @@ fun LoginScreen(
 
     // Proposition d'enregistrer le mdp si login réussi puis navigation /tabs
     val activity = LocalContext.current as? Activity
-    var offeredSave by rememberSaveable { mutableStateOf(false) }
     var loginFromPasswordManager by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(state.authenticated) {
-        if (state.authenticated && !offeredSave) {
-            offeredSave = true
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                AuthViewModel.AuthEvent.GoHome -> {
+                    // Si tu veux garder ton "savePassword" avant de quitter :
+                    if (!loginFromPasswordManager && activity != null) {
+                        savePassword(activity, email.trim(), password)
+                    }
 
-            // propose l'enregistrement AVANT de quitter l'écran
-            // ✅ Ne propose PAS de sauvegarde si ça vient du Password Manager
-            if (!loginFromPasswordManager && activity != null) {
-                savePassword(activity, email.trim(), password)
-            }
-
-            navController.navigate("tabs") {
-                popUpTo("auth") { inclusive = true }
-                launchSingleTop = true
+                    navController.navigate("tabs") {
+                        popUpTo("auth") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             }
         }
     }

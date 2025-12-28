@@ -22,6 +22,20 @@ fun RegisterScreen(
     var password by rememberSaveable { mutableStateOf("") }
     var confirmPassword by rememberSaveable { mutableStateOf("") }
 
+    // Auto-login après register
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                AuthViewModel.AuthEvent.GoHome -> {
+                    navController.navigate("tabs") {
+                        popUpTo("auth/register") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = { HeaderBar(title = "FrigoZen", null, null) }
     ) { innerPadding ->

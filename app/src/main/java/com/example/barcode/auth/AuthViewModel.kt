@@ -2,7 +2,9 @@ package com.example.barcode.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 class AuthViewModel(
@@ -18,13 +20,24 @@ class AuthViewModel(
             repo.login(email, password)
                 .onSuccess { res ->
                     session.saveToken(res.token)
-                    uiState.value = uiState.value.copy(authenticated = true, loading = false)
+                    repo.me(res.token).onSuccess { profile ->
+                        session.saveUser(profile)
+                    }
+                    session.setAppMode(AppMode.AUTH)
+                    _events.emit(AuthEvent.GoHome)
                 }
                 .onFailure { err ->
                     uiState.value = uiState.value.copy(error = err.message, loading = false)
                 }
         }
     }
+
+    // Pour auth auto après register
+    sealed interface AuthEvent {
+        data object GoHome : AuthEvent
+    }
+    private val _events = MutableSharedFlow<AuthEvent>()
+    val events = _events.asSharedFlow()
 
     fun onRegister(email: String, password: String, confirmPassword: String) {
         // petit garde-fou front (évite un call inutile)
@@ -38,12 +51,18 @@ class AuthViewModel(
 
             repo.register(email, password, confirmPassword)
                 .onSuccess { res ->
+                    // res.token vient de /auth/register
                     session.saveToken(res.token)
-                    uiState.value = uiState.value.copy(authenticated = true, loading = false)
+                    session.saveUser(UserProfile(id = res.id, email = email))
+                    session.setAppMode(AppMode.AUTH)
+
+                    _events.emit(AuthEvent.GoHome)
                 }
                 .onFailure { err ->
                     uiState.value = uiState.value.copy(error = err.message ?: "Erreur", loading = false)
                 }
+
+            uiState.value = uiState.value.copy(loading = false)
         }
     }
 
