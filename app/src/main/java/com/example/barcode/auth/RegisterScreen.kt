@@ -1,14 +1,23 @@
 package com.example.barcode.auth
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.barcode.ui.components.HeaderBar
+import com.example.barcode.R
 
 @Composable
 fun RegisterScreen(
@@ -37,75 +46,111 @@ fun RegisterScreen(
     }
 
     Scaffold(
-        topBar = { HeaderBar(title = "FrigoZen", null, null) }
+        containerColor = Color.Transparent
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .padding(16.dp)
-                .fillMaxSize()
-        ) {
-            TextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
-                singleLine = true,
+
+        AuthCenteredScreen(innerPadding) {
+
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !state.loading
-            )
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
 
-            Spacer(Modifier.height(12.dp))
-
-            TextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Mot de passe") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.loading
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            TextField(
-                value = confirmPassword,
-                onValueChange = { confirmPassword = it },
-                label = { Text("Confirmer le mot de passe") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.loading
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            if (state.loading) {
-
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .size(104.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    Image(
+                        painter = painterResource(id = R.drawable.frigozen_icon),
+                        contentDescription = "FrigoZen",
+                        modifier = Modifier.size(72.dp)
+                    )
                 }
 
-            } else {
+                Spacer(Modifier.height(14.dp))
 
-                Button(
-                    onClick = { viewModel.onRegister(email, password, confirmPassword) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Créer le compte")
-                }
+                Text(
+                    text = "FrigoZen",
+                    fontSize = 42.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
 
-                TextButton(onClick = onNavigateToLogin) {
-                    Text("J’ai déjà un compte")
-                }
-            }
+                Spacer(Modifier.height(6.dp))
 
-            state.error?.let {
+                Text(
+                    text = "Créer un compte",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(Modifier.height(15.dp))
+
+                TextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.loading
+                )
+
                 Spacer(Modifier.height(12.dp))
-                Text(it, color = MaterialTheme.colorScheme.error)
+
+                TextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Mot de passe") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.loading
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                TextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = { Text("Confirmer le mot de passe") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.loading
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                if (state.loading) {
+
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        CircularProgressIndicator()
+                    }
+
+                } else {
+
+                    Button(
+                        onClick = { viewModel.onRegister(email, password, confirmPassword) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Créer le compte")
+                    }
+
+                    TextButton(onClick = onNavigateToLogin) {
+                        Text("J’ai déjà un compte")
+                    }
+                }
+
+                state.error?.let {
+                    Spacer(Modifier.height(12.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }

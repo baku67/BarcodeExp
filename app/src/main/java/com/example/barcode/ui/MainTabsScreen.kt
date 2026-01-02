@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainTabsScreen(navController: NavHostController) {
 
-    val tabs = listOf("home", "items", "settings")
+    val tabs = listOf("home", "items", "listeCourses", "settings")
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
 
@@ -46,6 +46,7 @@ fun MainTabsScreen(navController: NavHostController) {
             when (tabs[page]) {
                 "home" -> HomeContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues())
                 "items" -> ItemsContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues())
+                "listeCourses" -> ListeCoursesContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues())
                 "settings" -> SettingsContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues())
             }
         }

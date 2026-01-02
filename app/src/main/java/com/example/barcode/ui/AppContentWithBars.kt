@@ -28,12 +28,14 @@ fun AppContentWithBars(
     val items = listOf(
         NavBarItem(label = "Home", icon = Icons.Filled.Home, route = "home"),
         NavBarItem(label = "Items", icon = Icons.Filled.List, route = "items"),
+        NavBarItem(label = "Courses", icon = Icons.Filled.List, route = "listeCourses"),
         NavBarItem(label = "Settings", icon = Icons.Filled.Settings, route = "settings")
     )
 
     val (title, subtitle) = when {
         selectedRoute.startsWith("home") -> "FrigoZen" to "Accueil"
         selectedRoute.startsWith("items") -> "FrigoZen" to "Produits"
+        selectedRoute.startsWith("listeCourses") -> "FrigoZen" to "Courses"
         selectedRoute.startsWith("settings") -> "FrigoZen" to "Réglages"
         else -> "FrigoZen" to null
     }

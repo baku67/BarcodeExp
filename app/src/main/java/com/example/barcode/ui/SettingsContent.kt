@@ -292,7 +292,11 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
 
                             OutlinedButton(
                                 onClick = {
-                                    SnackbarBus.show("À venir : création de compte + partage du frigo")
+                                    // SnackbarBus.show("À venir : création de compte + partage du frigo")
+
+                                    navController.navigate("auth/register") {
+                                        launchSingleTop = true
+                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {

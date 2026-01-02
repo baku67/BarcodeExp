@@ -116,7 +116,7 @@ class MainActivity : ComponentActivity() {
                             composable("splash") { GlobalLoaderScreen(navController) }
                             composable("dateOCR") { CameraDateOcrScreen() }
                             composable("barCodeOCR") { CameraOcrBarCodeScreen() }
-                            composable("tabs") { MainTabsScreen(navController) } // contient la navigation au Swipe (Home/Items/Settings)
+                            composable("tabs") { MainTabsScreen(navController) } // contient la navigation au Swipe (Home/Items/Liste/Settings)
 
                             navigation(startDestination = "auth/login", route = "auth") {
 
@@ -179,7 +179,15 @@ class MainActivity : ComponentActivity() {
                                     RegisterScreen(
                                         navController = navController,
                                         viewModel = authVm,
-                                        onNavigateToLogin = { navController.popBackStack() }
+                                        onNavigateToLogin = {
+                                            val popped = navController.popBackStack("auth/login", inclusive = false)
+                                            if (!popped) {
+                                                navController.navigate("auth/login") {
+                                                    popUpTo("auth/register") { inclusive = true }
+                                                    launchSingleTop = true
+                                                }
+                                            }
+                                        }
                                     )
                                 }
                             }

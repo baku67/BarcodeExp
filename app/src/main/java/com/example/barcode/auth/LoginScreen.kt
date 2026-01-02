@@ -11,13 +11,21 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.barcode.ui.components.HeaderBar
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import android.app.Activity
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import com.example.barcode.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,92 +103,114 @@ fun LoginScreen(
     }
 
     Scaffold(
-        topBar = { HeaderBar(title = "FrigoZen", null, null) }
+        containerColor = Color.Transparent
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .padding(16.dp)
-                .fillMaxSize()
-        ) {
 
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
+        AuthCenteredScreen(innerPadding) {
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
+                Box(
+                    modifier = Modifier
+                        .size(104.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.frigozen_icon),
+                        contentDescription = "FrigoZen",
+                        modifier = Modifier.size(72.dp)
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Text(
+                    text = "FrigoZen",
+                    fontSize = 42.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(Modifier.height(6.dp))
+
                 Text(
                     text = "Connexion",
-                    fontSize = 30.sp,
-                    modifier = Modifier.absoluteOffset(x = 0.dp, y = 0.dp)
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
-            }
 
-            Spacer(Modifier.height(15.dp))
+                Spacer(Modifier.height(15.dp))
 
-            TextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
-                singleLine = true,
-                interactionSource = emailIS,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.loading
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            TextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Mot de passe") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                interactionSource = passIS,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.loading
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            if (state.loading) {
-
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    CircularProgressIndicator()
-                }
-
-            } else {
-
-                Button(
-                    onClick = {
-                        loginFromPasswordManager = false
-                        viewModel.onLogin(email, password)
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Se connecter")
-                }
-
-                TextButton(onClick = onNavigateToRegister) {
-                    Text("Créer un compte")
-                }
+                TextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    singleLine = true,
+                    interactionSource = emailIS,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.loading,
+                )
 
                 Spacer(Modifier.height(12.dp))
 
-                OutlinedButton(
-                    onClick = { viewModel.onUseLocalMode() },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.SyncDisabled, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Mode local")
-                }
-            }
+                TextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Mot de passe") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    interactionSource = passIS,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.loading
+                )
 
-            state.error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(16.dp))
+
+                if (state.loading) {
+
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        CircularProgressIndicator()
+                    }
+
+                } else {
+
+                    Button(
+                        onClick = {
+                            loginFromPasswordManager = false
+                            viewModel.onLogin(email, password)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Se connecter")
+                    }
+
+                    TextButton(onClick = onNavigateToRegister) {
+                        Text("Créer un compte")
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedButton(
+                        onClick = { viewModel.onUseLocalMode() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.SyncDisabled, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Mode local")
+                    }
+                }
+
+                state.error?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }
