@@ -26,10 +26,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.barcode.add.AddItemViewModel
-import com.example.barcode.add.ScanStepScreen
-import com.example.barcode.add.DetailsStepScreen
-import com.example.barcode.add.DateStepScreen
+import com.example.barcode.addItem.AddItemViewModel
+import com.example.barcode.addItem.ScanStepScreen
+import com.example.barcode.addItem.DetailsStepScreen
+import com.example.barcode.addItem.DateStepScreen
 import com.example.barcode.auth.LoginScreen
 import com.example.barcode.ui.components.ItemsViewModel
 import androidx.compose.ui.platform.LocalContext

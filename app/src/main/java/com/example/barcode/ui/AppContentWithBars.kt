@@ -3,6 +3,7 @@ package com.example.barcode.ui
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Scaffold
@@ -27,7 +28,7 @@ fun AppContentWithBars(
 ) {
     val items = listOf(
         NavBarItem(label = "Home", icon = Icons.Filled.Home, route = "home"),
-        NavBarItem(label = "Items", icon = Icons.Filled.List, route = "items"),
+        NavBarItem(label = "Items", icon = Icons.Filled.Inbox, route = "items"),
         NavBarItem(label = "Courses", icon = Icons.Filled.List, route = "listeCourses"),
         NavBarItem(label = "Settings", icon = Icons.Filled.Settings, route = "settings")
     )

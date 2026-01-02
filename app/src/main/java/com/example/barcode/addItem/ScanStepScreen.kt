@@ -1,4 +1,4 @@
-package com.example.barcode.add
+package com.example.barcode.addItem
 
 import androidx.compose.runtime.Composable
 import com.example.barcode.model.ProductInfo

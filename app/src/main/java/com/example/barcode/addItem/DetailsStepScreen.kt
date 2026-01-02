@@ -1,4 +1,4 @@
-package com.example.barcode.add
+package com.example.barcode.addItem
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
