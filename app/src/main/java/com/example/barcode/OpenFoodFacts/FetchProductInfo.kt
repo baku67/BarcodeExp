@@ -1,7 +1,6 @@
-package com.example.barcode.util
+package com.example.barcode.OpenFoodFacts
 
 import android.util.Log
-import com.example.barcode.model.ProductInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject

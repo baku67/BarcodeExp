@@ -1,4 +1,4 @@
-package com.example.barcode.addItem
+package com.example.barcode.items
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel

@@ -1,4 +1,4 @@
-package com.example.barcode.stores
+package com.example.barcode.OpenFoodFacts
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit

@@ -27,6 +27,9 @@ import androidx.compose.ui.Alignment
 import com.example.barcode.ui.components.SnackbarBus
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import com.example.barcode.ui.components.ThemeToggleRow
+import com.example.barcode.user.UserPreferences
+import com.example.barcode.user.toUserPreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +50,10 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
     suspend fun refreshProfile() {
         if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
             repo.me(token)
-                .onSuccess { session.saveUser(it) }
+                .onSuccess { profile ->
+                    session.saveUser(profile)                            // id/email/isVerified...
+                    session.savePreferences(profile.toUserPreferences()) // theme/lang/layout
+                }
                 .onFailure { SnackbarBus.show("Impossible de charger le profil : ${it.message ?: it}") }
         }
     }
@@ -59,6 +65,8 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
     var deleting by rememberSaveable { mutableStateOf(false) }
 
     var resending by rememberSaveable { mutableStateOf(false) }
+
+    val prefs = session.preferences.collectAsState(initial = UserPreferences()).value
 
     LaunchedEffect(mode, token) {
         refreshProfile()
@@ -104,6 +112,19 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
+                    }
+                }
+            }
+
+            item {
+                ElevatedCard {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Apparence", style = MaterialTheme.typography.titleLarge)
+
+                        // ThemeToggleRow(
+                        //     prefs = prefs,
+                        //     onToggleDark = { checked -> authVm.onThemeToggled(checked) }
+                        // )
                     }
                 }
             }

@@ -1,5 +1,10 @@
 package com.example.barcode.auth
 
+import com.example.barcode.user.LoginRequest
+import com.example.barcode.user.LoginResponse
+import com.example.barcode.user.RegisterRequest
+import com.example.barcode.user.RegisterResponse
+import com.example.barcode.user.UserProfile
 import retrofit2.Response
 import kotlinx.coroutines.CancellationException
 
@@ -58,11 +63,21 @@ class AuthRepository(private val api: AuthApi) {
     }
 
     suspend fun resendVerifyEmail(token: String): Result<Unit> = try {
-        val res = api.resendEmailVerification("Bearer $token") // POST auth/verify/resend
+        val res = api.resendEmailVerification("Bearer $token")
         if (res.isSuccessful) Result.success(Unit)
         else Result.failure(Exception("HTTP ${res.code()} - ${res.message()}"))
     } catch (e: Exception) {
         Result.failure(e)
+    }
+
+    suspend fun patchPreferences(token: String, body: Map<String, String>): Result<Unit> {
+        return try {
+            val response = api.patchPreferences("Bearer $token", body)
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("HTTP ${response.code()} - ${response.message()}"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
 }

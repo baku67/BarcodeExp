@@ -2,9 +2,16 @@ package com.example.barcode.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.barcode.ui.components.SnackbarBus
+import com.example.barcode.user.ThemeMode
+import com.example.barcode.user.UserProfile
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class AuthViewModel(
@@ -75,26 +82,65 @@ class AuthViewModel(
         }
     }
 
-    private suspend fun refreshProfile(
-        token: String?,
-        repo: AuthRepository,
-        session: SessionManager,
-        onError: suspend (String) -> Unit,
-        setRefreshing: (Boolean) -> Unit
-    ) {
-        if (token.isNullOrBlank()) return
-        setRefreshing(true)
 
-        try {
-            repo.me(token)
-                .onSuccess { profile -> session.saveUser(profile) }
-                .onFailure { e ->
-                    if (e !is kotlinx.coroutines.CancellationException) {
-                        onError("Impossible de charger le profil : ${e.message ?: e}")
-                    }
+
+    fun onThemeToggled(isDark: Boolean) {
+        val newTheme = if (isDark) ThemeMode.DARK else ThemeMode.LIGHT
+
+        viewModelScope.launch {
+            // 1) Toujours appliquer localement (UI instant)
+            session.setTheme(newTheme)
+
+            // 2) Sync backend seulement en AUTH
+            val mode = session.appMode.first()
+            val token = session.token.first()
+
+            if (mode != AppMode.AUTH || token.isNullOrBlank()) return@launch
+
+            repo.patchPreferences(
+                token = token,
+                body = mapOf("theme" to if (isDark) "dark" else "light")
+            )
+            // Option UX : snackbar si échec
+            // .onFailure { ... }
+        }
+    }
+
+
+    private val patchFlow = MutableSharedFlow<Map<String, String>>(extraBufferCapacity = 1)
+
+    private suspend fun emitPrefsPatch(theme: ThemeMode? = null) {
+        val mode = session.appMode.first()
+        val token = session.token.first()
+
+        if (mode != AppMode.AUTH || token.isNullOrBlank()) return
+
+        val body = mutableMapOf<String, String>()
+        theme?.let {
+            body["theme"] = when (it) {
+                ThemeMode.DARK -> "dark"
+                ThemeMode.LIGHT -> "light"
+                ThemeMode.SYSTEM -> "system"
+            }
+        }
+
+        if (body.isNotEmpty()) patchFlow.tryEmit(body)
+    }
+
+    init {
+        viewModelScope.launch {
+            patchFlow
+                .debounce(500)              // ✅ évite spam
+                .distinctUntilChanged()     // ✅ évite PATCH identiques
+                .collectLatest { body ->    // ✅ annule l’ancien si nouveau arrive
+                    val token = session.token.first() ?: return@collectLatest
+                    repo.patchPreferences(token, body)
+                        .onFailure {
+                            // IMPORTANT : tu ne reverts pas l'UI.
+                            // Option : afficher un snackbar + marquer "pending sync"
+                            SnackbarBus.show("Sync préférences impossible : ${it.message ?: it}")
+                        }
                 }
-        } finally {
-            setRefreshing(false)
         }
     }
 }

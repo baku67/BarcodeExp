@@ -3,10 +3,18 @@ package com.example.barcode.auth
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.barcode.user.FrigoLayout
+import com.example.barcode.user.ThemeMode
+import com.example.barcode.user.UserPreferences
+import com.example.barcode.user.UserProfile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+
+// ----------------------------------------------------------
+// APP_MODE, TOKEN, User(id, mail, isVerified, preferences)
 
 // ✅ TOP-LEVEL: un seul DataStore par process
 private val Context.dataStore by preferencesDataStore(name = "session")
@@ -20,6 +28,13 @@ enum class AppMode { LOCAL, AUTH }
 private val USER_ID_KEY = stringPreferencesKey("user_id")
 private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
 private val USER_IS_VERIFIED_KEY = booleanPreferencesKey("user_is_verified")
+
+// Cache des préférences user
+private val PREF_THEME = stringPreferencesKey("pref_theme")               // "system|light|dark"
+private val PREF_LANG = stringPreferencesKey("pref_lang")                 // "fr"
+private val PREF_FRIGO_LAYOUT = stringPreferencesKey("pref_frigo_layout") // "list|design"
+private val PREF_UPDATED_AT = longPreferencesKey("pref_updated_at")       // epoch seconds
+
 
 class SessionManager(private val context: Context) {
 
@@ -63,6 +78,82 @@ class SessionManager(private val context: Context) {
             prefs.remove(USER_IS_VERIFIED_KEY)
             // en général, tu repasses en AUTH pour forcer login
             prefs[APP_MODE_KEY] = AppMode.AUTH.name
+        }
+    }
+
+    val preferences: Flow<UserPreferences> = context.dataStore.data.map { p ->
+        val theme = when (p[PREF_THEME]) {
+            "light" -> ThemeMode.LIGHT
+            "dark" -> ThemeMode.DARK
+            else -> ThemeMode.SYSTEM
+        }
+        val layout = when (p[PREF_FRIGO_LAYOUT]) {
+            "list" -> FrigoLayout.LIST
+            "design" -> FrigoLayout.DESIGN
+            else -> FrigoLayout.LIST
+        }
+        UserPreferences(
+            theme = theme,
+            lang = p[PREF_LANG] ?: "fr",
+            frigoLayout = layout,
+            updatedAtEpochSec = p[PREF_UPDATED_AT]
+        )
+    }
+
+    // Pour sync backend
+    suspend fun savePreferences(prefs: UserPreferences) {
+        context.dataStore.edit { p ->
+            p[PREF_THEME] = when (prefs.theme) {
+                ThemeMode.LIGHT -> "light"
+                ThemeMode.DARK -> "dark"
+                ThemeMode.SYSTEM -> "system"
+            }
+
+            p[PREF_LANG] = prefs.lang
+
+            p[PREF_FRIGO_LAYOUT] = when (prefs.frigoLayout) {
+                FrigoLayout.LIST -> "list"
+                FrigoLayout.DESIGN -> "design"
+            }
+
+            // si ça vient du serveur, garde la date serveur ; sinon maintenant
+            p[PREF_UPDATED_AT] = prefs.updatedAtEpochSec ?: (System.currentTimeMillis() / 1000)
+        }
+    }
+
+    suspend fun clearPreferences() {
+        context.dataStore.edit { p ->
+            p.remove(PREF_THEME)
+            p.remove(PREF_LANG)
+            p.remove(PREF_FRIGO_LAYOUT)
+            p.remove(PREF_UPDATED_AT)
+        }
+    }
+
+    // Au niveau UI
+    suspend fun setTheme(theme: ThemeMode) {
+        context.dataStore.edit {
+            it[PREF_THEME] = when (theme) {
+                ThemeMode.LIGHT -> "light"
+                ThemeMode.DARK -> "dark"
+                ThemeMode.SYSTEM -> "system"
+            }
+            it[PREF_UPDATED_AT] = System.currentTimeMillis() / 1000
+        }
+    }
+    suspend fun setLang(lang: String) {
+        context.dataStore.edit {
+            it[PREF_LANG] = lang
+            it[PREF_UPDATED_AT] = System.currentTimeMillis() / 1000
+        }
+    }
+    suspend fun setFrigoLayout(layout: FrigoLayout) {
+        context.dataStore.edit {
+            it[PREF_FRIGO_LAYOUT] = when (layout) {
+                FrigoLayout.LIST -> "list"
+                FrigoLayout.DESIGN -> "design"
+            }
+            it[PREF_UPDATED_AT] = System.currentTimeMillis() / 1000
         }
     }
 }

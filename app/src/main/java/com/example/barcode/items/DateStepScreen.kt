@@ -1,4 +1,4 @@
-package com.example.barcode.addItem
+package com.example.barcode.items
 
 import androidx.compose.runtime.Composable
 import com.example.barcode.ui.CameraDateOcrScreen

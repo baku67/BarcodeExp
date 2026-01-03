@@ -1,7 +1,7 @@
-package com.example.barcode.addItem
+package com.example.barcode.items
 
 import androidx.compose.runtime.Composable
-import com.example.barcode.model.ProductInfo
+import com.example.barcode.OpenFoodFacts.ProductInfo
 import com.example.barcode.ui.CameraOcrBarCodeScreen
 
 @Composable

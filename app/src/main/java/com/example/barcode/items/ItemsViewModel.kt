@@ -1,4 +1,4 @@
-package com.example.barcode.ui.components
+package com.example.barcode.items
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
