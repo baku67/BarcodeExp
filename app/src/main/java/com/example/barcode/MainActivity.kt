@@ -87,6 +87,15 @@ class MainActivity : ComponentActivity() {
                     ) {
                         val navController = rememberNavController()
 
+                        val appContext = LocalContext.current.applicationContext
+
+                        val session = remember { SessionManager(appContext) }
+                        val repo = remember { AuthRepository(ApiClient.authApi) }
+
+                        val authVm: AuthViewModel = viewModel(
+                            factory = AuthViewModelFactory(repo, session)
+                        )
+
                         // Si ouverture app suite a click lien email verification (page dédiée ou ici juste snack):
                         LaunchedEffect(Unit) {
                             DeepLinkBus.links.collect { uri ->
@@ -116,36 +125,11 @@ class MainActivity : ComponentActivity() {
                             composable("splash") { GlobalLoaderScreen(navController) }
                             composable("dateOCR") { CameraDateOcrScreen() }
                             composable("barCodeOCR") { CameraOcrBarCodeScreen() }
-                            composable("tabs") { MainTabsScreen(navController) } // contient la navigation au Swipe (Home/Items/Liste/Settings)
+                            composable("tabs") { MainTabsScreen(navController, authVm) } // contient la navigation au Swipe (Home/Items/Liste/Settings)
 
                             navigation(startDestination = "auth/login", route = "auth") {
 
-                                composable("auth/login") { backStackEntry ->
-                                    val appContext = LocalContext.current.applicationContext
-
-                                    // ✅ même owner pour login + register
-                                    val authGraphEntry =
-                                        remember(backStackEntry) { navController.getBackStackEntry("auth") }
-
-                                    // ✅ objets partagés (liés au graph auth)
-                                    val session =
-                                        remember(authGraphEntry) { SessionManager(appContext) }
-                                    val repo =
-                                        remember(authGraphEntry) { AuthRepository(ApiClient.authApi) }
-
-                                    val authVm: AuthViewModel = viewModel(
-                                        authGraphEntry,
-                                        factory = object : ViewModelProvider.Factory {
-                                            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                                                if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
-                                                    @Suppress("UNCHECKED_CAST")
-                                                    return AuthViewModel(repo, session) as T
-                                                }
-                                                throw IllegalArgumentException("Unknown ViewModel: $modelClass")
-                                            }
-                                        }
-                                    )
-
+                                composable("auth/login") {
                                     LoginScreen(
                                         navController = navController,
                                         viewModel = authVm,
@@ -153,29 +137,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-                                composable("auth/register") { backStackEntry ->
-                                    val appContext = LocalContext.current.applicationContext
-                                    val authGraphEntry =
-                                        remember(backStackEntry) { navController.getBackStackEntry("auth") }
-
-                                    val session =
-                                        remember(authGraphEntry) { SessionManager(appContext) }
-                                    val repo =
-                                        remember(authGraphEntry) { AuthRepository(ApiClient.authApi) }
-
-                                    val authVm: AuthViewModel = viewModel(
-                                        authGraphEntry,
-                                        factory = object : ViewModelProvider.Factory {
-                                            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                                                if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
-                                                    @Suppress("UNCHECKED_CAST")
-                                                    return AuthViewModel(repo, session) as T
-                                                }
-                                                throw IllegalArgumentException("Unknown ViewModel: $modelClass")
-                                            }
-                                        }
-                                    )
-
+                                composable("auth/register") {
                                     RegisterScreen(
                                         navController = navController,
                                         viewModel = authVm,

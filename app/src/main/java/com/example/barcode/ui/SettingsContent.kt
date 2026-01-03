@@ -27,46 +27,36 @@ import androidx.compose.ui.Alignment
 import com.example.barcode.ui.components.SnackbarBus
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import com.example.barcode.auth.AuthViewModel
 import com.example.barcode.ui.components.ThemeToggleRow
 import com.example.barcode.user.UserPreferences
 import com.example.barcode.user.toUserPreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsContent(navController: NavHostController, innerPadding: PaddingValues) {
+fun SettingsContent(
+    navController: NavHostController,
+    innerPadding: PaddingValues,
+    authVm: AuthViewModel
+) {
 
-    val appContext = LocalContext.current.applicationContext
-    val session = remember { SessionManager(appContext) }
     val scope = rememberCoroutineScope()
 
-    val mode = session.appMode.collectAsState(initial = AppMode.AUTH).value
-
-    // Si User en cache, on affiche ses infos
-    val repo = remember { AuthRepository(ApiClient.authApi) }
-    val token = session.token.collectAsState(initial = null).value
-    val cachedEmail = session.userEmail.collectAsState(initial = null).value
-    val cachedIsVerified = session.userIsVerified.collectAsState(initial = null).value
-
-    suspend fun refreshProfile() {
-        if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
-            repo.me(token)
-                .onSuccess { profile ->
-                    session.saveUser(profile)                            // id/email/isVerified...
-                    session.savePreferences(profile.toUserPreferences()) // theme/lang/layout
-                }
-                .onFailure { SnackbarBus.show("Impossible de charger le profil : ${it.message ?: it}") }
-        }
-    }
+    val mode = authVm.appMode.collectAsState(initial = AppMode.AUTH).value
+    val token = authVm.token.collectAsState(initial = null).value
+    val cachedEmail = authVm.userEmail.collectAsState(initial = null).value
+    val cachedIsVerified = authVm.userIsVerified.collectAsState(initial = null).value
+    val prefs = authVm.preferences.collectAsState(initial = UserPreferences()).value
 
     var refreshing by rememberSaveable { mutableStateOf(false) }
-
-    // Suppression de compte
+    var resending by rememberSaveable { mutableStateOf(false) }
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var deleting by rememberSaveable { mutableStateOf(false) }
 
-    var resending by rememberSaveable { mutableStateOf(false) }
-
-    val prefs = session.preferences.collectAsState(initial = UserPreferences()).value
+    suspend fun refreshProfile() {
+        authVm.refreshProfile()
+            .onFailure { SnackbarBus.show("Impossible de charger le profil : ${it.message ?: it}") }
+    }
 
     LaunchedEffect(mode, token) {
         refreshProfile()
@@ -121,10 +111,10 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Apparence", style = MaterialTheme.typography.titleLarge)
 
-                        // ThemeToggleRow(
-                        //     prefs = prefs,
-                        //     onToggleDark = { checked -> authVm.onThemeToggled(checked) }
-                        // )
+                        ThemeToggleRow(
+                            prefs = prefs,
+                            onToggleDark = { checked -> authVm.onThemeToggled(checked) }
+                        )
                     }
                 }
             }
@@ -162,22 +152,12 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
 
                                 OutlinedButton(
                                     enabled = !resending,
-                                    modifier = Modifier.fillMaxWidth(),
                                     onClick = {
                                         scope.launch {
-                                            if (token.isNullOrBlank()) {
-                                                SnackbarBus.show("Token manquant")
-                                                return@launch
-                                            }
-
                                             resending = true
-                                            repo.resendVerifyEmail(token)
-                                                .onSuccess {
-                                                    SnackbarBus.show("Email de confirmation renvoyé ✅")
-                                                }
-                                                .onFailure {
-                                                    SnackbarBus.show("Impossible de renvoyer : ${it.message ?: it}")
-                                                }
+                                            authVm.resendVerifyEmail()
+                                                .onSuccess { SnackbarBus.show("Email renvoyé ✅") }
+                                                .onFailure { SnackbarBus.show("Impossible : ${it.message ?: it}") }
                                             resending = false
                                         }
                                     }
@@ -203,14 +183,13 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
                             Button(
                                 onClick = {
                                     scope.launch {
-                                        session.logout()
+                                        authVm.logout()
                                         navController.navigate("auth/login") {
                                             popUpTo(0)
                                             launchSingleTop = true
                                         }
                                     }
-                                },
-                                modifier = Modifier.fillMaxWidth()
+                                }
                             ) {
                                 Text("Se déconnecter")
                             }
@@ -251,18 +230,13 @@ fun SettingsContent(navController: NavHostController, innerPadding: PaddingValue
                                                     }
 
                                                     deleting = true
-                                                    repo.deleteMe(token)
+                                                    authVm.deleteAccount()
                                                         .onSuccess {
                                                             SnackbarBus.show("Compte supprimé")
-                                                            session.logout()
-                                                            navController.navigate("auth/login") {
-                                                                popUpTo(0)
-                                                                launchSingleTop = true
-                                                            }
+                                                            authVm.logout()
+                                                            navController.navigate("auth/login") { popUpTo(0); launchSingleTop = true }
                                                         }
-                                                        .onFailure {
-                                                            SnackbarBus.show("Suppression impossible : ${it.message ?: it}")
-                                                        }
+                                                        .onFailure { SnackbarBus.show("Suppression impossible : ${it.message ?: it}") }
                                                     deleting = false
                                                     showDeleteDialog = false
                                                 }

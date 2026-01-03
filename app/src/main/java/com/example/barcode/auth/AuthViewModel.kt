@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.barcode.ui.components.SnackbarBus
 import com.example.barcode.user.ThemeMode
+import com.example.barcode.user.UserPreferences
 import com.example.barcode.user.UserProfile
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -14,12 +16,59 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+// Etat réseau uniquement
+data class AuthUiState(
+    val loading: Boolean = false,
+    val authenticated: Boolean = false,
+    val error: String? = null
+) {}
+
+
+
 class AuthViewModel(
     private val repo: AuthRepository,
     private val session: SessionManager
 ) : ViewModel() {
 
     val uiState = MutableStateFlow(AuthUiState())
+
+    val appMode: Flow<AppMode> = session.appMode
+    val token: Flow<String?> = session.token
+    val userEmail: Flow<String?> = session.userEmail
+    val userIsVerified: Flow<Boolean?> = session.userIsVerified
+    val preferences: Flow<UserPreferences> = session.preferences
+
+    suspend fun refreshProfile(): Result<Unit> {
+        val mode = session.appMode.first()
+        val t = session.token.first()
+        if (mode != AppMode.AUTH || t.isNullOrBlank()) return Result.success(Unit)
+
+        return repo.me(t).fold(
+            onSuccess = { profile ->
+                session.saveUser(profile)
+                // si ton UserProfile contient preferences, tu peux aussi:
+                // session.savePreferences(profile.toUserPreferences())
+                Result.success(Unit)
+            },
+            onFailure = { Result.failure(it) }
+        )
+    }
+
+    suspend fun resendVerifyEmail(): Result<Unit> {
+        val t = session.token.first()
+        if (t.isNullOrBlank()) return Result.failure(Exception("Token manquant"))
+        return repo.resendVerifyEmail(t)
+    }
+
+    suspend fun deleteAccount(): Result<Unit> {
+        val t = session.token.first()
+        if (t.isNullOrBlank()) return Result.failure(Exception("Token manquant"))
+        return repo.deleteMe(t)
+    }
+
+    suspend fun logout() {
+        session.logout()
+    }
 
     fun onLogin(email: String, password: String) {
         viewModelScope.launch {
@@ -85,24 +134,17 @@ class AuthViewModel(
 
 
     fun onThemeToggled(isDark: Boolean) {
-        val newTheme = if (isDark) ThemeMode.DARK else ThemeMode.LIGHT
-
         viewModelScope.launch {
-            // 1) Toujours appliquer localement (UI instant)
-            session.setTheme(newTheme)
+            session.setTheme(if (isDark) ThemeMode.DARK else ThemeMode.LIGHT)
 
-            // 2) Sync backend seulement en AUTH
             val mode = session.appMode.first()
-            val token = session.token.first()
-
-            if (mode != AppMode.AUTH || token.isNullOrBlank()) return@launch
+            val t = session.token.first()
+            if (mode != AppMode.AUTH || t.isNullOrBlank()) return@launch
 
             repo.patchPreferences(
-                token = token,
-                body = mapOf("theme" to if (isDark) "dark" else "light")
+                t,
+                mapOf("theme" to if (isDark) "dark" else "light")
             )
-            // Option UX : snackbar si échec
-            // .onFailure { ... }
         }
     }
 
