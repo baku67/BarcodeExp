@@ -28,12 +28,6 @@ interface AuthApi {
         @Header("Authorization") token: String,
         @Body body: Map<String, String>
     ): Response<Unit>
-    // Exemple patch preferences
-    //api.patchPreferences("Bearer $token", mapOf(
-    //    "theme" to "dark",
-    //    "lang" to "fr",
-    //    "frigo_layout" to "list"
-    //))
 
     @DELETE("me")
     suspend fun deleteMe(@Header("Authorization") token: String): Response<Unit>

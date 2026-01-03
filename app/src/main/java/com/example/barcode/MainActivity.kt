@@ -30,13 +30,12 @@ import com.example.barcode.items.AddItemViewModel
 import com.example.barcode.items.ScanStepScreen
 import com.example.barcode.items.DetailsStepScreen
 import com.example.barcode.items.DateStepScreen
-import com.example.barcode.auth.LoginScreen
+import com.example.barcode.auth.ui.LoginScreen
 import com.example.barcode.items.ItemsViewModel
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import com.example.barcode.auth.*
+import com.example.barcode.auth.ui.RegisterScreen
 import com.example.barcode.ui.MainTabsScreen
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow

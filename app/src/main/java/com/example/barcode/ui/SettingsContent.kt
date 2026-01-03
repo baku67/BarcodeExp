@@ -4,12 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.example.barcode.auth.SessionManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.runtime.LaunchedEffect
@@ -17,8 +14,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.barcode.auth.AppMode
 import kotlinx.coroutines.launch
-import com.example.barcode.auth.ApiClient
-import com.example.barcode.auth.AuthRepository
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -30,7 +25,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import com.example.barcode.auth.AuthViewModel
 import com.example.barcode.ui.components.ThemeToggleRow
 import com.example.barcode.user.UserPreferences
-import com.example.barcode.user.toUserPreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

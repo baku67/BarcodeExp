@@ -1,4 +1,4 @@
-package com.example.barcode.auth
+package com.example.barcode.auth.ui
 
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll

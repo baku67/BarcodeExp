@@ -1,5 +1,6 @@
-package com.example.barcode.auth
+package com.example.barcode
 
+import com.example.barcode.auth.AuthApi
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory

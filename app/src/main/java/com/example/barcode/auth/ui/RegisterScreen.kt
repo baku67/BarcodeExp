@@ -1,4 +1,4 @@
-package com.example.barcode.auth
+package com.example.barcode.auth.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.barcode.R
+import com.example.barcode.auth.AuthViewModel
 
 @Composable
 fun RegisterScreen(

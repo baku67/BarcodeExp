@@ -1,4 +1,4 @@
-package com.example.barcode.auth
+package com.example.barcode.auth.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -26,6 +26,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import com.example.barcode.R
+import com.example.barcode.auth.AuthViewModel
+import com.example.barcode.auth.getSavedPassword
+import com.example.barcode.auth.savePassword
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

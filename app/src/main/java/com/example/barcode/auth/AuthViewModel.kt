@@ -6,6 +6,7 @@ import com.example.barcode.ui.components.SnackbarBus
 import com.example.barcode.user.ThemeMode
 import com.example.barcode.user.UserPreferences
 import com.example.barcode.user.UserProfile
+import com.example.barcode.user.toUserPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +39,26 @@ class AuthViewModel(
     val userIsVerified: Flow<Boolean?> = session.userIsVerified
     val preferences: Flow<UserPreferences> = session.preferences
 
+    private val patchFlow = MutableSharedFlow<Map<String, String>>(extraBufferCapacity = 1)
+
+    // Patch des préférences en BDD au lancement ?
+    init {
+        viewModelScope.launch {
+            patchFlow
+                .debounce(500)              // ✅ évite spam
+                .distinctUntilChanged()     // ✅ évite PATCH identiques
+                .collectLatest { body ->    // ✅ annule l’ancien si nouveau arrive
+                    val token = session.token.first() ?: return@collectLatest
+                    repo.patchPreferences(token, body)
+                        .onFailure {
+                            // IMPORTANT : tu ne reverts pas l'UI.
+                            // Option : afficher un snackbar + marquer "pending sync"
+                            SnackbarBus.show("Sync préférences impossible : ${it.message ?: it}")
+                        }
+                }
+        }
+    }
+
     suspend fun refreshProfile(): Result<Unit> {
         val mode = session.appMode.first()
         val t = session.token.first()
@@ -46,8 +67,7 @@ class AuthViewModel(
         return repo.me(t).fold(
             onSuccess = { profile ->
                 session.saveUser(profile)
-                // si ton UserProfile contient preferences, tu peux aussi:
-                // session.savePreferences(profile.toUserPreferences())
+                session.savePreferences(profile.toUserPreferences())
                 Result.success(Unit)
             },
             onFailure = { Result.failure(it) }
@@ -135,21 +155,13 @@ class AuthViewModel(
 
     fun onThemeToggled(isDark: Boolean) {
         viewModelScope.launch {
-            session.setTheme(if (isDark) ThemeMode.DARK else ThemeMode.LIGHT)
+            val newTheme = if (isDark) ThemeMode.DARK else ThemeMode.LIGHT
+            session.setTheme(newTheme)
 
-            val mode = session.appMode.first()
-            val t = session.token.first()
-            if (mode != AppMode.AUTH || t.isNullOrBlank()) return@launch
-
-            repo.patchPreferences(
-                t,
-                mapOf("theme" to if (isDark) "dark" else "light")
-            )
+            // ✅ en AUTH ça partira dans patchFlow (debounce), en LOCAL ça ne fera rien
+            emitPrefsPatch(theme = newTheme)
         }
     }
-
-
-    private val patchFlow = MutableSharedFlow<Map<String, String>>(extraBufferCapacity = 1)
 
     private suspend fun emitPrefsPatch(theme: ThemeMode? = null) {
         val mode = session.appMode.first()
@@ -167,22 +179,5 @@ class AuthViewModel(
         }
 
         if (body.isNotEmpty()) patchFlow.tryEmit(body)
-    }
-
-    init {
-        viewModelScope.launch {
-            patchFlow
-                .debounce(500)              // ✅ évite spam
-                .distinctUntilChanged()     // ✅ évite PATCH identiques
-                .collectLatest { body ->    // ✅ annule l’ancien si nouveau arrive
-                    val token = session.token.first() ?: return@collectLatest
-                    repo.patchPreferences(token, body)
-                        .onFailure {
-                            // IMPORTANT : tu ne reverts pas l'UI.
-                            // Option : afficher un snackbar + marquer "pending sync"
-                            SnackbarBus.show("Sync préférences impossible : ${it.message ?: it}")
-                        }
-                }
-        }
     }
 }
