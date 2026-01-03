@@ -1,7 +1,12 @@
 package com.example.barcode.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.MarqueeAnimationMode
+import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,7 +19,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -83,6 +90,7 @@ fun ItemsContent(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ItemCard(
     name: String,
@@ -99,26 +107,55 @@ private fun ItemCard(
 
     Card(
         colors = CardDefaults.cardColors(containerColor = surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        // border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+        border = when {
+            expiry == null -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            expiry != null && isSoon(expiry) -> BorderStroke(1.dp, Color.Yellow)
+            expiry != null && isExpired(expiry) -> BorderStroke(1.dp, Color.Red)
+                else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        }
     ) {
         Row(
             Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // ⬅️ Image du produit (remplace le badge)
+            // Image du produit (remplace le badge) TODO: removeBG natif
             ProductThumb(imageUrl)
 
             Spacer(Modifier.width(12.dp))
 
             // Infos produit
             Column(Modifier.weight(1f)) {
-                Text(name, fontWeight = FontWeight.SemiBold, color = onSurface)
+
+                Text(
+                    text = name,
+                    fontWeight = FontWeight.SemiBold,
+                    color = onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip, // important: sinon l’ellipsis masque l’intérêt du marquee
+                    modifier = Modifier
+                        .fillMaxWidth() // important: il faut une contrainte de largeur
+                        .basicMarquee(
+                            animationMode = MarqueeAnimationMode.Immediately,
+                            iterations = Int.MAX_VALUE,
+                            initialDelayMillis = 1200,   // pause avant le 1er défilement
+                            repeatDelayMillis = 2000,    // pause entre chaque boucle (ton “interval régulier”)
+                            velocity = 28.dp,            // vitesse (dp/sec environ selon version)
+                            spacing = MarqueeSpacing(24.dp) // espace avant de “re-boucler”
+                        )
+                )
+
                 val brandText = brand?.takeIf { it.isNotBlank() } ?: "—"
                 Text(
                     brandText,
                     color = onSurface.copy(alpha = 0.7f),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false
                 )
+
                 // “dans 3j.” / “aujourd’hui” / “hier” / “il y a 2j.”
                 Text(
                     relativeCompact,
@@ -130,14 +167,15 @@ private fun ItemCard(
                     },
                     style = MaterialTheme.typography.bodySmall
                 )
-                // (optionnel) la date absolue en plus petit
-                if (absolute != "—") {
-                    Text(
-                        "($absolute)",
-                        color = onSurface.copy(alpha = 0.5f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+
+                // DATE absolue en plus petit
+                //if (absolute != "—") {
+                //    Text(
+                //        "($absolute)",
+                //        color = onSurface.copy(alpha = 0.5f),
+                //        style = MaterialTheme.typography.bodySmall
+                //    )
+                //}
             }
 
             IconButton(onClick = onDelete) {
