@@ -1,71 +1,72 @@
 package com.example.barcode.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.example.barcode.auth.SessionManager
 import com.example.barcode.user.ThemeMode
 import com.example.barcode.user.UserPreferences
 
+// Pour que AppBackground puisse connaître le thème RÉEL (y compris override user)
+val LocalIsDarkTheme = staticCompositionLocalOf { true }
+
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = AppPrimary,
+    onPrimary = Color(0xFF0B1220), // Text dans bouton primary
+    background = Color(0xFF0B1220), // inutile car AppBackground au dessus ?
+    surface = Color(0xFF0F1A2E), // itemsCard par exemple
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = AppPrimary,
+    onPrimary = Color(0xFFF7FBFF), // Text dans bouton primary
+    background = Color(0xFFF7FBFF), // inutile car AppBackground au dessus ?
+    surface = Color.White, // itemsCard par exemple
 )
 
 @Composable
-fun BarCodeTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+fun Theme(
     session: SessionManager,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    // appliquer réellement le thème à toute l’app:
-    val prefs = session.preferences.collectAsState(initial = UserPreferences()).value
-    val dark = when (prefs.theme) {
+    val prefs by session.preferences.collectAsState(initial = UserPreferences())
+
+    val isDark = when (prefs.theme) {
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
-    val colorScheme = when {
+    val baseScheme: ColorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
-        darkTheme -> DarkColorScheme
+        isDark -> DarkColorScheme
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = if (dark) DarkColorScheme else LightColorScheme,
-        typography = Typography,
-        content = content
-    )
+    // ✅ Verrouille AppPrimary quoi qu’il arrive (même si dynamicColor=true)
+    val scheme = baseScheme.copy(primary = AppPrimary)
+
+    CompositionLocalProvider(LocalIsDarkTheme provides isDark) {
+        MaterialTheme(
+            colorScheme = scheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

@@ -79,7 +79,7 @@ fun GlobalLoaderScreen(nav: NavHostController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFAFAFA))
+            .background(Color.Transparent)
             .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center
     ) {

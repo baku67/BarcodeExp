@@ -175,6 +175,7 @@ fun SettingsContent(
 
                             // Déconnexion
                             Button(
+                                modifier = Modifier.fillMaxWidth(),
                                 onClick = {
                                     scope.launch {
                                         authVm.logout()

@@ -8,9 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -19,7 +17,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.barcode.ui.CameraDateOcrScreen
 import com.example.barcode.ui.CameraOcrBarCodeScreen
 import com.example.barcode.ui.GlobalLoaderScreen
-import com.example.barcode.ui.theme.AppPrimary
 import androidx.navigation.compose.navigation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
@@ -41,11 +38,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import com.example.barcode.ui.components.SnackbarBus
 import com.example.barcode.ui.theme.AppBackground
+import com.example.barcode.ui.theme.Theme
 
-private val LightColors = lightColorScheme(
-    primary = AppPrimary,
-    // onPrimary = Color.White, // etc. si besoin
-)
 
 object DeepLinkBus {
     private val _links = MutableSharedFlow<Uri>(extraBufferCapacity = 1)
@@ -56,7 +50,6 @@ object DeepLinkBus {
     }
 }
 
-// MainActivity configure NavController et gère la permission caméra au démarrage
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,28 +65,24 @@ class MainActivity : ComponentActivity() {
 
         handleDeepLink(intent)
 
-        // Configuration de l'UI Compose avec Navigation
         setContent {
 
-            AppBackground {
-                MaterialTheme(
-                    colorScheme = LightColors,
-                ) {
+            val appContext = LocalContext.current.applicationContext
+            val session = remember { SessionManager(appContext) }
+            val repo = remember { AuthRepository(ApiClient.authApi) }
+            val authVm: AuthViewModel = viewModel(
+                factory = AuthViewModelFactory(repo, session)
+            )
+            val navController = rememberNavController()
+
+            Theme(session = session) {
+                AppBackground {
+
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = Color.Transparent,
                         tonalElevation = 0.dp
                     ) {
-                        val navController = rememberNavController()
-
-                        val appContext = LocalContext.current.applicationContext
-
-                        val session = remember { SessionManager(appContext) }
-                        val repo = remember { AuthRepository(ApiClient.authApi) }
-
-                        val authVm: AuthViewModel = viewModel(
-                            factory = AuthViewModelFactory(repo, session)
-                        )
 
                         // Si ouverture app suite a click lien email verification (page dédiée ou ici juste snack):
                         LaunchedEffect(Unit) {
@@ -115,7 +104,6 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-
                         // Définition des routes
                         NavHost(
                             navController,
@@ -124,7 +112,12 @@ class MainActivity : ComponentActivity() {
                             composable("splash") { GlobalLoaderScreen(navController) }
                             composable("dateOCR") { CameraDateOcrScreen() }
                             composable("barCodeOCR") { CameraOcrBarCodeScreen() }
-                            composable("tabs") { MainTabsScreen(navController, authVm) } // contient la navigation au Swipe (Home/Items/Liste/Settings)
+                            composable("tabs") {
+                                MainTabsScreen(
+                                    navController,
+                                    authVm
+                                )
+                            } // contient la navigation au Swipe (Home/Items/Liste/Settings)
 
                             navigation(startDestination = "auth/login", route = "auth") {
 
@@ -141,10 +134,15 @@ class MainActivity : ComponentActivity() {
                                         navController = navController,
                                         viewModel = authVm,
                                         onNavigateToLogin = {
-                                            val popped = navController.popBackStack("auth/login", inclusive = false)
+                                            val popped = navController.popBackStack(
+                                                "auth/login",
+                                                inclusive = false
+                                            )
                                             if (!popped) {
                                                 navController.navigate("auth/login") {
-                                                    popUpTo("auth/register") { inclusive = true }
+                                                    popUpTo("auth/register") {
+                                                        inclusive = true
+                                                    }
                                                     launchSingleTop = true
                                                 }
                                             }
@@ -175,7 +173,11 @@ class MainActivity : ComponentActivity() {
                                 // ⬇️ NOUVEL ÉCRAN DATE
                                 composable("addItem/date") { backStackEntry ->
                                     val parentEntry =
-                                        remember(backStackEntry) { navController.getBackStackEntry("addItem") }
+                                        remember(backStackEntry) {
+                                            navController.getBackStackEntry(
+                                                "addItem"
+                                            )
+                                        }
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
                                     val draft by addVm.draft.collectAsState()
 
@@ -193,13 +195,21 @@ class MainActivity : ComponentActivity() {
 
                                 composable("addItem/details") { backStackEntry ->
                                     val parentEntry =
-                                        remember(backStackEntry) { navController.getBackStackEntry("addItem") }
+                                        remember(backStackEntry) {
+                                            navController.getBackStackEntry(
+                                                "addItem"
+                                            )
+                                        }
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
                                     val draft by addVm.draft.collectAsState()
 
                                     // ✅ partage la même instance que ItemsScreen via l’entrée "home"
                                     val homeEntry =
-                                        remember(backStackEntry) { navController.getBackStackEntry("tabs") }
+                                        remember(backStackEntry) {
+                                            navController.getBackStackEntry(
+                                                "tabs"
+                                            )
+                                        }
                                     val itemsVm: ItemsViewModel = viewModel(homeEntry)
 
                                     DetailsStepScreen(
@@ -211,7 +221,8 @@ class MainActivity : ComponentActivity() {
                                             // ✅ commit direct
                                             itemsVm.addItem(
                                                 name = (name ?: draft.name ?: "(sans nom)"),
-                                                brand = (brand ?: draft.brand ?: "(sans brand)"),
+                                                brand = (brand ?: draft.brand
+                                                ?: "(sans brand)"),
                                                 // ajoute expiry si ton ItemsViewModel le supporte
                                                 expiry = (expiry ?: draft.expiryDate),
                                                 imageUrl = draft.imageUrl
@@ -226,7 +237,6 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-
                 }
             }
         }

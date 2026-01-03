@@ -49,14 +49,14 @@ fun HeaderBar(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.absoluteOffset(x = 0.dp, y = -4.dp)
                 )
-                subtitle?.let {
-                    Text(
-                        text = "- $subtitle",
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = .85f),
-                        modifier = Modifier.absoluteOffset(x = 15.dp, y = -2.dp)
-                    )
-                }
+                //subtitle?.let {
+                //    Text(
+                //        text = "- $subtitle",
+                //        fontSize = 14.sp,
+                //        color = Color.White.copy(alpha = .85f),
+                //        modifier = Modifier.absoluteOffset(x = 15.dp, y = -2.dp)
+                //    )
+                //}
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(

@@ -11,37 +11,72 @@ import androidx.compose.ui.graphics.Color
 
 @Composable
 fun AppBackground(content: @Composable () -> Unit) {
+    val isDark = LocalIsDarkTheme.current
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .drawWithCache {
-                val bg1 = Color(0xFF0B1220)
-                val bg2 = Color(0xFF0A2A3A)
 
-                val radialGreen = Brush.radialGradient(
-                    colorStops = arrayOf(
-                        0.0f to Color(0x4022C55E), // rgba(34,197,94,.25) approx
-                        0.6f to Color.Transparent
-                    ),
-                    center = Offset(size.width * 0.20f, size.height * 0.15f),
-                    radius = size.minDimension * 0.90f
-                )
+                if (isDark) {
+                    val bg1 = Color(0xFF0B1220)
+                    val bg2 = Color(0xFF0A2A3A)
 
-                val radialBlue = Brush.radialGradient(
-                    colorStops = arrayOf(
-                        0.0f to Color(0x333B82F6), // rgba(59,130,246,.20) approx
-                        0.6f to Color.Transparent
-                    ),
-                    center = Offset(size.width * 0.85f, size.height * 0.20f),
-                    radius = size.minDimension * 0.85f
-                )
+                    val radialGreen = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color(0x4022C55E), // rgba(34,197,94,.25) approx
+                            0.6f to Color.Transparent
+                        ),
+                        center = Offset(size.width * 0.20f, size.height * 0.15f),
+                        radius = size.minDimension * 0.90f
+                    )
 
-                val linear = Brush.verticalGradient(listOf(bg1, bg2))
+                    val radialBlue = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color(0x333B82F6), // rgba(59,130,246,.20) approx
+                            0.6f to Color.Transparent
+                        ),
+                        center = Offset(size.width * 0.85f, size.height * 0.20f),
+                        radius = size.minDimension * 0.85f
+                    )
 
-                onDrawBehind {
-                    drawRect(linear)
-                    drawRect(radialGreen)
-                    drawRect(radialBlue)
+                    val linear = Brush.verticalGradient(listOf(bg1, bg2))
+
+                    onDrawBehind {
+                        drawRect(linear)
+                        drawRect(radialGreen)
+                        drawRect(radialBlue)
+                    }
+                } else {
+                    // 🌤️ LIGHT: gradient différent (tu peux ajuster ces couleurs)
+                    val bg1 = Color(0xFFF7FBFF)
+                    val bg2 = Color(0xFFEAF3FF)
+
+                    val radialPrimary = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0.0f to AppPrimary.copy(alpha = 0.18f),
+                            0.6f to Color.Transparent
+                        ),
+                        center = Offset(size.width * 0.20f, size.height * 0.15f),
+                        radius = size.minDimension * 0.90f
+                    )
+
+                    val radialBlue = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color(0x1A3B82F6), // bleu très léger
+                            0.6f to Color.Transparent
+                        ),
+                        center = Offset(size.width * 0.85f, size.height * 0.20f),
+                        radius = size.minDimension * 0.85f
+                    )
+
+                    val linear = Brush.verticalGradient(listOf(bg1, bg2))
+
+                    onDrawBehind {
+                        drawRect(linear)
+                        drawRect(radialPrimary)
+                        drawRect(radialBlue)
+                    }
                 }
             }
     ) { content() }
