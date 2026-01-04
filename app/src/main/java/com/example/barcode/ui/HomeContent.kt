@@ -59,12 +59,13 @@ fun HomeContent(
                     }
                 }
 
-                // 2) Etats des permissions
+                // 2) Alerte si autorisations manquantes -> redirection vers section /Settings
                 // Attention: utiliser areNotificationsEnabled() avant envoie de notif,
                 // ET demander permissions au moment où besoin sinon peut bloquer après plusieurs refus si User voit pas l'intéret au lancement de  l'app
-                PermissionsCard()
+                // PermissionsCard()
+                Text("Attention: autorisations requises ?", style = MaterialTheme.typography.titleMedium)
 
-                // 2) Dashboard (Card Items et Card ListeCourses)
+                // 3) Dashboard (Card Items et Card ListeCourses)
                 DashboardRow(
                     totalProducts = totalProducts,
                     freshCount = freshCount,
@@ -74,7 +75,7 @@ fun HomeContent(
                     onNavigateToListeCourses = onNavigateToListeCourses,
                 )
 
-                // 3) Recette IA
+                // 4) Recette IA
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Recettes", style = MaterialTheme.typography.titleMedium)

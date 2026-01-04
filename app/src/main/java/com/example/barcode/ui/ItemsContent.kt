@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
-import com.example.barcode.items.ItemsViewModel
-import com.example.barcode.ui.components.IconToggle
+import com.example.barcode.addItems.ItemsViewModel
+import com.example.barcode.ui.components.FridgeDisplayIconToggle
 import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -73,7 +73,7 @@ fun ItemsContent(
 
             Spacer(Modifier.weight(1f))
 
-            IconToggle(
+            FridgeDisplayIconToggle(
                 selected = viewMode,
                 onSelect = { viewMode = it }
             )

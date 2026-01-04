@@ -1,17 +1,17 @@
-package com.example.barcode.items
+package com.example.barcode.addItems
 
 import androidx.compose.runtime.Composable
-import com.example.barcode.ui.CameraDateOcrScreen
+import com.example.barcode.ui.ScanDlcScreen
 
 @Composable
-fun DateStepScreen(
+fun ScanDlcStepScreen(
     productName: String?,
     productBrand: String?,
     productImageUrl: String?,
     onValidated: (expiryMs: Long) -> Unit,
     onCancel: () -> Unit
 ) {
-    CameraDateOcrScreen(
+    ScanDlcScreen(
         productName = productName,
         productBrand = productBrand,
         productImageUrl = productImageUrl,

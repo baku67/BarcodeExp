@@ -22,6 +22,7 @@ import com.example.barcode.ui.components.SnackbarBus
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import com.example.barcode.auth.AuthViewModel
+import com.example.barcode.ui.components.PermissionsCard
 import com.example.barcode.ui.components.ThemeToggleRow
 import com.example.barcode.user.UserPreferences
 
@@ -267,6 +268,14 @@ fun SettingsContent(
 
             }
 
+            // 2) Alerte si autorisations manquantes -> redirection vers section /Settings
+            // Attention: utiliser areNotificationsEnabled() avant envoie de notif,
+            // ET demander permissions au moment où besoin sinon peut bloquer après plusieurs refus si User voit pas l'intéret au lancement de  l'app
+            item {
+                PermissionsCard()
+            }
+
+            // Toggle Theme Light/Dark
             item {
                 ElevatedCard {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

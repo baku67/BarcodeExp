@@ -55,7 +55,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 // Autorise l'accès expérimental à imageProxy.image
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
-fun CameraDateOcrScreen(
+fun ScanDlcScreen(
     productName: String? = null,
     productBrand: String? = null,
     productImageUrl: String? = null,

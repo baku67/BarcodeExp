@@ -1,4 +1,4 @@
-package com.example.barcode.items
+package com.example.barcode.addItems
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize

@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
-fun IconToggle(
+fun FridgeDisplayIconToggle(
     selected: ViewMode,
     onSelect: (ViewMode) -> Unit
 ) {

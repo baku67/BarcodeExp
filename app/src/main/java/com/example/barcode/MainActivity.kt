@@ -1,12 +1,10 @@
 package com.example.barcode
 
-import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
@@ -14,8 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.barcode.ui.CameraDateOcrScreen
-import com.example.barcode.ui.CameraOcrBarCodeScreen
+import com.example.barcode.ui.ScanDlcScreen
+import com.example.barcode.ui.ScanBarCodeScreen
 import com.example.barcode.ui.GlobalLoaderScreen
 import androidx.navigation.compose.navigation
 import androidx.compose.runtime.getValue
@@ -23,12 +21,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.barcode.items.AddItemViewModel
-import com.example.barcode.items.ScanStepScreen
-import com.example.barcode.items.DetailsStepScreen
-import com.example.barcode.items.DateStepScreen
+import com.example.barcode.addItems.AddItemViewModel
+import com.example.barcode.addItems.ScanBarCodeStepScreen
+import com.example.barcode.addItems.DetailsStepScreen
+import com.example.barcode.addItems.ScanDlcStepScreen
 import com.example.barcode.auth.ui.LoginScreen
-import com.example.barcode.items.ItemsViewModel
+import com.example.barcode.addItems.ItemsViewModel
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.barcode.auth.*
@@ -54,14 +52,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Demande de la permission CAMERA dès le démarrage
-        val requestPerm = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { granted ->
-            if (!granted) finish() // Termine si refus
-        }
-        requestPerm.launch(Manifest.permission.CAMERA)
 
         handleDeepLink(intent)
 
@@ -110,8 +100,8 @@ class MainActivity : ComponentActivity() {
                             startDestination = "splash",
                         ) {
                             composable("splash") { GlobalLoaderScreen(navController) }
-                            composable("dateOCR") { CameraDateOcrScreen() }
-                            composable("barCodeOCR") { CameraOcrBarCodeScreen() }
+                            composable("dateOCR") { ScanDlcScreen() }
+                            composable("barCodeOCR") { ScanBarCodeScreen() }
                             composable("tabs") {
                                 MainTabsScreen(
                                     navController,
@@ -159,7 +149,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
 
-                                    ScanStepScreen(
+                                    ScanBarCodeStepScreen(
                                         onValidated = { product, code ->
                                             addVm.setBarcode(code)
                                             addVm.setDetails(product.name, product.brand)
@@ -170,7 +160,6 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-                                // ⬇️ NOUVEL ÉCRAN DATE
                                 composable("addItem/date") { backStackEntry ->
                                     val parentEntry =
                                         remember(backStackEntry) {
@@ -181,7 +170,7 @@ class MainActivity : ComponentActivity() {
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
                                     val draft by addVm.draft.collectAsState()
 
-                                    DateStepScreen(
+                                    ScanDlcStepScreen(
                                         productName = draft.name,
                                         productBrand = draft.brand,
                                         productImageUrl = draft.imageUrl,
