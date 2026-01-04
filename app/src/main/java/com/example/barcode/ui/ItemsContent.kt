@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,30 +26,32 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import com.example.barcode.items.ItemsViewModel
+import com.example.barcode.ui.components.IconToggle
 import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
+enum class ViewMode { List, Grid }
+
+
 @Composable
 fun ItemsContent(
-    navController: NavHostController,
     innerPadding: PaddingValues,
+    onAddItem: () -> Unit,
     vm: ItemsViewModel = viewModel()
 ) {
     val list by vm.items.collectAsState(initial = emptyList())
-    val primary = MaterialTheme.colorScheme.primary
+    var viewMode by rememberSaveable { mutableStateOf(ViewMode.List) }
 
-    // Tri décroissant : les dates les plus lointaines en haut, les plus proches (et expirés) en bas
+    // Tri croissant : expirés + plus proches en haut, plus lointaines en bas
     val sorted = remember(list) {
         list.sortedWith(
-            compareByDescending<com.example.barcode.data.Item> { it.expiryDate ?: Long.MAX_VALUE }
+            compareBy<com.example.barcode.data.Item> { it.expiryDate ?: Long.MAX_VALUE }
                 .thenBy { (it.name ?: "").lowercase() }
         )
     }
-
 
     Column(
         modifier = Modifier
@@ -56,7 +59,27 @@ fun ItemsContent(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text("Frigo", fontSize = 22.sp, color = primary, fontWeight = FontWeight.SemiBold)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Frigo",
+                fontSize = 22.sp,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(Modifier.weight(1f))
+
+            IconToggle(
+                selected = viewMode,
+                onSelect = { viewMode = it }
+            )
+        }
+
+
         Spacer(Modifier.height(12.dp))
 
         LazyColumn(
@@ -77,7 +100,7 @@ fun ItemsContent(
 
         Spacer(Modifier.height(8.dp))
         Button(
-            onClick = { navController.navigate("addItem") },
+            onClick = onAddItem,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
@@ -101,31 +124,30 @@ private fun ItemCard(
 ) {
     val surface = MaterialTheme.colorScheme.surface
     val onSurface = MaterialTheme.colorScheme.onSurface
-
     val relativeCompact = remember(expiry) { expiry?.let { formatRelativeDaysCompact(it) } ?: "—" }
-    val absolute = remember(expiry) { expiry?.let { formatAbsoluteDate(it) } ?: "—" }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-        // border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
         border = when {
             expiry == null -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             expiry != null && isSoon(expiry) -> BorderStroke(1.dp, Color.Yellow)
-            expiry != null && isExpired(expiry) -> BorderStroke(1.dp, Color.Red)
-                else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            expiry != null && isExpired(expiry) -> BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary)
+            // Si encore bien frais: gris
+            else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            // Ou alors primary:
+            // else -> BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
         }
     ) {
         Row(
             Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Image du produit (remplace le badge) TODO: removeBG natif
+            // TODO: removeBG natif
             ProductThumb(imageUrl)
 
             Spacer(Modifier.width(12.dp))
 
-            // Infos produit
             Column(Modifier.weight(1f)) {
 
                 Text(
@@ -161,8 +183,8 @@ private fun ItemCard(
                     relativeCompact,
                     color = when {
                         expiry == null -> onSurface.copy(alpha = 0.6f)
-                        isExpired(expiry) -> MaterialTheme.colorScheme.error
-                        isSoon(expiry) -> MaterialTheme.colorScheme.tertiary
+                        isSoon(expiry) -> Color.Yellow
+                        isExpired(expiry) -> MaterialTheme.colorScheme.tertiary
                         else -> onSurface.copy(alpha = 0.8f)
                     },
                     style = MaterialTheme.typography.bodySmall
@@ -239,6 +261,7 @@ private fun isExpired(expiry: Long): Boolean {
     return target.isBefore(today)
 }
 
+// Laisser l'utilisateur modifier la valeur de "isSoon" dans Settings
 private fun isSoon(expiry: Long): Boolean {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now(zone)

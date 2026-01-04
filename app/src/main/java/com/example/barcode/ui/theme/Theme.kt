@@ -24,6 +24,7 @@ val LocalIsDarkTheme = staticCompositionLocalOf { true }
 
 private val DarkColorScheme = darkColorScheme(
     primary = AppPrimary,
+    tertiary = AppRed,
     onPrimary = Color(0xFF0B1220), // Text dans bouton primary
     background = Color(0xFF0B1220), // inutile car AppBackground au dessus ?
     surface = Color(0xFF0F1A2E), // itemsCard par exemple
@@ -31,6 +32,7 @@ private val DarkColorScheme = darkColorScheme(
 
 private val LightColorScheme = lightColorScheme(
     primary = AppPrimary,
+    tertiary = AppRed,
     onPrimary = Color(0xFFF7FBFF), // Text dans bouton primary
     background = Color(0xFFF7FBFF), // inutile car AppBackground au dessus ?
     surface = Color.White, // itemsCard par exemple

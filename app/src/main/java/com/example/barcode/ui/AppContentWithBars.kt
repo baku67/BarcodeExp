@@ -65,6 +65,7 @@ fun AppContentWithBars(
             NavBar(
                 navController = navController,
                 items = items,
+                activeRoute = selectedRoute,
                 onItemClick = { item -> onTabClick(item.route) }
             )
         },

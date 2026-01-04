@@ -7,7 +7,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
 import com.example.barcode.auth.SessionManager
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -25,7 +24,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListeCoursesContent(navController: NavHostController, innerPadding: PaddingValues) {
+fun ListeCoursesContent(innerPadding: PaddingValues) {
 
     val appContext = LocalContext.current.applicationContext
     val session = remember { SessionManager(appContext) }

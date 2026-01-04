@@ -3,6 +3,7 @@ package com.example.barcode.ui
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -22,20 +23,24 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
 
-    val selectedRoute = tabs[pagerState.currentPage]
-
-    AppContentWithBars(
-        navController = navController,
-        selectedRoute = selectedRoute,
-        onTabClick = { route ->
-            val idx = tabs.indexOf(route)
-            if (idx >= 0) scope.launch {
+    fun goToTab(route: String) {
+        val idx = tabs.indexOf(route)
+        if (idx >= 0) {
+            scope.launch {
                 pagerState.animateScrollToPage(
                     page = idx,
                     animationSpec = tween(durationMillis = 550, easing = FastOutSlowInEasing)
                 )
             }
         }
+    }
+
+    val selectedRoute = tabs[pagerState.currentPage]
+
+    AppContentWithBars(
+        navController = navController,
+        selectedRoute = selectedRoute,
+        onTabClick = { route -> goToTab(route) }
     ) { innerPadding, snackbarHostState  ->
         HorizontalPager(
             state = pagerState,
@@ -45,13 +50,41 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
         ) { page ->
 
             when (tabs[page]) {
-                "home" -> HomeContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues())
-                "items" -> ItemsContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues())
-                "listeCourses" -> ListeCoursesContent(navController, innerPadding = androidx.compose.foundation.layout.PaddingValues())
-                "settings" -> SettingsContent(
-                    navController = navController,
+                "home" -> HomeContent(
+                    onNavigateToItems = { goToTab("items") },
+                    onNavigateToListeCourses = { goToTab("listeCourses") },
                     innerPadding = androidx.compose.foundation.layout.PaddingValues(),
-                    authVm = authVm
+                    14,
+                    10,
+                    3,
+                    1
+                ) // TODO Data Dashboard factices pour l'instant
+
+                "items" -> ItemsContent(
+                    innerPadding = PaddingValues(),
+                    onAddItem = {
+                        navController.navigate("addItem") {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+
+                "listeCourses" -> ListeCoursesContent(PaddingValues())
+
+                "settings" -> SettingsContent(
+                    innerPadding = PaddingValues(),
+                    authVm = authVm,
+                    onGoToLogin = {
+                        navController.navigate("auth/login") {
+                            popUpTo(0)
+                            launchSingleTop = true
+                        }
+                    },
+                    onGoToRegister = {
+                        navController.navigate("auth/register") {
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
         }

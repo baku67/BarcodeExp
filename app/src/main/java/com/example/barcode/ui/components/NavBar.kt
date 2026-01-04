@@ -3,11 +3,14 @@ package com.example.barcode.ui.components
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 
@@ -22,21 +25,29 @@ data class NavBarItem(
 fun NavBar(
     navController: NavHostController,
     items: List<NavBarItem>,
-    containerColor: Color = Color.Transparent, // ou "MaterialTheme.colorScheme.primary"
+    activeRoute: String? = null,
+    containerColor: Color = Color.Transparent,
     onItemClick: ((NavBarItem) -> Unit)? = null // si fourni, on ne navigate pas ici
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    val destination = navBackStackEntry?.destination
 
     NavigationBar(
         containerColor = containerColor,
         contentColor = Color.White
     ) {
         items.forEach { item ->
+
+
             val selected = when {
-                currentRoute == null -> false
-                item.matchPrefix -> currentRoute.startsWith(item.route)
-                else -> currentRoute == item.route
+                // ✅ Mode pager: on se base sur activeRoute (pas sur NavController)
+                activeRoute != null -> routeMatches(activeRoute, item)
+
+                // ✅ Mode NavController normal: gère aussi les nested graphs
+                else -> destination?.hierarchy?.any { dest ->
+                    val r = dest.route ?: return@any false
+                    if (item.matchPrefix) r.startsWith(item.route) else r == item.route
+                } == true
             }
 
             NavigationBarItem(
@@ -60,14 +71,19 @@ fun NavBar(
                 icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
                 label = { Text(item.label) },
                 alwaysShowLabel = true,
-                colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color.White,
-                    selectedTextColor = Color.White,
-                    unselectedIconColor = Color.White.copy(alpha = 0.85f),
-                    unselectedTextColor = Color.White.copy(alpha = 0.85f),
-                    indicatorColor = Color.White.copy(alpha = 0.18f)
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
                 )
             )
         }
     }
+}
+
+private fun routeMatches(activeRoute: String, item: NavBarItem): Boolean {
+    val r = activeRoute.substringBefore("?")
+    return if (item.matchPrefix) r.startsWith(item.route) else r == item.route
 }

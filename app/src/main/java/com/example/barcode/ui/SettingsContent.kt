@@ -6,7 +6,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.runtime.LaunchedEffect
@@ -29,9 +28,10 @@ import com.example.barcode.user.UserPreferences
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
-    navController: NavHostController,
     innerPadding: PaddingValues,
-    authVm: AuthViewModel
+    authVm: AuthViewModel,
+    onGoToLogin: () -> Unit,
+    onGoToRegister: () -> Unit,
 ) {
 
     val scope = rememberCoroutineScope()
@@ -113,6 +113,34 @@ fun SettingsContent(
                 }
             }
 
+            item {
+                //  Bloc paramétrages DLC et notifs
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Paramètres de DLC", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(6.dp))
+                        val dlcProductsCount = 0
+                        Text(
+                            "Nombre de produits en DLC: $dlcProductsCount",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            "Recevoir des alertes (toggle)",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "Si toggle: Combien de jours avant (options)",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "Si pas autorisation: need autorisation notifs",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+
             if (mode == AppMode.AUTH) {
                 item {
                     // Si MODE AUTH (User en cache) on affiche ses infos
@@ -176,15 +204,7 @@ fun SettingsContent(
                             // Déconnexion
                             Button(
                                 modifier = Modifier.fillMaxWidth(),
-                                onClick = {
-                                    scope.launch {
-                                        authVm.logout()
-                                        navController.navigate("auth/login") {
-                                            popUpTo(0)
-                                            launchSingleTop = true
-                                        }
-                                    }
-                                }
+                                onClick = onGoToLogin
                             ) {
                                 Text("Se déconnecter")
                             }
@@ -229,7 +249,7 @@ fun SettingsContent(
                                                         .onSuccess {
                                                             SnackbarBus.show("Compte supprimé")
                                                             authVm.logout()
-                                                            navController.navigate("auth/login") { popUpTo(0); launchSingleTop = true }
+                                                            onGoToLogin
                                                         }
                                                         .onFailure { SnackbarBus.show("Suppression impossible : ${it.message ?: it}") }
                                                     deleting = false
@@ -281,13 +301,7 @@ fun SettingsContent(
                             Spacer(Modifier.height(12.dp))
 
                             OutlinedButton(
-                                onClick = {
-                                    // SnackbarBus.show("À venir : création de compte + partage du frigo")
-
-                                    navController.navigate("auth/register") {
-                                        launchSingleTop = true
-                                    }
-                                },
+                                onClick = onGoToRegister,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(Icons.Filled.Sync, contentDescription = null)

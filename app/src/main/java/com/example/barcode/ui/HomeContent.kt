@@ -17,12 +17,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
+import com.example.barcode.ui.components.DashboardRow
 import com.example.barcode.ui.components.SnackbarBus
 
 // Écran d'accueil avec un bouton pour accéder à l'OCR
 @Composable
-fun HomeContent(navController: NavHostController, innerPadding: PaddingValues) {
+fun HomeContent(
+    onNavigateToItems: () -> Unit,
+    onNavigateToListeCourses: () -> Unit,
+    innerPadding: PaddingValues,
+    totalProducts: Int,
+    freshCount: Int,
+    expiringSoonCount: Int,
+    expiredCount: Int,
+) {
 
     Column(
         modifier = Modifier
@@ -50,31 +58,14 @@ fun HomeContent(navController: NavHostController, innerPadding: PaddingValues) {
                     }
                 }
 
-                // 2) Bloc nombre de produits en DLC
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("DLC", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(6.dp))
-                        val dlcProductsCount = 0
-                        Text(
-                            "Nombre de produits en DLC: $dlcProductsCount",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            "Recevoir des alertes (toggle)",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            "Si toggle: Combien de jours avant (options)",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            "Si pas autorisation: need autorisation notifs",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
+                DashboardRow(
+                    totalProducts = totalProducts,
+                    freshCount = freshCount,
+                    expiringSoonCount = expiringSoonCount,
+                    expiredCount = expiredCount,
+                    onNavigateToItems = onNavigateToItems,
+                    onNavigateToListeCourses = onNavigateToListeCourses,
+                )
 
                 // 3) Bloc proposer une recette
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
