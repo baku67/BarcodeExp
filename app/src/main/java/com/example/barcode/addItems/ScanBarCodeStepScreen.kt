@@ -9,15 +9,20 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.barcode.OpenFoodFacts.ProductInfo
+import com.example.barcode.R
 import com.example.barcode.ui.ScanBarCodeScreen
 
 // Demande d'autorisation Caméra puis -> ScanBarCodeScreen
@@ -39,43 +44,94 @@ fun ScanBarCodeStepScreen(
         cameraGranted = granted
     }
 
-    // Si OK → on affiche l’écran caméra
+    // ✅ Permission OK -> vraie étape 1/3 avec HeaderBar "Ajouter un produit"
     if (cameraGranted) {
-        ScanBarCodeScreen(onValidated = onValidated)
+        AddItemStepScaffold(
+            step = 1,
+            onBack = null,          // pas de retour à l’étape précédente
+            onCancel = onCancel
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                ScanBarCodeScreen(onValidated = onValidated)
+            }
+        }
         return
     }
 
-    // Sinon → UI “permission manquante”
+    // ❌ Permission KO -> page dédiée centrée + branding en haut (sans navigation)
     val permanentlyDenied = activity?.isPermanentlyDenied(Manifest.permission.CAMERA) == true
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text("Autorisation requise", style = MaterialTheme.typography.titleLarge)
-        Text(
-            "La caméra est nécessaire pour scanner les codes-barres. " +
-                    "Tu peux aussi annuler et ajouter manuellement plus tard.",
-            style = MaterialTheme.typography.bodyMedium
+    Column(modifier = Modifier.fillMaxSize()) {
+
+        BrandHeader(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 18.dp, bottom = 6.dp)
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (!permanentlyDenied) {
-                Button(onClick = { requestCamera.launch(Manifest.permission.CAMERA) }) {
-                    Text("Autoriser la caméra")
-                }
-            } else {
-                Button(onClick = { context.openAppSettings() }) {
-                    Text("Ouvrir les réglages")
-                }
-            }
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            ElevatedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 420.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Autorisation caméra", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "La caméra est nécessaire pour scanner les codes-barres.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
 
-            OutlinedButton(onClick = onCancel) {
-                Text("Annuler")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (!permanentlyDenied) {
+                            Button(onClick = { requestCamera.launch(Manifest.permission.CAMERA) }) {
+                                Text("Autoriser")
+                            }
+                        } else {
+                            Button(onClick = { context.openAppSettings() }) {
+                                Text("Ouvrir les réglages")
+                            }
+                        }
+                        OutlinedButton(onClick = onCancel) { Text("Annuler") }
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun BrandHeader(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+            contentDescription = null,
+            modifier = Modifier.size(34.dp)
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = "FrigoZen",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 

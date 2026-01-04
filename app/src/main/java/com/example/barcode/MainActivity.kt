@@ -143,6 +143,12 @@ class MainActivity : ComponentActivity() {
 
                             navigation(startDestination = "addItem/scan", route = "addItem") {
 
+                                fun close(addVm: AddItemViewModel) {
+                                    addVm.reset()
+                                    val popped = navController.popBackStack("tabs", false)
+                                    if (!popped) navController.navigate("tabs") { launchSingleTop = true }
+                                }
+
                                 composable("addItem/scan") { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
                                         navController.getBackStackEntry("addItem")
@@ -156,7 +162,7 @@ class MainActivity : ComponentActivity() {
                                             addVm.setImage(product.imageUrl)
                                             navController.navigate("addItem/date")
                                         },
-                                        onCancel = { navController.popBackStack() }
+                                        onCancel = { close(addVm) }
                                     )
                                 }
 
@@ -178,7 +184,8 @@ class MainActivity : ComponentActivity() {
                                             addVm.setExpiryDate(expiryMs)
                                             navController.navigate("addItem/details")
                                         },
-                                        onCancel = { navController.popBackStack() }
+                                        onBack = { navController.popBackStack() },
+                                        onCancel = { close(addVm) }
                                     )
                                 }
 
@@ -217,10 +224,10 @@ class MainActivity : ComponentActivity() {
                                                 imageUrl = draft.imageUrl
                                             )
 
-                                            addVm.reset()
-                                            navController.popBackStack("tabs", false)
+                                            close(addVm)
                                         },
-                                        onBack = { navController.popBackStack() }
+                                        onBack = { navController.popBackStack() },
+                                        onCancel = { close(addVm) }
                                     )
                                 }
                             }

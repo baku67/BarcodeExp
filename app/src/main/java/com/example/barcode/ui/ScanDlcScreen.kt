@@ -60,17 +60,20 @@ fun ScanDlcScreen(
     productBrand: String? = null,
     productImageUrl: String? = null,
     onValidated: ((expiryEpochMs: Long) -> Unit)? = null,
-    onCancel: (() -> Unit)? = null
+    onCancel: (() -> Unit)? = null,
+    showHeader: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     val ctx = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
-
     var detectedDate by remember { mutableStateOf("") }
-    var lastDetectedDate by remember { mutableStateOf("") }
     var detectedDateMs by remember { mutableStateOf<Long?>(null) }
+    var lastDetectedDate by remember { mutableStateOf("") }
     var frozen by remember { mutableStateOf(false) }
     var lastAnalyseTime by remember { mutableStateOf(0L) }
+    var cameraError by remember { mutableStateOf<String?>(null) }
+
     val minIntervalMs = 500L
 
     // 👉 Mémorise les use-cases liés par CET écran
@@ -79,6 +82,18 @@ fun ScanDlcScreen(
 
     val dateRegex = remember {
         Regex("""\b(0[1-9]|[12][0-9]|3[01])\s*([\-\/\. ])\s*(0[1-9]|1[0-2])\s*\2\s*(202\d|203\d|204\d|2050|2[0-9]|3[0-9]|4[0-9]|50)\b""")
+    }
+
+    val onRetry = {
+        frozen = false
+        lastDetectedDate = ""
+        detectedDate = ""
+        detectedDateMs = null
+        lastAnalyseTime = 0L
+    }
+
+    val onValidate: () -> Unit = {
+        detectedDateMs?.let { ms -> onValidated?.invoke(ms) }
     }
 
     fun normalizeYear(twoOrFour: String): Int? = when (twoOrFour.length) {
@@ -92,109 +107,36 @@ fun ScanDlcScreen(
         ld.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
     } catch (_: Exception) { null }
 
-    Scaffold(
-        topBar = { HeaderBar(title = "FrigoZen", "Scan d'une date", Icons.Filled.AddCircle) }
-    ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            AndroidView(
-                factory = { c -> PreviewView(c).also { previewView = it } },
-                modifier = Modifier.fillMaxSize(),
-                onRelease = { previewView = null } // important
+    if (showHeader) {
+        Scaffold(topBar = { HeaderBar(title = "FrigoZen", "Scan d'une date", Icons.Filled.AddCircle) }) { inner ->
+            ScanDlcContent(
+                modifier = modifier.fillMaxSize().padding(inner),
+                productName = productName,
+                productBrand = productBrand,
+                productImageUrl = productImageUrl,
+                previewView = previewView,
+                onPreviewViewChange = { previewView = it },
+                detectedDate = detectedDate,
+                detectedDateMs = detectedDateMs,
+                onRetry = onRetry,
+                onValidate = onValidate,
+                cameraError = cameraError
             )
-
-            // 🧊 Card produit (étape 1) + date détectée
-            if (productName != null || productBrand != null || productImageUrl != null) {
-                Card(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(12.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
-                    elevation = CardDefaults.cardElevation(4.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (!productImageUrl.isNullOrBlank()) {
-                            Image(
-                                painter = rememberAsyncImagePainter(productImageUrl),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(Modifier.width(12.dp))
-                        }
-                        Column(Modifier.weight(1f)) {
-                            Text(productName ?: "(sans nom)", fontWeight = FontWeight.SemiBold)
-                            if (!productBrand.isNullOrBlank()) {
-                                Text(productBrand, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
-                            }
-                            if (detectedDate.isNotBlank()) {
-                                Text(
-                                    "DLUO/DLC : $detectedDate",
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Bandeau de la date brute détectée (toujours visible)
-            Text(
-                text = detectedDate,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .background(Color.Black)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                color = Color.White,
-                style = MaterialTheme.typography.bodyLarge
-            )
-
-            // Actions bas d’écran (Retry / Valider)
-            if (detectedDateMs != null) {
-                BottomAppBar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            // 🔄 relance l’analyse
-                            frozen = false
-                            lastDetectedDate = ""
-                            detectedDate = ""
-                            detectedDateMs = null
-                            lastAnalyseTime = 0L
-                        },
-                        modifier = Modifier.padding(8.dp)
-                    ) { Text("Réessayer") }
-
-                    Spacer(Modifier.weight(1f))
-
-                    Button(
-                        onClick = { detectedDateMs?.let { onValidated?.invoke(it) } },
-                        modifier = Modifier.padding(8.dp)
-                    ) { Text("Valider") }
-                }
-            }
-
-/*            Text(
-                text = detectedDate,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .background(Color.Black)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                color = Color.White,
-                style = MaterialTheme.typography.bodyLarge
-            )*/
         }
+    } else {
+        ScanDlcContent(
+            modifier = modifier.fillMaxSize(),
+            productName = productName,
+            productBrand = productBrand,
+            productImageUrl = productImageUrl,
+            previewView = previewView,
+            onPreviewViewChange = { previewView = it },
+            detectedDate = detectedDate,
+            detectedDateMs = detectedDateMs,
+            onRetry = onRetry,
+            onValidate = onValidate,
+            cameraError = cameraError
+        )
     }
 
     DisposableEffect(previewView, lifecycleOwner) {
@@ -204,56 +146,83 @@ fun ScanDlcScreen(
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
         val listener = Runnable {
-            val cameraProvider = cameraProviderFuture.get()
+            try {
+                val cameraProvider = cameraProviderFuture.get()
 
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(view.surfaceProvider)
-            }
+                // ✅ évite "already bound" / conflits entre écrans
+                cameraProvider.unbindAll()
 
-            val analysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build().also { ia ->
-                    ia.setAnalyzer(executor) { imageProxy ->
-                        if (frozen) { imageProxy.close(); return@setAnalyzer } // ⬅️ stop tant que non relancé
+                val preview = Preview.Builder().build().also {
+                    it.setSurfaceProvider(view.surfaceProvider)
+                }
 
-                        val now = System.currentTimeMillis()
-                        if (now - lastAnalyseTime < minIntervalMs) { imageProxy.close(); return@setAnalyzer }
-                        lastAnalyseTime = now
+                val analysis = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build().also { ia ->
+                        ia.setAnalyzer(executor) { imageProxy ->
 
-                        imageProxy.image?.let { mediaImage ->
-                            val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+                            if (frozen) {
+                                imageProxy.close()
+                                return@setAnalyzer
+                            }
+
+                            val now = System.currentTimeMillis()
+                            if (now - lastAnalyseTime < minIntervalMs) {
+                                imageProxy.close()
+                                return@setAnalyzer
+                            }
+                            lastAnalyseTime = now
+
+                            val mediaImage = imageProxy.image
+                            if (mediaImage == null) {
+                                imageProxy.close()
+                                return@setAnalyzer
+                            }
+
+                            val inputImage = InputImage.fromMediaImage(
+                                mediaImage,
+                                imageProxy.imageInfo.rotationDegrees
+                            )
+
                             recognizer.process(inputImage)
                                 .addOnSuccessListener { visionText ->
                                     dateRegex.find(visionText.text)?.let { m ->
-                                        if (m.groupValues.size >= 5) {
-                                            val (d, sep, mo, yRaw) = m.destructured
-                                            normalizeYear(yRaw)?.let { y ->
-                                                val normalized = "$d$sep$mo$sep$y"
-                                                if (normalized != lastDetectedDate) {
-                                                    lastDetectedDate = normalized
-                                                    detectedDate = normalized
-                                                    detectedDateMs = parseToEpochMs(d, mo, y)
-                                                    frozen = true // ⬅️ on fige après détection
-                                                }
-                                            }
+                                        val (d, sep, mo, yRaw) = m.destructured
+                                        val y = normalizeYear(yRaw) ?: return@addOnSuccessListener
+
+                                        val normalized = "$d$sep$mo$sep$y"
+                                        if (normalized == lastDetectedDate) return@addOnSuccessListener
+
+                                        val ms = parseToEpochMs(d, mo, y)
+                                        detectedDate = normalized
+                                        detectedDateMs = ms
+
+                                        // ✅ ne “freeze” que si la date est réellement exploitable
+                                        if (ms != null) {
+                                            lastDetectedDate = normalized
+                                            frozen = true
                                         }
                                     }
                                 }
                                 .addOnFailureListener { e -> Log.e("OCR", "Erreur", e) }
-                                .addOnCompleteListener { imageProxy.close() }
-                        } ?: imageProxy.close()
+                                .addOnCompleteListener { imageProxy.close() } // ✅ close unique ici
+                        }
                     }
-                }
 
-            cameraProvider.bindToLifecycle(
-                lifecycleOwner, // ✅ pas l’Activity
-                CameraSelector.DEFAULT_BACK_CAMERA,
-                preview,
-                analysis
-            )
+                cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    preview,
+                    analysis
+                )
 
-            boundPreview = preview
-            boundAnalysis = analysis
+                boundPreview = preview
+                boundAnalysis = analysis
+                cameraError = null
+            } catch (t: Throwable) {
+                Log.e("ScanDlc", "Camera bind failed", t)
+                cameraError = t.message ?: t::class.java.simpleName
+            }
         }
 
         cameraProviderFuture.addListener(listener, executor)
@@ -281,6 +250,136 @@ fun ScanDlcScreen(
                 }
             } catch (_: Exception) {}
             try { recognizer.close() } catch (_: Exception) {}
+        }
+    }
+}
+
+
+@Composable
+private fun ScanDlcContent(
+    modifier: Modifier,
+    productName: String?,
+    productBrand: String?,
+    productImageUrl: String?,
+    // ✅ state unique venant du parent
+    previewView: PreviewView?,
+    onPreviewViewChange: (PreviewView?) -> Unit,
+    detectedDate: String,
+    detectedDateMs: Long?,
+    onRetry: () -> Unit,
+    onValidate: () -> Unit,
+    cameraError: String?
+) {
+    Box(modifier = modifier) {
+
+        AndroidView(
+            factory = { c -> PreviewView(c).also { onPreviewViewChange(it) } },
+            modifier = Modifier.fillMaxSize(),
+            onRelease = { onPreviewViewChange(null) }
+        )
+
+        cameraError?.let { msg ->
+            Card(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Text(
+                    text = "Caméra indisponible : $msg",
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+
+        // 🧊 Card produit (étape 1) + date détectée
+        if (productName != null || productBrand != null || productImageUrl != null) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(12.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
+                elevation = CardDefaults.cardElevation(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (!productImageUrl.isNullOrBlank()) {
+                        Image(
+                            painter = rememberAsyncImagePainter(productImageUrl),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(Modifier.width(12.dp))
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(productName ?: "(sans nom)", fontWeight = FontWeight.SemiBold)
+                        if (!productBrand.isNullOrBlank()) {
+                            Text(productBrand, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                        }
+                        if (detectedDate.isNotBlank()) {
+                            Text(
+                                "DLUO/DLC : $detectedDate",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bandeau de la date brute détectée (toujours visible)
+        Text(
+            text = detectedDate,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .background(Color.Black)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            color = Color.White,
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        // Actions bas d’écran (Retry / Valider)
+        if (detectedDateMs == null) {
+            // Bandeau uniquement quand pas encore validable
+            if (detectedDate.isNotBlank()) {
+                Text(
+                    text = detectedDate,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .background(Color.Black.copy(alpha = 0.85f))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        } else {
+            BottomAppBar(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+            ) {
+                OutlinedButton(onClick = onRetry, modifier = Modifier.padding(8.dp)) { Text("Réessayer") }
+
+                Spacer(Modifier.width(12.dp))
+
+                Text(
+                    text = "DLC : $detectedDate",
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1
+                )
+
+                Button(onClick = onValidate, modifier = Modifier.padding(8.dp)) { Text("Valider") }
+            }
         }
     }
 }
