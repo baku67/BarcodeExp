@@ -8,8 +8,12 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -27,17 +31,27 @@ fun NavBar(
     items: List<NavBarItem>,
     activeRoute: String? = null,
     containerColor: Color = Color.Transparent,
-    onItemClick: ((NavBarItem) -> Unit)? = null // si fourni, on ne navigate pas ici
+    onItemClick: ((NavBarItem) -> Unit)? = null, // si fourni, on ne navigate pas ici
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val destination = navBackStackEntry?.destination
 
+    val dividerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
+
     NavigationBar(
+        modifier = Modifier.drawBehind {
+            val stroke = 1.dp.toPx()
+            drawLine(
+                color = dividerColor,
+                start = Offset(0f, 0f),
+                end = Offset(size.width, 0f),
+                strokeWidth = stroke
+            )
+        },
         containerColor = containerColor,
         contentColor = Color.White
     ) {
         items.forEach { item ->
-
 
             val selected = when {
                 // ✅ Mode pager: on se base sur activeRoute (pas sur NavController)

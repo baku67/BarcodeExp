@@ -97,7 +97,174 @@ fun SettingsContent(
                             )
                         }
                     }
+
+                    // Si MODE AUTH (User en cache) on affiche ses infos + btn deco + btn suppr compte
+                    if (mode == AppMode.AUTH) {
+
+                        Column(modifier = Modifier.padding(16.dp)) {
+                                    Text("Compte", style = MaterialTheme.typography.titleMedium)
+                                    Spacer(Modifier.height(6.dp))
+
+                                    Text("Email : ${cachedEmail ?: "Chargement..."}", style = MaterialTheme.typography.bodyLarge)
+
+                                    val verifiedLabel = when (cachedIsVerified) {
+                                        true -> "Oui ✅"
+                                        false -> "Non ❌"
+                                        null -> "Chargement..."
+                                    }
+
+                                    Text(
+                                        "Email vérifié : $verifiedLabel",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+
+                                    if (cachedIsVerified == false) {
+                                        Spacer(Modifier.height(10.dp))
+
+                                        Text(
+                                            "Tu n’as pas encore confirmé ton email. Vérifie tes spams si besoin.",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+
+                                        Spacer(Modifier.height(8.dp))
+
+                                        OutlinedButton(
+                                            enabled = !resending,
+                                            onClick = {
+                                                scope.launch {
+                                                    resending = true
+                                                    authVm.resendVerifyEmail()
+                                                        .onSuccess { SnackbarBus.show("Email renvoyé ✅") }
+                                                        .onFailure { SnackbarBus.show("Impossible : ${it.message ?: it}") }
+                                                    resending = false
+                                                }
+                                            }
+                                        ) {
+                                            if (resending) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(18.dp),
+                                                        strokeWidth = 2.dp
+                                                    )
+                                                    Spacer(Modifier.width(10.dp))
+                                                    Text("Envoi…")
+                                                }
+                                            } else {
+                                                Text("Renvoyer l’email de confirmation")
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(Modifier.height(10.dp))
+
+                                    // Déconnexion
+                                    Button(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = onGoToLogin
+                                    ) {
+                                        Text("Se déconnecter")
+                                    }
+
+                                    // Suppression compte
+                                    Spacer(Modifier.height(12.dp))
+
+                                    OutlinedButton(
+                                        onClick = { showDeleteDialog = true },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = !deleting,
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.error
+                                        )
+                                    ) {
+                                        Text(if (deleting) "Suppression..." else "Supprimer mon compte")
+                                    }
+
+                                    if (showDeleteDialog) {
+                                        AlertDialog(
+                                            onDismissRequest = { if (!deleting) showDeleteDialog = false },
+                                            title = { Text("Supprimer le compte ?") },
+                                            text = {
+                                                Text("Cette action est définitive. Tes données cloud seront supprimées.")
+                                            },
+                                            confirmButton = {
+                                                Button(
+                                                    enabled = !deleting,
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = MaterialTheme.colorScheme.error,
+                                                        contentColor = MaterialTheme.colorScheme.onError
+                                                    ),
+                                                    onClick = {
+                                                        scope.launch {
+                                                            if (token.isNullOrBlank()) {
+                                                                SnackbarBus.show("Token manquant")
+                                                                return@launch
+                                                            }
+
+                                                            deleting = true
+                                                            authVm.deleteAccount()
+                                                                .onSuccess {
+                                                                    SnackbarBus.show("Compte supprimé")
+                                                                    authVm.logout()
+                                                                    onGoToLogin
+                                                                }
+                                                                .onFailure { SnackbarBus.show("Suppression impossible : ${it.message ?: it}") }
+                                                            deleting = false
+                                                            showDeleteDialog = false
+                                                        }
+                                                    }
+                                                ) {
+                                                    if (deleting) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            CircularProgressIndicator(
+                                                                modifier = Modifier.size(18.dp),
+                                                                strokeWidth = 2.dp,
+                                                                color = MaterialTheme.colorScheme.onError
+                                                            )
+                                                            Spacer(Modifier.width(10.dp))
+                                                            Text("Suppression…")
+                                                        }
+                                                    } else {
+                                                        Text("Supprimer définitivement")
+                                                    }
+                                                }
+                                            },
+                                            dismissButton = {
+                                                TextButton(
+                                                    enabled = !deleting,
+                                                    onClick = { showDeleteDialog = false }
+                                                ) { Text("Annuler") }
+                                            }
+                                        )
+                                    }
+                                }
+                    }
+
+                    // Si MODE LOCAL proposition création de compte
+                    if (mode == AppMode.LOCAL) {
+
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Synchroniser & partager", style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                "Passe en mode compte pour sauvegarder en base, synchroniser entre appareils " +
+                                        "et partager le frigo avec d’autres utilisateurs.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+
+                            Spacer(Modifier.height(12.dp))
+
+                            OutlinedButton(
+                                onClick = onGoToRegister,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Filled.Sync, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Créer un compte pour synchroniser & partager")
+                            }
+                        }
+                    }
                 }
+
             }
 
             item {
@@ -137,178 +304,6 @@ fun SettingsContent(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error
                         )
-                    }
-                }
-            }
-
-            if (mode == AppMode.AUTH) {
-                item {
-                    // Si MODE AUTH (User en cache) on affiche ses infos
-                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Compte", style = MaterialTheme.typography.titleMedium)
-                            Spacer(Modifier.height(6.dp))
-
-                            Text("Email : ${cachedEmail ?: "Chargement..."}", style = MaterialTheme.typography.bodyLarge)
-
-                            val verifiedLabel = when (cachedIsVerified) {
-                                true -> "Oui ✅"
-                                false -> "Non ❌"
-                                null -> "Chargement..."
-                            }
-
-                            Text(
-                                "Email vérifié : $verifiedLabel",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-
-                            if (cachedIsVerified == false) {
-                                Spacer(Modifier.height(10.dp))
-
-                                Text(
-                                    "Tu n’as pas encore confirmé ton email. Vérifie tes spams si besoin.",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-
-                                Spacer(Modifier.height(8.dp))
-
-                                OutlinedButton(
-                                    enabled = !resending,
-                                    onClick = {
-                                        scope.launch {
-                                            resending = true
-                                            authVm.resendVerifyEmail()
-                                                .onSuccess { SnackbarBus.show("Email renvoyé ✅") }
-                                                .onFailure { SnackbarBus.show("Impossible : ${it.message ?: it}") }
-                                            resending = false
-                                        }
-                                    }
-                                ) {
-                                    if (resending) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(18.dp),
-                                                strokeWidth = 2.dp
-                                            )
-                                            Spacer(Modifier.width(10.dp))
-                                            Text("Envoi…")
-                                        }
-                                    } else {
-                                        Text("Renvoyer l’email de confirmation")
-                                    }
-                                }
-                            }
-
-                            Spacer(Modifier.height(10.dp))
-
-                            // Déconnexion
-                            Button(
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = onGoToLogin
-                            ) {
-                                Text("Se déconnecter")
-                            }
-
-                            // Suppression compte
-                            Spacer(Modifier.height(12.dp))
-
-                            OutlinedButton(
-                                onClick = { showDeleteDialog = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = !deleting,
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.error
-                                )
-                            ) {
-                                Text(if (deleting) "Suppression..." else "Supprimer mon compte")
-                            }
-
-                            if (showDeleteDialog) {
-                                AlertDialog(
-                                    onDismissRequest = { if (!deleting) showDeleteDialog = false },
-                                    title = { Text("Supprimer le compte ?") },
-                                    text = {
-                                        Text("Cette action est définitive. Tes données cloud seront supprimées.")
-                                    },
-                                    confirmButton = {
-                                        Button(
-                                            enabled = !deleting,
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.error,
-                                                contentColor = MaterialTheme.colorScheme.onError
-                                            ),
-                                            onClick = {
-                                                scope.launch {
-                                                    if (token.isNullOrBlank()) {
-                                                        SnackbarBus.show("Token manquant")
-                                                        return@launch
-                                                    }
-
-                                                    deleting = true
-                                                    authVm.deleteAccount()
-                                                        .onSuccess {
-                                                            SnackbarBus.show("Compte supprimé")
-                                                            authVm.logout()
-                                                            onGoToLogin
-                                                        }
-                                                        .onFailure { SnackbarBus.show("Suppression impossible : ${it.message ?: it}") }
-                                                    deleting = false
-                                                    showDeleteDialog = false
-                                                }
-                                            }
-                                        ) {
-                                            if (deleting) {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    CircularProgressIndicator(
-                                                        modifier = Modifier.size(18.dp),
-                                                        strokeWidth = 2.dp,
-                                                        color = MaterialTheme.colorScheme.onError
-                                                    )
-                                                    Spacer(Modifier.width(10.dp))
-                                                    Text("Suppression…")
-                                                }
-                                            } else {
-                                                Text("Supprimer définitivement")
-                                            }
-                                        }
-                                    },
-                                    dismissButton = {
-                                        TextButton(
-                                            enabled = !deleting,
-                                            onClick = { showDeleteDialog = false }
-                                        ) { Text("Annuler") }
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                }
-            }
-
-            if (mode == AppMode.LOCAL) {
-                item {
-                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Synchroniser & partager", style = MaterialTheme.typography.titleMedium)
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                "Passe en mode compte pour sauvegarder en base, synchroniser entre appareils " +
-                                        "et partager le frigo avec d’autres utilisateurs.",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-
-                            Spacer(Modifier.height(12.dp))
-
-                            OutlinedButton(
-                                onClick = onGoToRegister,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Filled.Sync, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Créer un compte pour synchroniser & partager")
-                            }
-                        }
                     }
                 }
             }
