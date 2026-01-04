@@ -54,7 +54,8 @@ private fun AddItemStepTopBar(
             Text(
                 text = "Ajouter un produit",
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.primary
             )
         },
         navigationIcon = {

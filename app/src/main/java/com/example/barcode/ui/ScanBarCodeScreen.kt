@@ -197,30 +197,14 @@ fun ScanBarCodeScreen(
     ) {
         Column(Modifier.fillMaxSize()) {
 
-            // FAB flash
-            FloatingActionButton(
-                onClick = {
-                    boundCamera?.cameraControl?.enableTorch(!torchOn)
-                    torchOn = !torchOn   // synchronisation locale immédiate
-                },
-                containerColor = MaterialTheme.colorScheme.secondary,
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(
-                    imageVector = if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
-                    contentDescription = if (torchOn) "Flash ON" else "Flash OFF"
-                )
-            }
-
-            /* ---------- Compteur de requetes (compteur stored) ---------- */
+            /* ---------- TODO Compteur de requetes (compteur stored) à retirer ---------- */
             Text("API: $fetchCount")
 
             /* ---------- Erreur "rate limit" ---------- */
             if (rateLimitMsg != null) {
                 Text(
                     text = rateLimitMsg!!,
-                    color = Color(0xFFD32F2F), // rouge discret
+                    color = Color(0xFFD32F2F),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
@@ -228,15 +212,34 @@ fun ScanBarCodeScreen(
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
+
                 /* ---------- Camera ---------- */
                 AndroidView(
                     factory = { c -> PreviewView(c).also {
-                        // it.preferredImplementationMode = PreviewView.ImplementationMode.COMPATIBLE
                         previewView = it
                     } },
                     modifier = Modifier.fillMaxSize(),
                     onRelease = { previewView = null }
                 )
+
+                // Btn toggle Flash overlay
+                FloatingActionButton(
+                    onClick = {
+                        boundCamera?.cameraControl?.enableTorch(!torchOn)
+                        torchOn = !torchOn
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp),
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = Color.White,
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        imageVector = if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                        contentDescription = if (torchOn) "Flash ON" else "Flash OFF"
+                    )
+                }
 
 
                 /* ---------- État « pas de données » (todo: composant dédié, props icon ou Lottie) ---------- */
@@ -270,7 +273,7 @@ fun ScanBarCodeScreen(
                         LottieAnimation(
                             composition = composition,
                             progress = progress,
-                            modifier = Modifier.size(200.dp).alpha(0.55f)  // ajuste la taille
+                            modifier = Modifier.size(200.dp).alpha(0.55f)
                         )
 
                         Text(
