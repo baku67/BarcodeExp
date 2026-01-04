@@ -18,9 +18,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.barcode.ui.components.DashboardRow
+import com.example.barcode.ui.components.PermissionsCard
 import com.example.barcode.ui.components.SnackbarBus
 
-// Écran d'accueil avec un bouton pour accéder à l'OCR
+
 @Composable
 fun HomeContent(
     onNavigateToItems: () -> Unit,
@@ -58,6 +59,12 @@ fun HomeContent(
                     }
                 }
 
+                // 2) Etats des permissions
+                // Attention: utiliser areNotificationsEnabled() avant envoie de notif,
+                // ET demander permissions au moment où besoin sinon peut bloquer après plusieurs refus si User voit pas l'intéret au lancement de  l'app
+                PermissionsCard()
+
+                // 2) Dashboard (Card Items et Card ListeCourses)
                 DashboardRow(
                     totalProducts = totalProducts,
                     freshCount = freshCount,
@@ -67,7 +74,7 @@ fun HomeContent(
                     onNavigateToListeCourses = onNavigateToListeCourses,
                 )
 
-                // 3) Bloc proposer une recette
+                // 3) Recette IA
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Recettes", style = MaterialTheme.typography.titleMedium)
@@ -90,7 +97,4 @@ fun HomeContent(
 
         }
     }
-
-
-
 }
