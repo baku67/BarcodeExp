@@ -1,5 +1,8 @@
 package com.example.barcode.ui.components
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Icon
@@ -13,15 +16,17 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.barcode.interfaces.AppIcon
 
 data class NavBarItem(
     val label: String,
-    val icon: ImageVector,
     val route: String,
+    val icon: AppIcon,
     val matchPrefix: Boolean = false // utile si ta route est du style "addItem/scan"
 )
 
@@ -82,7 +87,20 @@ fun NavBar(
                         popUpTo(navController.graph.startDestinationId) { saveState = true }
                     }
                 },
-                icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
+                icon = {
+                    when (val ic = item.icon) {
+                        is AppIcon.Vector -> Icon(
+                            imageVector = ic.image,
+                            contentDescription = item.label
+                        )
+
+                        is AppIcon.Drawable -> Icon(
+                            painter = painterResource(id = ic.resId),
+                            contentDescription = item.label,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                },
                 label = { Text(item.label) },
                 alwaysShowLabel = true,
                 colors = NavigationBarItemDefaults.colors(

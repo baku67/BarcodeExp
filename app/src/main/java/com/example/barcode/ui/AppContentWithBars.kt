@@ -3,7 +3,6 @@ package com.example.barcode.ui
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Scaffold
@@ -17,6 +16,8 @@ import com.example.barcode.ui.components.NavBar
 import com.example.barcode.ui.components.NavBarItem
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
+import com.example.barcode.R
+import com.example.barcode.interfaces.AppIcon
 import com.example.barcode.ui.components.SnackbarBus
 
 @Composable
@@ -27,10 +28,10 @@ fun AppContentWithBars(
     content: @Composable (PaddingValues, snackbarHostState: SnackbarHostState) -> Unit
 ) {
     val items = listOf(
-        NavBarItem(label = "Home", icon = Icons.Filled.Home, route = "home"),
-        NavBarItem(label = "Items", icon = Icons.Filled.Inbox, route = "items"),
-        NavBarItem(label = "Courses", icon = Icons.Filled.List, route = "listeCourses"),
-        NavBarItem(label = "Settings", icon = Icons.Filled.Settings, route = "settings")
+        NavBarItem(label = "Home", route = "home", icon = AppIcon.Vector(Icons.Filled.Home)),
+        NavBarItem(label = "Items", route = "items", icon = AppIcon.Drawable(R.drawable.ic_nav_fridge_icon)),
+        NavBarItem(label = "Courses", route = "listeCourses", icon = AppIcon.Vector(Icons.Filled.List)),
+        NavBarItem(label = "Settings", route = "settings", icon = AppIcon.Vector(Icons.Filled.Settings))
     )
 
     val (title, subtitle) = when {

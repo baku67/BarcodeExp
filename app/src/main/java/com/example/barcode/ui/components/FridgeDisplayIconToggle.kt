@@ -19,6 +19,9 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.ui.ViewMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import com.example.barcode.R
+import com.example.barcode.interfaces.AppIcon
 
 @Composable
 fun FridgeDisplayIconToggle(
@@ -36,14 +39,15 @@ fun FridgeDisplayIconToggle(
     ) {
         SegIcon(
             active = selected == ViewMode.List,
-            icon = Icons.Filled.ViewList,
+            icon = AppIcon.Vector(Icons.Filled.ViewList),
             onClick = { onSelect(ViewMode.List) },
             shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
         )
 
         SegIcon(
             active = selected == ViewMode.Grid,
-            icon = Icons.Filled.GridView,
+            // icon = AppIcon.Drawable(R.drawable.display_fridge_grid), // icon custom fridge bof bof
+            icon = AppIcon.Vector(Icons.Filled.GridView),
             onClick = { onSelect(ViewMode.Grid) },
             shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
         )
@@ -54,7 +58,7 @@ fun FridgeDisplayIconToggle(
 @Composable
 fun SegIcon(
     active: Boolean,
-    icon: ImageVector,
+    icon: AppIcon, // ImageVector (Icones Material) ou @DrawableRes Int (Pour Icones SVG->XML customs)
     onClick: () -> Unit,
     shape: RoundedCornerShape
 ) {
@@ -68,11 +72,18 @@ fun SegIcon(
             .background(bg)
             .size(40.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = tint
-        )
+        when (icon) {
+            is AppIcon.Vector -> Icon(
+                imageVector = icon.image,
+                contentDescription = null,
+                tint = tint
+            )
+            is AppIcon.Drawable -> Icon(
+                painter = painterResource(icon.resId),
+                contentDescription = null,
+                tint = tint
+            )
+        }
     }
 }
 
