@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
 
-    val tabs = listOf("home", "items", "listeCourses", "settings")
+    val tabs = listOf("home", "listeCourses", "items", "recipes", "settings")
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
 
@@ -51,14 +51,16 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
 
             when (tabs[page]) {
                 "home" -> HomeContent(
-                    onNavigateToItems = { goToTab("items") },
                     onNavigateToListeCourses = { goToTab("listeCourses") },
+                    onNavigateToItems = { goToTab("items") },
                     innerPadding = androidx.compose.foundation.layout.PaddingValues(),
                     14,
                     10,
                     3,
                     1
                 ) // TODO Data Dashboard factices pour l'instant
+
+                "listeCourses" -> ListeCoursesContent(PaddingValues())
 
                 "items" -> ItemsContent(
                     innerPadding = PaddingValues(),
@@ -69,7 +71,7 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
                     }
                 )
 
-                "listeCourses" -> ListeCoursesContent(PaddingValues())
+                "recipes" -> RecipesContent(PaddingValues())
 
                 "settings" -> SettingsContent(
                     innerPadding = PaddingValues(),

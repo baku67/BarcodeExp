@@ -99,15 +99,8 @@ class MainActivity : ComponentActivity() {
                             navController,
                             startDestination = "splash",
                         ) {
+
                             composable("splash") { GlobalLoaderScreen(navController) }
-                            composable("dateOCR") { ScanDlcScreen() }
-                            composable("barCodeOCR") { ScanBarCodeScreen() }
-                            composable("tabs") {
-                                MainTabsScreen(
-                                    navController,
-                                    authVm
-                                )
-                            } // contient la navigation au Swipe (Home/Items/Liste/Settings)
 
                             navigation(startDestination = "auth/login", route = "auth") {
 
@@ -140,6 +133,13 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
+
+                            composable("tabs") {
+                                MainTabsScreen(
+                                    navController,
+                                    authVm
+                                )
+                            } // contient la navigation au Swipe (Home/Items/Liste/Settings)
 
                             navigation(startDestination = "addItem/scan", route = "addItem") {
 
@@ -231,6 +231,8 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
+                            composable("dateOCR") { ScanDlcScreen() }
+                            composable("barCodeOCR") { ScanBarCodeScreen() }
                         }
                     }
                 }

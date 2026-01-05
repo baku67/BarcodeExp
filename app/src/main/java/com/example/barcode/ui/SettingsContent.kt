@@ -53,8 +53,11 @@ fun SettingsContent(
             .onFailure { SnackbarBus.show("Impossible de charger le profil : ${it.message ?: it}") }
     }
 
+    // LaunchedEffect est déclenché à chaque apparition et aussi (ou déjà) dans l'onglet qui le précède !! A enlver et garder uniquement le PullToRefresh ?
     LaunchedEffect(mode, token) {
-        refreshProfile()
+        if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
+            refreshProfile()
+        }
     }
 
     PullToRefreshBox(

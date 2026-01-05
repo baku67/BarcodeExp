@@ -18,14 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.barcode.ui.components.DashboardRow
-import com.example.barcode.ui.components.PermissionsCard
 import com.example.barcode.ui.components.SnackbarBus
 
 
 @Composable
 fun HomeContent(
-    onNavigateToItems: () -> Unit,
     onNavigateToListeCourses: () -> Unit,
+    onNavigateToItems: () -> Unit,
     innerPadding: PaddingValues,
     totalProducts: Int,
     freshCount: Int,

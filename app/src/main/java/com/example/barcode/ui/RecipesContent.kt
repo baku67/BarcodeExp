@@ -25,7 +25,7 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListeCoursesContent(innerPadding: PaddingValues) {
+fun RecipesContent(innerPadding: PaddingValues) {
 
     val appContext = LocalContext.current.applicationContext
     val session = remember { SessionManager(appContext) }
@@ -34,7 +34,7 @@ fun ListeCoursesContent(innerPadding: PaddingValues) {
     val mode = session.appMode.collectAsState(initial = AppMode.AUTH).value
     val token = session.token.collectAsState(initial = null).value
 
-    suspend fun refreshListeCourses() {
+    suspend fun refreshRecipesTokens() {
         if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
             delay(3_000) // todo
         }
@@ -43,8 +43,8 @@ fun ListeCoursesContent(innerPadding: PaddingValues) {
     var refreshing by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(mode, token) {
-        // refresh liste cloudée
-        // refreshListeCourses()
+        // refresh tokens jsp :
+        // refreshRecipesTokens()
     }
 
     PullToRefreshBox(
@@ -52,7 +52,7 @@ fun ListeCoursesContent(innerPadding: PaddingValues) {
         onRefresh = {
             scope.launch {
                 refreshing = true
-                refreshListeCourses()
+                refreshRecipesTokens()
                 refreshing = false
             }
         },
