@@ -42,12 +42,15 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
         selectedRoute = selectedRoute,
         onTabClick = { route -> goToTab(route) }
     ) { innerPadding, snackbarHostState  ->
+
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) { page ->
+
+            val isActive = pagerState.currentPage == page
 
             when (tabs[page]) {
                 "home" -> HomeContent(
@@ -60,7 +63,10 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
                     1
                 ) // TODO Data Dashboard factices pour l'instant
 
-                "listeCourses" -> ListeCoursesContent(PaddingValues())
+                "listeCourses" -> ListeCoursesContent(
+                    innerPadding = PaddingValues(),
+                    isActive = isActive
+                )
 
                 "items" -> ItemsContent(
                     innerPadding = PaddingValues(),
@@ -68,10 +74,14 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
                         navController.navigate("addItem") {
                             launchSingleTop = true
                         }
-                    }
+                    },
+                    isActive = isActive
                 )
 
-                "recipes" -> RecipesContent(PaddingValues())
+                "recipes" -> RecipesContent(
+                    innerPadding = PaddingValues(),
+                    isActive = isActive
+                )
 
                 "settings" -> SettingsContent(
                     innerPadding = PaddingValues(),
@@ -86,7 +96,8 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
                         navController.navigate("auth/register") {
                             launchSingleTop = true
                         }
-                    }
+                    },
+                    isActive = isActive
                 )
             }
         }

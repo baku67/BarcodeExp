@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,22 +29,42 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.barcode.addItems.ItemsViewModel
+import com.example.barcode.auth.AppMode
+import com.example.barcode.auth.SessionManager
 import com.example.barcode.ui.components.FridgeDisplayIconToggle
 import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import com.example.barcode.ui.components.SnackbarBus
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 enum class ViewMode { List, Grid }
 
-
+// TODO: bouton explicite de rafraichissement ou alors padding en haut de liste (mais caché) qui permet de ne pas activer le pull-to-refresh sans faire expres (BAD UX°
 @Composable
 fun ItemsContent(
     innerPadding: PaddingValues,
     onAddItem: () -> Unit,
-    vm: ItemsViewModel = viewModel()
+    vm: ItemsViewModel = viewModel(),
+    isActive: Boolean,
 ) {
     val list by vm.items.collectAsState(initial = emptyList())
     var viewMode by rememberSaveable { mutableStateOf(ViewMode.List) }
+
+    // --- Session (comme RecipesContent)
+    val appContext = LocalContext.current.applicationContext
+    val session = remember { SessionManager(appContext) }
+    val scope = rememberCoroutineScope()
+
+    val mode = session.appMode.collectAsState(initial = AppMode.AUTH).value
+    val token = session.token.collectAsState(initial = null).value
+
+    // --- Pull-to-refresh + initial load
+    var refreshing by rememberSaveable { mutableStateOf(false) }
+    var initialLoading by rememberSaveable { mutableStateOf(false) }
+    var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Tri croissant : expirés + plus proches en haut, plus lointaines en bas
     val sorted = remember(list) {
@@ -53,63 +74,121 @@ fun ItemsContent(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .padding(innerPadding)
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
+    // TODO: remplacer le delay par vrai refresh VM/API
+    suspend fun refreshItems() {
+        if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
+            delay(3_000)
+            // ex: vm.refreshItems(token!!)
+        } else {
+            // ex: vm.reloadLocal()
+        }
+    }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Frigo",
-                fontSize = 22.sp,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
-            )
+    // --- Auto-load 1 seule fois quand l’onglet est réellement actif
+    LaunchedEffect(isActive, mode, token) {
+        val canLoad = isActive && mode == AppMode.AUTH && !token.isNullOrBlank()
+        if (!canLoad) return@LaunchedEffect
 
-            Spacer(Modifier.weight(1f))
+        if (loadedForToken == token) return@LaunchedEffect
 
-            FridgeDisplayIconToggle(
-                selected = viewMode,
-                onSelect = { viewMode = it }
+        initialLoading = true
+        try {
+            refreshItems()
+        } finally {
+            initialLoading = false
+            loadedForToken = token // même si échec => évite spam navigation (refresh manuel pour retenter)
+        }
+    }
+
+
+    Box(Modifier.fillMaxSize()) {
+
+        // Barre de chargement top (jolie + non intrusive)
+        if (initialLoading) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
             )
         }
 
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = {
+                scope.launch {
+                    if (mode != AppMode.AUTH || token.isNullOrBlank()) {
+                        SnackbarBus.show("Connecte-toi pour synchroniser.")
+                        return@launch
+                    }
 
-        Spacer(Modifier.height(12.dp))
-
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(sorted, key = { it.id }) { it ->
-                ItemCard(
-                    name = it.name ?: "(sans nom)",
-                    brand = it.brand,
-                    expiry = it.expiryDate,
-                    imageUrl = it.imageUrl, // ⚠️ suppose que ton Item a bien imageUrl
-                    onDelete = { vm.deleteItem(it.id) }
-                )
-            }
-            item { Spacer(Modifier.height(4.dp)) }
-        }
-
-        Spacer(Modifier.height(8.dp))
-        Button(
-            onClick = onAddItem,
+                    refreshing = true
+                    try {
+                        refreshItems()
+                    } finally {
+                        refreshing = false
+                    }
+                }
+            },
             modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
+                .padding(innerPadding)
+                .fillMaxSize()
         ) {
-            Icon(Icons.Filled.Add, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Ajouter un produit")
-        }
+            // ✅ On garde ton layout : header + list scroll + bouton sticky en bas
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Frigo",
+                        fontSize = 22.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
 
+                    Spacer(Modifier.weight(1f))
+
+                    FridgeDisplayIconToggle(
+                        selected = viewMode,
+                        onSelect = { viewMode = it }
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(sorted, key = { it.id }) { it ->
+                        ItemCard(
+                            name = it.name ?: "(sans nom)",
+                            brand = it.brand,
+                            expiry = it.expiryDate,
+                            imageUrl = it.imageUrl,
+                            onDelete = { vm.deleteItem(it.id) }
+                        )
+                    }
+                    item { Spacer(Modifier.height(4.dp)) }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = onAddItem,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Ajouter un produit")
+                }
+            }
+        }
     }
 }
 

@@ -33,6 +33,7 @@ fun SettingsContent(
     authVm: AuthViewModel,
     onGoToLogin: () -> Unit,
     onGoToRegister: () -> Unit,
+    isActive: Boolean
 ) {
 
     val scope = rememberCoroutineScope()
@@ -44,281 +45,342 @@ fun SettingsContent(
     val prefs = authVm.preferences.collectAsState(initial = UserPreferences()).value
 
     var refreshing by rememberSaveable { mutableStateOf(false) }
+
+    // vérifie si données déja fetch pour ce JWT, "1er chargement" todo:remplacer par 1ers chargements dans GloabLoaderScreen Splash
+    var initialLoading by rememberSaveable { mutableStateOf(false) }   // ✅ loader initial dédié au premier chargement
+    var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
+
     var resending by rememberSaveable { mutableStateOf(false) }
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var deleting by rememberSaveable { mutableStateOf(false) }
 
+    // TODO: remplacer le delay par vrai refresh VM/API
     suspend fun refreshProfile() {
         authVm.refreshProfile()
             .onFailure { SnackbarBus.show("Impossible de charger le profil : ${it.message ?: it}") }
     }
 
-    // LaunchedEffect est déclenché à chaque apparition et aussi (ou déjà) dans l'onglet qui le précède !! A enlver et garder uniquement le PullToRefresh ?
-    LaunchedEffect(mode, token) {
-        if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
+    LaunchedEffect(isActive, mode, token) {
+        val canLoad = isActive && mode == AppMode.AUTH && !token.isNullOrBlank()
+        if (!canLoad) return@LaunchedEffect
+
+        // auto-load 1 seule fois (par token)
+        if (loadedForToken == token) return@LaunchedEffect
+
+        initialLoading = true
+        try {
             refreshProfile()
+        } finally {
+            initialLoading = false
+            loadedForToken = token // ✅ même si échec => évite spam navigation (refresh manuel pour retenter)
         }
     }
 
-    PullToRefreshBox(
-        isRefreshing = refreshing,
-        onRefresh = {
-            scope.launch {
-                refreshing = true
-                refreshProfile()
-                refreshing = false
-            }
-        },
-        modifier = Modifier
-            .padding(innerPadding)
-            .fillMaxSize()
-    ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                // Bloc : Affichage du Mode actuel (LOCAL ou AUTH)
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Mode d’utilisation", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(6.dp))
 
-                        val modeLabel = when (mode) {
-                            AppMode.LOCAL -> "Local (sur ce téléphone)"
-                            AppMode.AUTH -> "Connecté (synchronisation cloud)"
-                        }
 
-                        Text(modeLabel, style = MaterialTheme.typography.bodyLarge)
 
-                        if (mode == AppMode.LOCAL) {
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                "Tes données restent uniquement sur ton appareil. Pas de partage, pas de sync multi-appareils.",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
+    Box(Modifier.fillMaxSize()) {
+
+        // Barre de chargement top
+        if (initialLoading) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter) // ✅ OK car on est dans BoxScope
+            )
+        }
+
+        // Contenu + PullToRefreshBox
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = {
+                scope.launch {
+                    if (mode != AppMode.AUTH || token.isNullOrBlank()) {
+                        SnackbarBus.show("Connecte-toi pour synchroniser.") // todo: bouton redirect login dans le snack ?
+                        return@launch
                     }
 
-                    // Si MODE AUTH (User en cache) on affiche ses infos + btn deco + btn suppr compte
-                    if (mode == AppMode.AUTH) {
-
+                    refreshing = true
+                    try {
+                        refreshProfile()
+                    } finally {
+                        refreshing = false
+                    }
+                }
+            },
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    // Bloc : Affichage du Mode actuel (LOCAL ou AUTH)
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                                    Text("Compte", style = MaterialTheme.typography.titleMedium)
-                                    Spacer(Modifier.height(6.dp))
+                            Text(
+                                "Mode d’utilisation",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(Modifier.height(6.dp))
 
-                                    Text("Email : ${cachedEmail ?: "Chargement..."}", style = MaterialTheme.typography.bodyLarge)
+                            val modeLabel = when (mode) {
+                                AppMode.LOCAL -> "Local (sur ce téléphone)"
+                                AppMode.AUTH -> "Connecté (synchronisation cloud)"
+                            }
 
-                                    val verifiedLabel = when (cachedIsVerified) {
-                                        true -> "Oui ✅"
-                                        false -> "Non ❌"
-                                        null -> "Chargement..."
-                                    }
+                            Text(modeLabel, style = MaterialTheme.typography.bodyLarge)
 
-                                    Text(
-                                        "Email vérifié : $verifiedLabel",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
+                            if (mode == AppMode.LOCAL) {
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    "Tes données restent uniquement sur ton appareil. Pas de partage, pas de sync multi-appareils.",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
 
-                                    if (cachedIsVerified == false) {
-                                        Spacer(Modifier.height(10.dp))
+                        // Si MODE AUTH (User en cache) on affiche ses infos + btn deco + btn suppr compte
+                        if (mode == AppMode.AUTH) {
 
-                                        Text(
-                                            "Tu n’as pas encore confirmé ton email. Vérifie tes spams si besoin.",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Compte", style = MaterialTheme.typography.titleMedium)
+                                Spacer(Modifier.height(6.dp))
 
-                                        Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Email : ${cachedEmail ?: "Chargement..."}",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
 
-                                        OutlinedButton(
-                                            enabled = !resending,
-                                            onClick = {
-                                                scope.launch {
-                                                    resending = true
-                                                    authVm.resendVerifyEmail()
-                                                        .onSuccess { SnackbarBus.show("Email renvoyé ✅") }
-                                                        .onFailure { SnackbarBus.show("Impossible : ${it.message ?: it}") }
-                                                    resending = false
-                                                }
-                                            }
-                                        ) {
-                                            if (resending) {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    CircularProgressIndicator(
-                                                        modifier = Modifier.size(18.dp),
-                                                        strokeWidth = 2.dp
-                                                    )
-                                                    Spacer(Modifier.width(10.dp))
-                                                    Text("Envoi…")
-                                                }
-                                            } else {
-                                                Text("Renvoyer l’email de confirmation")
-                                            }
-                                        }
-                                    }
+                                val verifiedLabel = when (cachedIsVerified) {
+                                    true -> "Oui ✅"
+                                    false -> "Non ❌"
+                                    null -> "Chargement..."
+                                }
 
+                                Text(
+                                    "Email vérifié : $verifiedLabel",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+
+                                if (cachedIsVerified == false) {
                                     Spacer(Modifier.height(10.dp))
 
-                                    // Déconnexion
-                                    Button(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        onClick = onGoToLogin
-                                    ) {
-                                        Text("Se déconnecter")
-                                    }
+                                    Text(
+                                        "Tu n’as pas encore confirmé ton email. Vérifie tes spams si besoin.",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
 
-                                    // Suppression compte
-                                    Spacer(Modifier.height(12.dp))
+                                    Spacer(Modifier.height(8.dp))
 
                                     OutlinedButton(
-                                        onClick = { showDeleteDialog = true },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        enabled = !deleting,
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.error
-                                        )
-                                    ) {
-                                        Text(if (deleting) "Suppression..." else "Supprimer mon compte")
-                                    }
-
-                                    if (showDeleteDialog) {
-                                        AlertDialog(
-                                            onDismissRequest = { if (!deleting) showDeleteDialog = false },
-                                            title = { Text("Supprimer le compte ?") },
-                                            text = {
-                                                Text("Cette action est définitive. Tes données cloud seront supprimées.")
-                                            },
-                                            confirmButton = {
-                                                Button(
-                                                    enabled = !deleting,
-                                                    colors = ButtonDefaults.buttonColors(
-                                                        containerColor = MaterialTheme.colorScheme.error,
-                                                        contentColor = MaterialTheme.colorScheme.onError
-                                                    ),
-                                                    onClick = {
-                                                        scope.launch {
-                                                            if (token.isNullOrBlank()) {
-                                                                SnackbarBus.show("Token manquant")
-                                                                return@launch
-                                                            }
-
-                                                            deleting = true
-                                                            authVm.deleteAccount()
-                                                                .onSuccess {
-                                                                    SnackbarBus.show("Compte supprimé")
-                                                                    authVm.logout()
-                                                                    onGoToLogin
-                                                                }
-                                                                .onFailure { SnackbarBus.show("Suppression impossible : ${it.message ?: it}") }
-                                                            deleting = false
-                                                            showDeleteDialog = false
-                                                        }
-                                                    }
-                                                ) {
-                                                    if (deleting) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            CircularProgressIndicator(
-                                                                modifier = Modifier.size(18.dp),
-                                                                strokeWidth = 2.dp,
-                                                                color = MaterialTheme.colorScheme.onError
-                                                            )
-                                                            Spacer(Modifier.width(10.dp))
-                                                            Text("Suppression…")
-                                                        }
-                                                    } else {
-                                                        Text("Supprimer définitivement")
-                                                    }
-                                                }
-                                            },
-                                            dismissButton = {
-                                                TextButton(
-                                                    enabled = !deleting,
-                                                    onClick = { showDeleteDialog = false }
-                                                ) { Text("Annuler") }
+                                        enabled = !resending,
+                                        onClick = {
+                                            scope.launch {
+                                                resending = true
+                                                authVm.resendVerifyEmail()
+                                                    .onSuccess { SnackbarBus.show("Email renvoyé ✅") }
+                                                    .onFailure { SnackbarBus.show("Impossible : ${it.message ?: it}") }
+                                                resending = false
                                             }
-                                        )
+                                        }
+                                    ) {
+                                        if (resending) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp),
+                                                    strokeWidth = 2.dp
+                                                )
+                                                Spacer(Modifier.width(10.dp))
+                                                Text("Envoi…")
+                                            }
+                                        } else {
+                                            Text("Renvoyer l’email de confirmation")
+                                        }
                                     }
                                 }
-                    }
 
-                    // Si MODE LOCAL proposition création de compte
-                    if (mode == AppMode.LOCAL) {
+                                Spacer(Modifier.height(10.dp))
 
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Synchroniser & partager", style = MaterialTheme.typography.titleMedium)
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                "Passe en mode compte pour sauvegarder en base, synchroniser entre appareils " +
-                                        "et partager le frigo avec d’autres utilisateurs.",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                                // Déconnexion
+                                Button(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = onGoToLogin
+                                ) {
+                                    Text("Se déconnecter")
+                                }
 
-                            Spacer(Modifier.height(12.dp))
+                                // Suppression compte
+                                Spacer(Modifier.height(12.dp))
 
-                            OutlinedButton(
-                                onClick = onGoToRegister,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Filled.Sync, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Créer un compte pour synchroniser & partager")
+                                OutlinedButton(
+                                    onClick = { showDeleteDialog = true },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !deleting,
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    )
+                                ) {
+                                    Text(if (deleting) "Suppression..." else "Supprimer mon compte")
+                                }
+
+                                if (showDeleteDialog) {
+                                    AlertDialog(
+                                        onDismissRequest = {
+                                            if (!deleting) showDeleteDialog = false
+                                        },
+                                        title = { Text("Supprimer le compte ?") },
+                                        text = {
+                                            Text("Cette action est définitive. Tes données cloud seront supprimées.")
+                                        },
+                                        confirmButton = {
+                                            Button(
+                                                enabled = !deleting,
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.error,
+                                                    contentColor = MaterialTheme.colorScheme.onError
+                                                ),
+                                                onClick = {
+                                                    scope.launch {
+                                                        if (token.isNullOrBlank()) {
+                                                            SnackbarBus.show("Token manquant")
+                                                            return@launch
+                                                        }
+
+                                                        deleting = true
+                                                        authVm.deleteAccount()
+                                                            .onSuccess {
+                                                                SnackbarBus.show("Compte supprimé")
+                                                                authVm.logout()
+                                                                onGoToLogin()
+                                                            }
+                                                            .onFailure { SnackbarBus.show("Suppression impossible : ${it.message ?: it}") }
+                                                        deleting = false
+                                                        showDeleteDialog = false
+                                                    }
+                                                }
+                                            ) {
+                                                if (deleting) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        CircularProgressIndicator(
+                                                            modifier = Modifier.size(18.dp),
+                                                            strokeWidth = 2.dp,
+                                                            color = MaterialTheme.colorScheme.onError
+                                                        )
+                                                        Spacer(Modifier.width(10.dp))
+                                                        Text("Suppression…")
+                                                    }
+                                                } else {
+                                                    Text("Supprimer définitivement")
+                                                }
+                                            }
+                                        },
+                                        dismissButton = {
+                                            TextButton(
+                                                enabled = !deleting,
+                                                onClick = { showDeleteDialog = false }
+                                            ) { Text("Annuler") }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Si MODE LOCAL proposition création de compte
+                        if (mode == AppMode.LOCAL) {
+
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    "Synchroniser & partager",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    "Passe en mode compte pour sauvegarder en base, synchroniser entre appareils " +
+                                            "et partager le frigo avec d’autres utilisateurs.",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+
+                                Spacer(Modifier.height(12.dp))
+
+                                OutlinedButton(
+                                    onClick = onGoToRegister,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Filled.Sync, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Créer un compte pour synchroniser & partager")
+                                }
                             }
                         }
                     }
+
                 }
 
-            }
+                // 2) Alerte si autorisations manquantes -> redirection vers section /Settings
+                // Attention: utiliser areNotificationsEnabled() avant envoie de notif,
+                // ET demander permissions au moment où besoin sinon peut bloquer après plusieurs refus si User voit pas l'intéret au lancement de  l'app
+                item {
+                    PermissionsCard()
+                }
 
-            // 2) Alerte si autorisations manquantes -> redirection vers section /Settings
-            // Attention: utiliser areNotificationsEnabled() avant envoie de notif,
-            // ET demander permissions au moment où besoin sinon peut bloquer après plusieurs refus si User voit pas l'intéret au lancement de  l'app
-            item {
-                PermissionsCard()
-            }
+                // Toggle Theme Light/Dark
+                item {
+                    ElevatedCard {
+                        Column(
+                            Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text("Apparence", style = MaterialTheme.typography.titleLarge)
 
-            // Toggle Theme Light/Dark
-            item {
-                ElevatedCard {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Apparence", style = MaterialTheme.typography.titleLarge)
-
-                        ThemeToggleRow(
-                            prefs = prefs,
-                            onToggleDark = { checked -> authVm.onThemeToggled(checked) }
-                        )
+                            ThemeToggleRow(
+                                prefs = prefs,
+                                onToggleDark = { checked -> authVm.onThemeToggled(checked) }
+                            )
+                        }
                     }
                 }
-            }
 
-            item {
-                //  Bloc paramétrages DLC et notifs
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Paramètres de DLC", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(6.dp))
-                        val dlcProductsCount = 0
-                        Text(
-                            "Nombre de produits en DLC: $dlcProductsCount",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            "Recevoir des alertes (toggle)",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            "Si toggle: Combien de jours avant (options)",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            "Si pas autorisation: need autorisation notifs",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
+                item {
+                    //  Bloc paramétrages DLC et notifs
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "Paramètres de DLC",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            val dlcProductsCount = 0
+                            Text(
+                                "Nombre de produits en DLC: $dlcProductsCount",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                "Recevoir des alertes (toggle)",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                "Si toggle: Combien de jours avant (options)",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                "Si pas autorisation: need autorisation notifs",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
         }
+
+
     }
+
+
+
 }

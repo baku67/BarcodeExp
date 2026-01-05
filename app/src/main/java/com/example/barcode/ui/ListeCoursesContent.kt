@@ -20,12 +20,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import com.example.barcode.ui.components.SnackbarBus
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListeCoursesContent(innerPadding: PaddingValues) {
+fun ListeCoursesContent(innerPadding: PaddingValues, isActive: Boolean) {
 
     val appContext = LocalContext.current.applicationContext
     val session = remember { SessionManager(appContext) }
@@ -34,41 +35,74 @@ fun ListeCoursesContent(innerPadding: PaddingValues) {
     val mode = session.appMode.collectAsState(initial = AppMode.AUTH).value
     val token = session.token.collectAsState(initial = null).value
 
+    var refreshing by rememberSaveable { mutableStateOf(false) }
+
+    // vérifie si données déja fetch pour ce JWT, "1er chargement" todo:remplacer par 1ers chargements dans GloabLoaderScreen Splash
+    var initialLoading by rememberSaveable { mutableStateOf(false) }   // ✅ loader initial dédié au premier chargement
+    var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // TODO: remplacer le delay par vrai refresh VM/API
     suspend fun refreshListeCourses() {
         if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
             delay(3_000) // todo
         }
     }
 
-    var refreshing by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(isActive, mode, token) {
+        val canLoad = isActive && mode == AppMode.AUTH && !token.isNullOrBlank()
+        if (!canLoad) return@LaunchedEffect
 
-    LaunchedEffect(mode, token) {
-        // refresh liste cloudée
-        // refreshListeCourses()
+        // auto-load 1 seule fois (par token)
+        if (loadedForToken == token) return@LaunchedEffect
+
+        initialLoading = true
+        try {
+            refreshListeCourses()
+        } finally {
+            initialLoading = false
+            loadedForToken = token // ✅ même si échec => évite spam navigation (refresh manuel pour retenter)
+        }
     }
 
-    PullToRefreshBox(
-        isRefreshing = refreshing,
-        onRefresh = {
-            scope.launch {
-                refreshing = true
-                refreshListeCourses()
-                refreshing = false
-            }
-        },
-        modifier = Modifier
-            .padding(innerPadding)
-            .fillMaxSize()
-    ) {
-        LazyColumn(
+    Box(Modifier.fillMaxSize()) {
+
+        // Barre de chargement top
+        if (initialLoading) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter) // ✅ OK car on est dans BoxScope
+            )
+        }
+
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = {
+                scope.launch {
+                    refreshing = true
+                    refreshListeCourses()
+                    refreshing = false
+                }
+            },
             modifier = Modifier
+                .padding(innerPadding)
                 .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
 
+                // Contenu todo
+                item {
+                    // Empty state temporaire
+                    // (remplace ensuite par tes vraies cartes/recettes)
+                    androidx.compose.material3.Text("Aucune recette pour le moment.")
+                }
 
-
+            }
         }
     }
 }

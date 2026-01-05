@@ -50,7 +50,7 @@ fun GlobalLoaderScreen(nav: NavHostController) {
 
         val session = SessionManager(appContext)
 
-        // TODO: remplace ce delay par tes vrais chargements (préfetch, DB, etc.)
+        // TODO: remplacer ce delay par check AUTH + RefreshToken voir capture
         delay(3000)
         // exemple : pré-initialiser MLKit, charger prefs, réhydrater cache, ping API…
         // BarcodeScanning.getClient() // warm-up éventuel
