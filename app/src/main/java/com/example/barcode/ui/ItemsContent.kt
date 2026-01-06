@@ -81,7 +81,9 @@ fun ItemsContent(
 
     // bottom sheet au clic sur ItemCard
     var sheetItem by remember { mutableStateOf<com.example.barcode.data.Item?>(null) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
     // Viewer plein écran (click sur images BottomSheet)
     var viewerUrl by remember { mutableStateOf<String?>(null) }
 
@@ -93,20 +95,6 @@ fun ItemsContent(
         )
     }
 
-    // BottomSheet au click sur ItemCard
-    if (sheetItem != null) {
-        ModalBottomSheet(
-            onDismissRequest = { sheetItem = null },
-            sheetState = sheetState
-        ) {
-            ItemExtraBottomSheet(
-                item = sheetItem!!,
-                onClose = { sheetItem = null },
-                onOpenViewer = { viewerUrl = it }
-            )
-        }
-    }
-
     // Viewer d'Image plein écran (click sur images BottomSheet)
     if (viewerUrl != null) {
         ImageViewerDialog(
@@ -114,6 +102,8 @@ fun ItemsContent(
             onDismiss = { viewerUrl = null }
         )
     }
+
+
 
     // TODO: remplacer le delay par vrai refresh VM/API
     suspend fun refreshItems() {
@@ -124,6 +114,27 @@ fun ItemsContent(
             // ex: vm.reloadLocal()
         }
     }
+
+    // BottomSheet au click sur ItemCard
+    fun closeSheet() {
+        scope.launch {
+            sheetState.hide()
+            sheetItem = null
+        }
+    }
+    if (sheetItem != null) {
+        ModalBottomSheet(
+            onDismissRequest = { closeSheet() }, // Modif pour anim bottomSheet a chaque fois
+            sheetState = sheetState
+        ) {
+            ItemExtraBottomSheet(
+                item = sheetItem!!,
+                onClose = { closeSheet() },       // Modif pour anim bottomSheet a chaque foiss
+                onOpenViewer = { viewerUrl = it }
+            )
+        }
+    }
+
 
     // --- Auto-load 1 seule fois quand l’onglet est réellement actif
     LaunchedEffect(isActive, mode, token) {
@@ -138,6 +149,20 @@ fun ItemsContent(
         } finally {
             initialLoading = false
             loadedForToken = token // même si échec => évite spam navigation (refresh manuel pour retenter)
+        }
+    }
+
+    // Tout ça pour relancer l'anim open BottomSheet
+    // ✅ Quand on ouvre (sheetItem != null), on force l’anim show()
+    LaunchedEffect(sheetItem) {
+        if (sheetItem != null) {
+            sheetState.show()
+        }
+    }
+    // ✅ Si l’utilisateur ferme en swipant vers le bas, on “nettoie” sheetItem
+    LaunchedEffect(sheetState.currentValue) {
+        if (sheetState.currentValue == SheetValue.Hidden) {
+            sheetItem = null
         }
     }
 
