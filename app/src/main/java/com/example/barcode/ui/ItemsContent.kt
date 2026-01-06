@@ -7,6 +7,7 @@ import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -122,14 +123,27 @@ fun ItemsContent(
             sheetItem = null
         }
     }
+
+    // Couleur du calque pour le composant du fond quand BottomSheet actif
+    // if (sheetItem != null) {
+    //     Box(
+    //         modifier = Modifier
+    //             .fillMaxSize()
+    //             .background(Color.Black.copy(alpha = 0.35f))
+    //             .clickable { closeSheet() } // tap outside => close (optionnel)
+    //     )
+    // }
+
+    // BottomSheet
     if (sheetItem != null) {
         ModalBottomSheet(
-            onDismissRequest = { closeSheet() }, // Modif pour anim bottomSheet a chaque fois
-            sheetState = sheetState
+            onDismissRequest = { closeSheet() },
+            sheetState = sheetState,
+            dragHandle = null
         ) {
-            ItemExtraBottomSheet(
+            ItemDetailsBottomSheet(
                 item = sheetItem!!,
-                onClose = { closeSheet() },       // Modif pour anim bottomSheet a chaque foiss
+                onClose = { closeSheet() },
                 onOpenViewer = { viewerUrl = it }
             )
         }
@@ -400,9 +414,9 @@ private fun formatRelativeDaysCompact(targetMillis: Long): String {
     return when {
         days == 0 -> "aujourd'hui"
         days == 1 -> "demain"
-        days > 1  -> "dans ${days}j."
+        days > 1  -> "dans ${days}j"
         days == -1 -> "hier"
-        else -> "il y a ${-days}j."
+        else -> "il y a ${-days}j (!)"
     }
 }
 
@@ -426,49 +440,80 @@ private fun isSoon(expiry: Long): Boolean {
 
 // BOTTOM SHEET 1/2:
 @Composable
-private fun ItemExtraBottomSheet(
+private fun ItemDetailsBottomSheet(
     item: com.example.barcode.data.Item,
     onClose: () -> Unit,
     onOpenViewer: (String) -> Unit // ouverture du viewer d'image
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "Images (infos produit)",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+
+    Column(Modifier.fillMaxWidth()) {
+
+        // Border top coloré AU TOP, avant tout
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(MaterialTheme.colorScheme.primary)
+        )
+
+        // Poignée custom en haut
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp, bottom = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(44.dp)
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f))
             )
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = onClose) { Text("Fermer") }
         }
 
-        ExtraImageBlock(
-            title = "Ingrédients",
-            url = item.imageIngredientsUrl,
-            onOpenViewer = onOpenViewer
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp) // pour laisser respirer la barre top(Box au dessus)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Images (infos produit)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onClose) { Text("Fermer") }
+            }
 
-        ExtraImageBlock(
-            title = "Nutrition",
-            url = item.imageNutritionUrl,
-            onOpenViewer = onOpenViewer
-        )
+            ExtraImageBlockCollapsible(
+                title = "Ingrédients",
+                url = item.imageIngredientsUrl,
+                onOpenViewer = onOpenViewer
+            )
 
-        Spacer(Modifier.height(6.dp))
+            ExtraImageBlockCollapsible(
+                title = "Nutrition",
+                url = item.imageNutritionUrl,
+                onOpenViewer = onOpenViewer
+            )
+
+            Spacer(Modifier.height(6.dp))
+        }
     }
 }
 // BOTTOM SHEET 2/2:
 @Composable
-private fun ExtraImageBlock(
+private fun ExtraImageBlockCollapsible(
     title: String,
     url: String?,
     onOpenViewer: (String) -> Unit
 ) {
+    var expanded by rememberSaveable(title) { mutableStateOf(false) }
+
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
@@ -479,7 +524,22 @@ private fun ExtraImageBlock(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(title, fontWeight = FontWeight.SemiBold)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = !url.isNullOrBlank()) { expanded = !expanded },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(title, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.weight(1f))
+                if (!url.isNullOrBlank()) {
+                    Text(
+                        if (expanded) "Masquer" else "Afficher",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
 
             if (url.isNullOrBlank()) {
                 Text(
@@ -489,19 +549,22 @@ private fun ExtraImageBlock(
                 return@Column
             }
 
-            Image(
-                painter = rememberAsyncImagePainter(url),
-                contentDescription = title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .combinedClickable(
-                        onClick = { onOpenViewer(url) },
-                        onLongClick = null
-                    ),
-                contentScale = ContentScale.Fit
-            )
+            // ✅ IMPORTANT: l'Image n'est composée que si expanded == true
+            if (expanded) {
+                Image(
+                    painter = rememberAsyncImagePainter(url),
+                    contentDescription = title,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .combinedClickable(
+                            onClick = { onOpenViewer(url) },
+                            onLongClick = null
+                        ),
+                    contentScale = ContentScale.Fit
+                )
+            }
         }
     }
 }

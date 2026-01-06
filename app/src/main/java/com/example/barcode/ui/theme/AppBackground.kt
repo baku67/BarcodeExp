@@ -144,7 +144,7 @@ fun AppBackground(content: @Composable () -> Unit) {
                                     y = center.y - h / 2f
                                 ),
                                 size = Size(w, h),
-                                alpha = if (isDark) 0.12f else 0.08f // Opacité du pattern (dark(0)=transp)
+                                alpha = if (isDark) 0.13f else 0.08f // Opacité du pattern (dark(0)=transp)
                             )
                         }
                     }
