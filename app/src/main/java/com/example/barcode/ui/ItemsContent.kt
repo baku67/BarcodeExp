@@ -7,6 +7,7 @@ import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,6 +37,8 @@ import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import com.example.barcode.ui.components.SnackbarBus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -43,6 +46,7 @@ import kotlinx.coroutines.launch
 enum class ViewMode { List, Grid }
 
 // TODO: bouton explicite de rafraichissement ou alors padding en haut de liste (mais caché) qui permet de ne pas activer le pull-to-refresh sans faire expres (BAD UX°
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemsContent(
     innerPadding: PaddingValues,
@@ -66,12 +70,28 @@ fun ItemsContent(
     var initialLoading by rememberSaveable { mutableStateOf(false) }
     var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
 
+    // bottom sheet au clic sur ItemCard
+    var sheetItem by remember { mutableStateOf<com.example.barcode.data.Item?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     // Tri croissant : expirés + plus proches en haut, plus lointaines en bas
     val sorted = remember(list) {
         list.sortedWith(
             compareBy<com.example.barcode.data.Item> { it.expiryDate ?: Long.MAX_VALUE }
                 .thenBy { (it.name ?: "").lowercase() }
         )
+    }
+
+    if (sheetItem != null) {
+        ModalBottomSheet(
+            onDismissRequest = { sheetItem = null },
+            sheetState = sheetState
+        ) {
+            ItemExtraBottomSheet(
+                item = sheetItem!!,
+                onClose = { sheetItem = null }
+            )
+        }
     }
 
     // TODO: remplacer le delay par vrai refresh VM/API
@@ -170,6 +190,7 @@ fun ItemsContent(
                             brand = it.brand,
                             expiry = it.expiryDate,
                             imageUrl = it.imageUrl,
+                            onLongPress = { sheetItem = it },
                             onDelete = { vm.deleteItem(it.id) }
                         )
                     }
@@ -199,6 +220,7 @@ private fun ItemCard(
     brand: String?,
     expiry: Long?,
     imageUrl: String?,
+    onLongPress: () -> Unit,
     onDelete: () -> Unit
 ) {
     val surface = MaterialTheme.colorScheme.surface
@@ -206,6 +228,10 @@ private fun ItemCard(
     val relativeCompact = remember(expiry) { expiry?.let { formatRelativeDaysCompact(it) } ?: "—" }
 
     Card(
+        modifier = Modifier.combinedClickable(
+            onClick = { /* rien pour l'instant */ },
+            onLongClick = onLongPress
+        ),
         colors = CardDefaults.cardColors(containerColor = surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         border = when {
@@ -347,4 +373,80 @@ private fun isSoon(expiry: Long): Boolean {
     val target = Instant.ofEpochMilli(expiry).atZone(zone).toLocalDate()
     val days = ChronoUnit.DAYS.between(today, target).toInt()
     return days in 0..2
+}
+
+
+
+// BOTTOM SHEET 1/2:
+@Composable
+private fun ItemExtraBottomSheet(
+    item: com.example.barcode.data.Item,
+    onClose: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Images (infos produit)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onClose) { Text("Fermer") }
+        }
+
+        ExtraImageBlock(
+            title = "Ingrédients",
+            url = item.imageIngredientsUrl
+        )
+
+        ExtraImageBlock(
+            title = "Nutrition",
+            url = item.imageNutritionUrl
+        )
+
+        Spacer(Modifier.height(6.dp))
+    }
+}
+// BOTTOM SHEET 2/2:
+@Composable
+private fun ExtraImageBlock(
+    title: String,
+    url: String?
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(title, fontWeight = FontWeight.SemiBold)
+
+            if (url.isNullOrBlank()) {
+                Text(
+                    "Aucune image disponible.",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                return@Column
+            }
+
+            Image(
+                painter = rememberAsyncImagePainter(url),
+                contentDescription = title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Fit
+            )
+        }
+    }
 }

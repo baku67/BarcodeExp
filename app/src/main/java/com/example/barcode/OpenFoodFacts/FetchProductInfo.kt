@@ -98,19 +98,9 @@ suspend fun fetchProductInfo(code: String): FetchResult =
             }
 
             val obj = JSONObject(json).getJSONObject("product")
-
             val images = obj.optJSONObject("images")
             val langs = listOf(lang, "fr", "en").distinct()
-
             val frontUrl = images?.let { selectedTypeUrl(code, it, "front", langs) }
-            val ingredientsUrl = images?.let { selectedTypeUrl(code, it, "ingredients", langs) }
-            val nutritionUrl = images?.let { selectedTypeUrl(code, it, "nutrition", langs) }
-
-            // ✅ candidates pour la sélection dans l'UI (dans l'ordre)
-            val candidates = listOfNotNull(frontUrl, ingredientsUrl, nutritionUrl).distinct()
-
-            // ✅ image principale par défaut (front si dispo, sinon fallback OFF)
-            val imgUrl = frontUrl ?: obj.optString("image_url", "")
 
             val name = pickProductName(obj, lang)
             val brand = obj.optString("brands", "Inconnue")
@@ -118,6 +108,17 @@ suspend fun fetchProductInfo(code: String): FetchResult =
                 obj.optJSONArray("nutrition_grades_tags")?.optString(0)?.substringAfterLast('-')
                     ?: ""
             }
+            // image principale par défaut (thumbnail)
+            val imgUrl = frontUrl ?: obj.optString("image_url", "")
+            // // Images candidates aux choix parmis 4 images uploadés par des randoms (un peu claqué et peut correspondre aux images ingredients et nutrition...)
+            val candidates = if (images != null) {
+                buildFrontCandidates(code, images, langs, max = 4)
+            } else {
+                listOfNotNull(frontUrl).distinct()
+            }
+            val ingredientsUrl = images?.let { selectedTypeUrl(code, it, "ingredients", langs) }
+            val nutritionUrl = images?.let { selectedTypeUrl(code, it, "nutrition", langs) }
+
 
             FetchResult(
                 product = ProductInfo(
@@ -125,7 +126,7 @@ suspend fun fetchProductInfo(code: String): FetchResult =
                     brand = brand,
                     imageUrl = imgUrl,
                     nutriScore = nutri,
-                    imageCandidates = candidates, // images candidates au choix Step3 confirmation
+                    imageCandidates = candidates, // Images candidates aux choix parmis 4 images uploadés par des randoms (un peu claqué et peut correspondre aux images ingredients et nutrition...)
                     imageIngredientsUrl = ingredientsUrl,
                     imageNutritionUrl = nutritionUrl
                 ),
@@ -156,6 +157,52 @@ private fun selectedTypeUrl(
     val key = pickSelectedKey(images, type, langs) ?: return null
     val rev = getRev(images, key) ?: return null
     return selectedImageUrl(code, key, rev, size = "400")
+}
+
+private fun rawImageUrl(code: String, imgId: String, size: String = "400"): String {
+    val folder = productImagesFolder(code)
+    // OFF: raw image = /<id>.jpg, resized = /<id>.400.jpg :contentReference[oaicite:2]{index=2}
+    return "https://images.openfoodfacts.org/images/products/$folder/$imgId.$size.jpg"
+}
+
+// Images candidates aux choix parmis 4 images uploadés par des randoms (un peu claqué et peut correspondre aux images ingredients et nutrition...)
+private fun buildFrontCandidates(
+    code: String,
+    images: JSONObject,
+    langs: List<String>,
+    max: Int = 4
+): List<String> {
+    val out = LinkedHashSet<String>()
+
+    // 1) Front "sélectionnées" par langue (souvent 1 seule, mais on tente plusieurs langues)
+    val preferredFrontKeys = buildList {
+        langs.forEach { add("front_$it") }   // device lang puis fr/en
+        add("front")                        // rare
+    }.distinct()
+
+    for (key in preferredFrontKeys) {
+        val rev = getRev(images, key) ?: continue
+        out.add(selectedImageUrl(code, key, rev, size = "400"))
+        if (out.size >= max) return out.toList()
+    }
+
+    // 2) Complément avec images brutes numérotées (souvent d'autres faces/angles)
+    val rawIds = mutableListOf<String>()
+    val it = images.keys()
+    while (it.hasNext()) {
+        val k = it.next()
+        if (k.all(Char::isDigit)) rawIds.add(k)
+    }
+
+    // Les plus récentes d'abord
+    rawIds.sortByDescending { k -> images.optJSONObject(k)?.optLong("uploaded_t") ?: 0L }
+
+    for (id in rawIds) {
+        out.add(rawImageUrl(code, id, size = "400"))
+        if (out.size >= max) break
+    }
+
+    return out.toList()
 }
 
 private fun padBarcode13(code: String): String =
