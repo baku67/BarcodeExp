@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -113,25 +114,37 @@ fun AppBackground(content: @Composable () -> Unit) {
                 }
         )
 
-        // 2) Overlay pattern (statique, 1 couche, +scale)
-        val patternScale = if (isDark) 2.8f else 2.8f // > 1 = icônes plus grosses, motif moins dense
-
+        // 2) Overlay pattern (statique, 1 couche, +rotate, +scale)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithCache {
                     onDrawBehind {
                         withTransform({
+                            // rotation globale pour casser la grille
+                            val patternRotation = 9f // subtil: (-10 / 10)
+                            rotate(degrees = patternRotation, pivot = center)
+                            // scale globale des tiles
+                            val patternScale = if (isDark) 3.1f else 3.1f // > 1 = icônes plus grosses, motif moins dense
                             scale(
                                 scaleX = patternScale,
                                 scaleY = patternScale,
                                 pivot = Offset(size.width / 2f, size.height / 2f) // centré: laisser 2f meme si scale+-
                             )
                         }) {
-                            // On dessine une surface "réduite" pour couvrir l'écran une fois scalée
+                            // draw "overscan" pour éviter les coins vides après rotation (+opacité)
+                            val overscan = 1.6f
+                            val w = size.width * overscan
+                            val h = size.height * overscan
+
                             drawRect(
                                 brush = patternBrush,
-                                alpha = if (isDark) 0.15f else 0.08f
+                                topLeft = Offset(
+                                    x = center.x - w / 2f,
+                                    y = center.y - h / 2f
+                                ),
+                                size = Size(w, h),
+                                alpha = if (isDark) 0.12f else 0.08f // Opacité du pattern (dark(0)=transp)
                             )
                         }
                     }
