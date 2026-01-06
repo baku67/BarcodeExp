@@ -7,13 +7,17 @@ import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,11 +41,16 @@ import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.barcode.ui.components.SnackbarBus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 enum class ViewMode { List, Grid }
 
@@ -73,6 +82,8 @@ fun ItemsContent(
     // bottom sheet au clic sur ItemCard
     var sheetItem by remember { mutableStateOf<com.example.barcode.data.Item?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Viewer plein écran (click sur images BottomSheet)
+    var viewerUrl by remember { mutableStateOf<String?>(null) }
 
     // Tri croissant : expirés + plus proches en haut, plus lointaines en bas
     val sorted = remember(list) {
@@ -82,6 +93,7 @@ fun ItemsContent(
         )
     }
 
+    // BottomSheet au click sur ItemCard
     if (sheetItem != null) {
         ModalBottomSheet(
             onDismissRequest = { sheetItem = null },
@@ -89,9 +101,18 @@ fun ItemsContent(
         ) {
             ItemExtraBottomSheet(
                 item = sheetItem!!,
-                onClose = { sheetItem = null }
+                onClose = { sheetItem = null },
+                onOpenViewer = { viewerUrl = it }
             )
         }
+    }
+
+    // Viewer d'Image plein écran (click sur images BottomSheet)
+    if (viewerUrl != null) {
+        ImageViewerDialog(
+            url = viewerUrl!!,
+            onDismiss = { viewerUrl = null }
+        )
     }
 
     // TODO: remplacer le delay par vrai refresh VM/API
@@ -212,6 +233,7 @@ fun ItemsContent(
         }
     }
 }
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -381,7 +403,8 @@ private fun isSoon(expiry: Long): Boolean {
 @Composable
 private fun ItemExtraBottomSheet(
     item: com.example.barcode.data.Item,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onOpenViewer: (String) -> Unit // ouverture du viewer d'image
 ) {
     Column(
         modifier = Modifier
@@ -401,12 +424,14 @@ private fun ItemExtraBottomSheet(
 
         ExtraImageBlock(
             title = "Ingrédients",
-            url = item.imageIngredientsUrl
+            url = item.imageIngredientsUrl,
+            onOpenViewer = onOpenViewer
         )
 
         ExtraImageBlock(
             title = "Nutrition",
-            url = item.imageNutritionUrl
+            url = item.imageNutritionUrl,
+            onOpenViewer = onOpenViewer
         )
 
         Spacer(Modifier.height(6.dp))
@@ -416,7 +441,8 @@ private fun ItemExtraBottomSheet(
 @Composable
 private fun ExtraImageBlock(
     title: String,
-    url: String?
+    url: String?,
+    onOpenViewer: (String) -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -444,9 +470,85 @@ private fun ExtraImageBlock(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(220.dp)
-                    .clip(RoundedCornerShape(12.dp)),
+                    .clip(RoundedCornerShape(12.dp))
+                    .combinedClickable(
+                        onClick = { onOpenViewer(url) },
+                        onLongClick = null
+                    ),
                 contentScale = ContentScale.Fit
             )
+        }
+    }
+}
+
+// Viewer d'image du BottomSheet:
+@Composable
+private fun ImageViewerDialog(
+    url: String,
+    onDismiss: () -> Unit
+) {
+    // zoom/pan/rotation
+    var scale by remember(url) { mutableStateOf(1f) }
+    var rotation by remember(url) { mutableStateOf(0f) }
+    var offset by remember(url) { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+
+    val state = rememberTransformableState { zoomChange, panChange, rotationChange ->
+        scale = (scale * zoomChange).coerceIn(1f, 8f)
+        rotation += rotationChange
+        offset += panChange
+
+        // si on revient proche de 1x, on “recentre” (évite de perdre l’image)
+        if (abs(scale - 1f) < 0.03f) {
+            scale = 1f
+            rotation = 0f
+            offset = androidx.compose.ui.geometry.Offset.Zero
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            // scrim cliquable pour fermer (optionnel, mais UX top)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(0.92f)
+                    .clickable { onDismiss() }
+            )
+
+            // image interactive
+            Image(
+                painter = rememberAsyncImagePainter(url),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(18.dp)
+                    .transformable(state = state, lockRotationOnZoomPan = false) // ✅ pan/zoom/rotate :contentReference[oaicite:6]{index=6}
+                    .graphicsLayer {
+                        translationX = offset.x
+                        translationY = offset.y
+                        scaleX = scale
+                        scaleY = scale
+                        rotationZ = rotation
+                    }
+            )
+
+            // bouton fermer
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(10.dp)
+            ) {
+                Icon(Icons.Filled.Close, contentDescription = "Fermer", tint = Color.White)
+            }
         }
     }
 }
