@@ -5,5 +5,7 @@ data class ProductInfo(
     val brand: String,
     val imageUrl: String,
     val nutriScore: String,
-    val imageCandidates: List<String> = emptyList()
+    val imageCandidates: List<String> = emptyList(),
+    val imageIngredientsUrl: String?,
+    val imageNutritionUrl: String?
 )

@@ -160,7 +160,9 @@ class MainActivity : ComponentActivity() {
                                             addVm.setBarcode(code)
                                             addVm.setDetails(product.name, product.brand)
                                             addVm.setImage(product.imageUrl)
-                                            addVm.setImageCandidates(product.imageCandidates) // Ajout des images candidates au choix
+                                            addVm.setImageCandidates(product.imageCandidates) // Ajout des images candidates au choix Step3 confirm
+                                            addVm.setIngredientsImage(product.imageIngredientsUrl)
+                                            addVm.setNutritionImage(product.imageNutritionUrl)
                                             navController.navigate("addItem/date")
                                         },
                                         onCancel = { close(addVm) }
@@ -215,21 +217,22 @@ class MainActivity : ComponentActivity() {
                                             addVm.setDetails(name, brand)
                                             addVm.setExpiryDate(expiry)
 
-                                            // ✅ commit direct
+                                            // commit direct
                                             itemsVm.addItem(
                                                 name = (name ?: draft.name ?: "(sans nom)"),
-                                                brand = (brand ?: draft.brand
-                                                ?: "(sans brand)"),
-                                                // ajoute expiry si ton ItemsViewModel le supporte
+                                                brand = (brand ?: draft.brand ?: "(sans brand)"),
                                                 expiry = (expiry ?: draft.expiryDate),
-                                                imageUrl = draft.imageUrl
+                                                imageUrl = draft.imageUrl,
+                                                imageIngredientsUrl = draft.imageIngredientsUrl,
+                                                imageNutritionUrl = draft.imageNutritionUrl,
+                                                nutriScore = draft.nutriScore
                                             )
 
                                             close(addVm)
                                         },
                                         onBack = { navController.popBackStack() },
                                         onCancel = { close(addVm) },
-                                        // Nécessaire pour le choix entres les 4 images candidates
+                                        // Nécessaire pour le choix entres les images candidates dans Step3
                                         onCycleImage = { addVm.cycleNextImage() }
                                     )
                                 }

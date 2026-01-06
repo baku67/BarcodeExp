@@ -19,14 +19,25 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
     // La UI collecte ce Flow (Compose: collectAsState)
     val items: Flow<List<Item>> = repo.observeItems()
 
-    fun addItem(name: String, brand: String, expiry: Long?, imageUrl: String?) =
+    fun addItem(
+        name: String,
+        brand: String,
+        expiry: Long?,
+        imageUrl: String?,
+        imageIngredientsUrl: String?,
+        imageNutritionUrl: String?,
+        nutriScore: String?
+    ) =
         viewModelScope.launch {
             repo.addOrUpdate(
                 Item(
                     name = name,
                     brand = brand,
                     expiryDate = expiry,
-                    imageUrl = imageUrl
+                    imageUrl = imageUrl,
+                    imageIngredientsUrl = imageIngredientsUrl,
+                    imageNutritionUrl = imageNutritionUrl,
+                    nutriScore = nutriScore
                 )
             )
         }

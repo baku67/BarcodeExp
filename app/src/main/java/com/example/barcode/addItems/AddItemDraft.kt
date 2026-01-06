@@ -9,7 +9,12 @@ data class AddItemDraft(
     val name: String? = null,
     val brand: String? = null,
     val expiryDate: Long? = null,
+
     val imageUrl: String? = null,
+    val imageIngredientsUrl: String? = null,
+    val imageNutritionUrl: String? = null,
+
+    val nutriScore: String? = null,
 
     // Pour tester les 4 images candidates récupérées
     val imageCandidates: List<String> = emptyList(),

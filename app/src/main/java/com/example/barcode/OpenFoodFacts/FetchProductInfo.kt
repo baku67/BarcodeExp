@@ -101,23 +101,19 @@ suspend fun fetchProductInfo(code: String): FetchResult =
 
             val images = obj.optJSONObject("images")
             val langs = listOf(lang, "fr", "en").distinct()
-            val candidates = buildList {
-                if (images != null) {
-                    // types d'images ajoutées ("packaging", etc...)
-                    listOf("front", "ingredients", "nutrition").forEach { type ->
-                        val key = pickSelectedKey(images, type, langs) ?: return@forEach
-                        val rev = getRev(images, key) ?: return@forEach
-                        add(selectedImageUrl(code, key, rev, size = "400"))
-                    }
-                }
-            }.distinct()
 
+            val frontUrl = images?.let { selectedTypeUrl(code, it, "front", langs) }
+            val ingredientsUrl = images?.let { selectedTypeUrl(code, it, "ingredients", langs) }
+            val nutritionUrl = images?.let { selectedTypeUrl(code, it, "nutrition", langs) }
 
-            // ✅ Fallbacks robustes
+            // ✅ candidates pour la sélection dans l'UI (dans l'ordre)
+            val candidates = listOfNotNull(frontUrl, ingredientsUrl, nutritionUrl).distinct()
+
+            // ✅ image principale par défaut (front si dispo, sinon fallback OFF)
+            val imgUrl = frontUrl ?: obj.optString("image_url", "")
+
             val name = pickProductName(obj, lang)
             val brand = obj.optString("brands", "Inconnue")
-            val imgUrl = candidates.firstOrNull()
-                ?: obj.optString("image_url", "")
             val nutri = obj.optString("nutrition_grade_fr", "").ifEmpty {
                 obj.optJSONArray("nutrition_grades_tags")?.optString(0)?.substringAfterLast('-')
                     ?: ""
@@ -129,7 +125,9 @@ suspend fun fetchProductInfo(code: String): FetchResult =
                     brand = brand,
                     imageUrl = imgUrl,
                     nutriScore = nutri,
-                    imageCandidates = candidates // ✅ ajoute ce champ à ProductInfo
+                    imageCandidates = candidates, // images candidates au choix Step3 confirmation
+                    imageIngredientsUrl = ingredientsUrl,
+                    imageNutritionUrl = nutritionUrl
                 ),
                 rateLimited = false,
                 message = null
@@ -149,6 +147,16 @@ suspend fun fetchProductInfo(code: String): FetchResult =
 
 // -----------------------------------   Helpers
 
+private fun selectedTypeUrl(
+    code: String,
+    images: JSONObject,
+    type: String,
+    langs: List<String>
+): String? {
+    val key = pickSelectedKey(images, type, langs) ?: return null
+    val rev = getRev(images, key) ?: return null
+    return selectedImageUrl(code, key, rev, size = "400")
+}
 
 private fun padBarcode13(code: String): String =
     code.filter(Char::isDigit).padStart(13, '0')

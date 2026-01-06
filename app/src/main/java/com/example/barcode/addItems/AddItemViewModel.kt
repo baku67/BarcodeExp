@@ -25,6 +25,10 @@ class AddItemViewModel(
     fun setDetails(name: String?, brand: String?) = _draft.update { it.copy(name = name, brand = brand) }
     fun setExpiryDate(ts: Long?) = _draft.update { it.copy(expiryDate = ts) }
     fun setImage(url: String?) = _draft.update { it.copy(imageUrl = url) }
+    fun setIngredientsImage(url: String?) = _draft.update { it.copy(imageIngredientsUrl = url) }
+    fun setNutritionImage(url: String?) = _draft.update { it.copy(imageNutritionUrl = url) }
+    fun setNutriScore(v: String?) = _draft.update { it.copy(nutriScore = v) }
+
     fun reset() { _draft.value = AddItemDraft() }
 
 
