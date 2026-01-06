@@ -12,7 +12,8 @@ import java.util.zip.GZIPInputStream
 data class FetchResult(
     val product: ProductInfo?,     // null si erreur
     val rateLimited: Boolean,      // true si HTTP 429
-    val message: String? = null    // message optionnel pour l'UI
+    val message: String? = null,    // message optionnel pour l'UI
+    val nutri: String? = null,
 )
 
 
@@ -48,11 +49,17 @@ suspend fun fetchProductInfo(code: String): FetchResult =
             "product_name_$lang",
             "product_name_fr","product_name_en","product_name_es",
             "generic_name","generic_name_$lang",
-            "brands","image_url","languages_tags","lang",
+            "brands",
+            "image_url",          // fallback
+            "images",             // ✅ le map qui nous intéresse
             "nutrition_grade_fr","nutrition_grades_tags"
         ).joinToString(",")
 
-        val url = URL("https://world.openfoodfacts.org/api/v2/product/$code.json?lc=fr&fields=product_name,product_name_fr,product_name_en,product_name_es,generic_name,generic_name_fr,brands,image_url,languages_tags,lang")
+        val url = URL(
+            "https://world.openfoodfacts.org/api/v2/product/$code.json" +
+                    "?lc=$lang&fields=$fields"
+        )
+
         var conn: HttpURLConnection? = null
         try {
             conn = (url.openConnection() as HttpURLConnection).apply {
@@ -92,17 +99,38 @@ suspend fun fetchProductInfo(code: String): FetchResult =
 
             val obj = JSONObject(json).getJSONObject("product")
 
+            val images = obj.optJSONObject("images")
+            val langs = listOf(lang, "fr", "en").distinct()
+            val candidates = buildList {
+                if (images != null) {
+                    // types d'images ajoutées ("packaging", etc...)
+                    listOf("front", "ingredients", "nutrition").forEach { type ->
+                        val key = pickSelectedKey(images, type, langs) ?: return@forEach
+                        val rev = getRev(images, key) ?: return@forEach
+                        add(selectedImageUrl(code, key, rev, size = "400"))
+                    }
+                }
+            }.distinct()
+
+
             // ✅ Fallbacks robustes
             val name = pickProductName(obj, lang)
             val brand = obj.optString("brands", "Inconnue")
-            val imgUrl = obj.optString("image_url", "")
+            val imgUrl = candidates.firstOrNull()
+                ?: obj.optString("image_url", "")
             val nutri = obj.optString("nutrition_grade_fr", "").ifEmpty {
                 obj.optJSONArray("nutrition_grades_tags")?.optString(0)?.substringAfterLast('-')
                     ?: ""
             }
 
             FetchResult(
-                product = ProductInfo(name, brand, imgUrl, nutri),
+                product = ProductInfo(
+                    name = name,
+                    brand = brand,
+                    imageUrl = imgUrl,
+                    nutriScore = nutri,
+                    imageCandidates = candidates // ✅ ajoute ce champ à ProductInfo
+                ),
                 rateLimited = false,
                 message = null
             )
@@ -117,3 +145,34 @@ suspend fun fetchProductInfo(code: String): FetchResult =
             conn?.disconnect()
         }
     }
+
+
+// -----------------------------------   Helpers
+
+
+private fun padBarcode13(code: String): String =
+    code.filter(Char::isDigit).padStart(13, '0')
+
+private fun productImagesFolder(code: String): String {
+    val c = padBarcode13(code)
+    // 13 digits => 3+3+3+rest
+    return "${c.substring(0,3)}/${c.substring(3,6)}/${c.substring(6,9)}/${c.substring(9)}"
+}
+
+private fun selectedImageUrl(code: String, imageKey: String, rev: String, size: String = "400"): String {
+    val folder = productImagesFolder(code)
+    return "https://images.openfoodfacts.org/images/products/$folder/$imageKey.$rev.$size.jpg"
+}
+
+private fun pickSelectedKey(images: JSONObject, type: String, langs: List<String>): String? {
+    // On essaye type_lang (front_fr), puis fallback fr/en
+    for (l in langs) {
+        val k = "${type}_$l"
+        if (images.has(k)) return k
+    }
+    // Certains produits peuvent avoir un key sans langue (rare)
+    return type.takeIf { images.has(it) }
+}
+
+private fun getRev(images: JSONObject, key: String): String? =
+    images.optJSONObject(key)?.opt("rev")?.toString()?.takeIf { it.isNotBlank() }

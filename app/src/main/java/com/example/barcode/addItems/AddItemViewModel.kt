@@ -26,4 +26,34 @@ class AddItemViewModel(
     fun setExpiryDate(ts: Long?) = _draft.update { it.copy(expiryDate = ts) }
     fun setImage(url: String?) = _draft.update { it.copy(imageUrl = url) }
     fun reset() { _draft.value = AddItemDraft() }
+
+
+
+
+    // Pour tester les 4 images candidates récupérées
+    fun setImageCandidates(urls: List<String>) = _draft.update { d ->
+        val unique = urls.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+
+        // si l'image actuelle existe dans la liste, on garde son index
+        val current = d.imageUrl
+        val idx = current?.let { unique.indexOf(it) }?.takeIf { it >= 0 } ?: 0
+        val resolvedUrl = current ?: unique.getOrNull(idx)
+
+        d.copy(
+            imageCandidates = unique,
+            imageCandidateIndex = idx,
+            imageUrl = resolvedUrl
+        )
+    }
+
+    fun cycleNextImage() = _draft.update { d ->
+        val list = d.imageCandidates
+        if (list.size <= 1) return@update d
+
+        val next = (d.imageCandidateIndex + 1) % list.size
+        d.copy(
+            imageCandidateIndex = next,
+            imageUrl = list[next]
+        )
+    }
 }

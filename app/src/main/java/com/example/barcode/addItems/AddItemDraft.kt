@@ -9,5 +9,9 @@ data class AddItemDraft(
     val name: String? = null,
     val brand: String? = null,
     val expiryDate: Long? = null,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+
+    // Pour tester les 4 images candidates récupérées
+    val imageCandidates: List<String> = emptyList(),
+    val imageCandidateIndex: Int = 0
 ) : Parcelable

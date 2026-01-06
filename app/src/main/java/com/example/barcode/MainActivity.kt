@@ -160,6 +160,7 @@ class MainActivity : ComponentActivity() {
                                             addVm.setBarcode(code)
                                             addVm.setDetails(product.name, product.brand)
                                             addVm.setImage(product.imageUrl)
+                                            addVm.setImageCandidates(product.imageCandidates) // Ajout des images candidates au choix
                                             navController.navigate("addItem/date")
                                         },
                                         onCancel = { close(addVm) }
@@ -227,7 +228,9 @@ class MainActivity : ComponentActivity() {
                                             close(addVm)
                                         },
                                         onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) }
+                                        onCancel = { close(addVm) },
+                                        // Nécessaire pour le choix entres les 4 images candidates
+                                        onCycleImage = { addVm.cycleNextImage() }
                                     )
                                 }
                             }
