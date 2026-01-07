@@ -22,7 +22,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.outlined.Eco
+import androidx.compose.material.icons.outlined.RestaurantMenu
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.TimerOff
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -51,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.barcode.ui.theme.LocalIsDarkTheme
+import com.google.android.engage.shopping.datamodel.ShoppingCart
 import kotlinx.coroutines.delay
 
 @Composable
@@ -109,10 +112,10 @@ private fun DashboardCardProductsWide(
 ) {
     // Fake “x prochains” (à remplacer plus tard par tes vrais items triés par expiryDate)
     val nextExpiring = listOf(
-        "Jambon — J+1 ezf ze",
-        "Yaourt — J+2",
-        "Salade — J+3 fezfez",
-        "Poulait — J+3",
+        "Jambon — 1j ezf ze",
+        "Yaourt — 2j",
+        "Salade — 3j fezfez",
+        "Poulait — 3j",
     )
 
     Card(
@@ -140,60 +143,72 @@ private fun DashboardCardProductsWide(
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
 
-                // 1) Gauche : nombre + label (colonne)
+
+
+                // 2) Milieu : header (nombre+label) + mini-sections en ligne
                 Column(
                     modifier = Modifier
-                        .weight(0.55f)
+                        .weight(0.85f) // ✅ un peu plus large qu'avant (tu peux ajuster)
                         .fillMaxHeight(),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    AnimatedCountText(
-                        target = total,
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary,
-                        durationMillis = 750
-                    )
-                    Text(
-                        text = "Produits",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                    // Header (tu peux garder le tien)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        AnimatedCountText(
+                            target = total,
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            durationMillis = 750
+                        )
+                        Text(
+                            text = "Produits",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
-                // 2) Milieu : 3 mini-sections en colonne (Périmés -> Bientôt -> Sains)
-                Column(
-                    modifier = Modifier
-                        .weight(0.55f)
-                        .fillMaxHeight(),
-                    verticalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    StatIconRow(
-                        icon = Icons.Outlined.TimerOff,
-                        label = "Périmés",
-                        value = expired,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        iconAlpha = 0.80f // on boust un peu l'opacité de l'icone périmés (rouge)
-                    )
-                    StatIconRow(
-                        icon = Icons.Outlined.WarningAmber,
-                        label = "Bientôt",
-                        value = soon,
-                        color = Color(0xFFF9A825)
-                    )
-                    StatIconRow(
-                        icon = Icons.Outlined.Eco,
-                        label = "Sains",
-                        value = fresh,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Spacer(Modifier.height(10.dp))
+
+                    // Mini-sections en ligne (ordre cohérent avec la barre : rouge → jaune → vert)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        StatIconPill(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Outlined.TimerOff,
+                            label = "Périmés",
+                            value = expired,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            iconAlpha = 0.80f
+                        )
+                        StatIconPill(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Outlined.WarningAmber,
+                            label = "Bientôt",
+                            value = soon,
+                            color = Color(0xFFF9A825)
+                        )
+                        StatIconPill(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Outlined.Eco,
+                            label = "Sains",
+                            value = fresh,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 // 3) Droite : mini-liste "À consommer"
                 Column(
                     modifier = Modifier
-                        .weight(0.90f)
+                        .weight(0.85f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.18f))
@@ -234,6 +249,67 @@ private fun DashboardCardProductsWide(
 }
 
 
+@Composable
+private fun StatIconPill(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    label: String,
+    value: Int,
+    color: Color,
+    iconAlpha: Float = 0.55f
+) {
+    val hasValue = value > 0
+
+    val borderColor = if (hasValue) {
+        color.copy(alpha = 0.22f)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
+    }
+
+    val numberColor = if (hasValue) color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+    val iconTint = if (hasValue) color.copy(alpha = iconAlpha) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+
+    Row(
+        modifier = modifier
+            .height(34.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .border(0.75.dp, borderColor, RoundedCornerShape(12.dp))
+            .padding(horizontal = 6.dp),           // ✅ moins de padding
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center // ✅ centre le contenu
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = iconTint,
+            modifier = Modifier.size(16.dp)
+        )
+
+        Spacer(Modifier.width(6.dp))
+
+        if (hasValue) {
+            AnimatedCountText(
+                target = value.coerceIn(0, 99),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = numberColor,
+                maxLines = 1,             // ✅ important
+                softWrap = false,
+                durationMillis = 450
+            )
+        } else {
+            Text(
+                text = "—",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = numberColor,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
+    }
+}
+
 
 @Composable
 private fun DashboardCardShoppingListFake(
@@ -258,22 +334,35 @@ private fun DashboardCardShoppingListFake(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             // Header (nombre + label) centré
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                AnimatedCountText(
-                    target = total,
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    durationMillis = 650
+            Box(modifier = Modifier.fillMaxWidth()) {
+                // ✅ icône discrète en haut à droite
+                Icon(
+                    imageVector = Icons.Filled.ReceiptLong,
+                    contentDescription = "Courses",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.70f),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(18.dp)
                 )
-                Text(
-                    text = "Courses",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
+                // ✅ header centré
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    AnimatedCountText(
+                        target = total,
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        durationMillis = 650
+                    )
+                    Text(
+                        text = "Courses",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             // Mini-liste
@@ -325,23 +414,34 @@ private fun DashboardCardRecipesFake(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             // Header (centré)
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                AnimatedCountText(
-                    target = totalRecipes,
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    durationMillis = 650,
-                    delayMillis = 60
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Icon(
+                    imageVector = Icons.Outlined.RestaurantMenu,
+                    contentDescription = "Recettes",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.70f),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(18.dp)
                 )
-                Text(
-                    text = "Recettes",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    AnimatedCountText(
+                        target = totalRecipes,
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        durationMillis = 650,
+                        delayMillis = 60
+                    )
+                    Text(
+                        text = "Recettes",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             // Mini-liste (full width pour align End)
