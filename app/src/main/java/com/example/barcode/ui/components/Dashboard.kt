@@ -1,15 +1,16 @@
 package com.example.barcode.ui.components
 
-import android.annotation.SuppressLint
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,14 +18,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AvTimer
-import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Eco
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.TimerOff
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Card
@@ -33,16 +30,24 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 @Composable
 fun DashboardRow(
@@ -91,7 +96,7 @@ private fun DashboardCardProductsWide(
 ) {
     // Fake “3 prochains” (à remplacer plus tard par tes vrais items triés par expiryDate)
     val nextExpiring = listOf(
-        "Jambon — J+1",
+        "Jambon — J+1fzfefze",
         "Yaourt — J+2",
         "Salade — J+3",
     )
@@ -104,94 +109,100 @@ private fun DashboardCardProductsWide(
         onClick = onClick,
         interactionSource = remember { MutableInteractionSource() }  // "ripple" anim au click
     ) {
-        Row(
+
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-
-            // 1) Gauche : nombre + label (colonne)
-            Column(
+            Row(
                 modifier = Modifier
-                    .weight(0.55f)
-                    .fillMaxHeight(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,     // ✅ centrage vertical
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    text = total.toString(),
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Produits",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
 
-            // 2) Milieu : 3 mini-sections en colonne (Périmés -> Bientôt -> Sains)
-            Column(
-                modifier = Modifier
-                    .weight(0.55f)
-                    .fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                StatIconRow(
-                    icon = Icons.Outlined.TimerOff,
-                    label = "Périmés",
-                    value = expired,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    iconAlpha = 0.80f // on boust un peu l'opacité de l'icone périmés (rouge)
-                )
-                StatIconRow(
-                    icon = Icons.Outlined.WarningAmber,
-                    label = "Bientôt",
-                    value = soon,
-                    color = Color(0xFFF9A825)
-                )
-                StatIconRow(
-                    icon = Icons.Outlined.Eco,
-                    label = "Sains",
-                    value = fresh,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            // 3) Droite : mini-liste "À consommer" (inchangée)
-            Column(
-                modifier = Modifier
-                    .weight(0.90f)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                nextExpiring.forEach { line ->
+                // 1) Gauche : nombre + label (colonne)
+                Column(
+                    modifier = Modifier
+                        .weight(0.55f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    AnimatedCountText(
+                        target = total,
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        durationMillis = 750
+                    )
                     Text(
-                        text = "• $line",
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = "Produits",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                // 2) Milieu : 3 mini-sections en colonne (Périmés -> Bientôt -> Sains)
+                Column(
+                    modifier = Modifier
+                        .weight(0.55f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    StatIconRow(
+                        icon = Icons.Outlined.TimerOff,
+                        label = "Périmés",
+                        value = expired,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        iconAlpha = 0.80f // on boust un peu l'opacité de l'icone périmés (rouge)
+                    )
+                    StatIconRow(
+                        icon = Icons.Outlined.WarningAmber,
+                        label = "Bientôt",
+                        value = soon,
+                        color = Color(0xFFF9A825)
+                    )
+                    StatIconRow(
+                        icon = Icons.Outlined.Eco,
+                        label = "Sains",
+                        value = fresh,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // 3) Droite : mini-liste "À consommer" (inchangée)
+                Column(
+                    modifier = Modifier
+                        .weight(0.90f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    nextExpiring.forEach { line ->
+                        Text(
+                            text = "• $line",
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
+
+
+            ExpiryProgressBar(
+                total = total,
+                fresh = fresh,
+                soon = soon,
+                expired = expired,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-
-
-        val safeRatio = if (total > 0) fresh / total.toFloat() else 0f
-        LinearProgressIndicator(
-            progress = { safeRatio }, // nouvelle API (lambda)
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(4.dp)
-                .clip(RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp)),
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-        )
     }
 }
 
@@ -224,10 +235,12 @@ private fun DashboardCardShoppingListFake(
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text(
-                        text = total.toString(),
+                    AnimatedCountText(
+                        target = total,
                         style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        durationMillis = 750
                     )
                     Text(
                         text = "Liste de courses",
@@ -290,10 +303,12 @@ private fun DashboardCardRecipesFake(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text(
-                    text = totalRecipes.toString(),
+                AnimatedCountText(
+                    target = totalRecipes,
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    durationMillis = 750
                 )
                 Text(
                     text = "Recettes",
@@ -330,28 +345,36 @@ private fun StatIconRow(
 ) {
     val hasValue = value > 0
 
-    // Base alpha par statut (tu compenses déjà le rouge)
     val baseAlpha = when (label) {
-        "Périmés" -> 0.35f
-        "Bientôt" -> 0.16f
-        else -> 0.14f
+        "Périmés" -> 0.40f
+        "Bientôt" -> 0.18f
+        else -> 0.20f
     }
 
-    // ✅ Si value > 0 -> bord plus présent, sinon très discret
     val borderAlpha = if (hasValue) baseAlpha.coerceAtLeast(0.22f) else 0.06f
-    val border = color.copy(alpha = borderAlpha)
+    val borderColor = if (hasValue) {
+        // plus visible quand > 0
+        color.copy(alpha = borderAlpha)
+    } else {
+        // neutre/grisé quand 0
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
+    }
 
-    // ✅ Chiffre: coloré si >0, sinon grisé
     val numberColor = if (hasValue) color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-
     val numberDisplay = if (hasValue) value.coerceIn(0, 99).toString() else "—"
+
+    val iconTint = if (hasValue) {
+        color.copy(alpha = iconAlpha)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(40.dp)
             .clip(RoundedCornerShape(12.dp))
-            .border(0.75.dp, border, RoundedCornerShape(12.dp))
+            .border(0.75.dp, borderColor, RoundedCornerShape(12.dp))
             .padding(top = 6.dp, bottom = 6.dp, start = 10.dp, end = 0.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -362,20 +385,35 @@ private fun StatIconRow(
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = color.copy(alpha = effectiveIconAlpha),
+            tint = iconTint,
             modifier = Modifier.size(18.dp)
         )
 
-        Text(
-            text = numberDisplay,
-            modifier = Modifier.width(22.dp),
-            textAlign = TextAlign.End,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = numberColor,
-            maxLines = 1,
-            softWrap = false
-        )
+        if (hasValue) {
+            AnimatedCountText(
+                target = value.coerceIn(0, 99),
+                modifier = Modifier.width(22.dp),
+                textAlign = TextAlign.End,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = numberColor,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Clip,
+                durationMillis = 550
+            )
+        } else {
+            Text(
+                text = "—",
+                modifier = Modifier.width(22.dp),
+                textAlign = TextAlign.End,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = numberColor,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
     }
 }
 
@@ -400,4 +438,113 @@ private fun NotificationBubble(
             fontWeight = FontWeight.Bold
         )
     }
+}
+
+
+
+
+@Composable
+private fun ExpiryProgressBar(
+    total: Int,
+    fresh: Int,
+    soon: Int,
+    expired: Int,
+    modifier: Modifier = Modifier,
+    animate: Boolean = true,
+) {
+    val t = total.coerceAtLeast(1)
+
+    val freshW = (fresh.coerceAtLeast(0) / t.toFloat()).coerceIn(0f, 1f)
+    val soonW = (soon.coerceAtLeast(0) / t.toFloat()).coerceIn(0f, 1f)
+    val expiredW = (expired.coerceAtLeast(0) / t.toFloat()).coerceIn(0f, 1f)
+
+    // Normalisation (si counts incohérents)
+    val sum = (freshW + soonW + expiredW).takeIf { it > 0f } ?: 1f
+    val wf = freshW / sum
+    val ws = soonW / sum
+    val we = expiredW / sum
+
+    var target by remember { mutableStateOf(if (animate) 0f else 1f) }
+
+    LaunchedEffect(total, fresh, soon, expired, animate) {
+        if (!animate) { target = 1f; return@LaunchedEffect }
+        target = 0f
+        delay(80)
+        target = 1f
+    }
+
+    val reveal by animateFloatAsState(
+        targetValue = target,
+        animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+        label = "expiryBarReveal"
+    )
+
+    // Track (fond)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(4.dp)
+            .clip(RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+    ) {
+        // Contenu (segments) -> reveal via scaleX depuis la gauche
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = reveal
+                    transformOrigin = TransformOrigin(0f, 0.5f) // ✅ reveal depuis la gauche
+                }
+        ) {
+            if (we > 0f) Box(Modifier.weight(we).fillMaxHeight().background(MaterialTheme.colorScheme.tertiary))
+            if (ws > 0f) Box(Modifier.weight(ws).fillMaxHeight().background(Color(0xFFF9A825)))
+            if (wf > 0f) Box(Modifier.weight(wf).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+        }
+    }
+}
+
+
+@Composable
+fun AnimatedCountText(
+    target: Int,
+    modifier: Modifier = Modifier,
+    style: TextStyle,
+    color: Color = Color.Unspecified,
+    fontWeight: FontWeight? = null,
+    textAlign: TextAlign? = null,
+    maxLines: Int = Int.MAX_VALUE,
+    softWrap: Boolean = true,
+    overflow: TextOverflow = TextOverflow.Clip,
+    durationMillis: Int = 650,
+    delayMillis: Int = 0,
+    enabled: Boolean = true,
+    format: (Int) -> String = { it.toString() }
+) {
+    val safeTarget = target.coerceAtLeast(0)
+    val anim = remember { Animatable(0f) }
+
+    LaunchedEffect(safeTarget, enabled) {
+        if (!enabled) {
+            anim.snapTo(safeTarget.toFloat())
+            return@LaunchedEffect
+        }
+        if (delayMillis > 0) delay(delayMillis.toLong())
+        anim.snapTo(0f)
+        anim.animateTo(
+            targetValue = safeTarget.toFloat(),
+            animationSpec = tween(durationMillis = durationMillis)
+        )
+    }
+
+    Text(
+        text = format(anim.value.toInt()),
+        modifier = modifier,
+        style = style,
+        color = color,
+        fontWeight = fontWeight,
+        textAlign = textAlign,
+        maxLines = maxLines,
+        softWrap = softWrap,
+        overflow = overflow
+    )
 }
