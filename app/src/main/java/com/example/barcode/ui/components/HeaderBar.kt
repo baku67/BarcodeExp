@@ -16,6 +16,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import com.example.barcode.R
+import com.example.barcode.ui.theme.Manrope
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,10 +45,13 @@ fun HeaderBar(
             ) {
                 Text(
                     text = title,
-                    fontSize = 25.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.absoluteOffset(x = 0.dp, y = -4.dp)
+                    modifier = Modifier.absoluteOffset(x = 0.dp, y = -4.dp),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontFamily = Manrope,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 25.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 )
                 //subtitle?.let {
                 //    Text(

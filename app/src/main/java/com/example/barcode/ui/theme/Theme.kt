@@ -67,7 +67,7 @@ fun Theme(
     CompositionLocalProvider(LocalIsDarkTheme provides isDark) {
         MaterialTheme(
             colorScheme = scheme,
-            typography = Typography,
+            typography = AppTypography,
             content = content
         )
     }

@@ -38,7 +38,7 @@ fun HomeContent(
             .padding(innerPadding)
             .padding(16.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth(),
@@ -73,26 +73,6 @@ fun HomeContent(
                     onNavigateToItems = onNavigateToItems,
                     onNavigateToListeCourses = onNavigateToListeCourses,
                 )
-
-                // 4) Recette IA
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Recettes", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(10.dp))
-                        Text("(publicité)", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(10.dp))
-                        Text("(pré-prompt) définir alergies, gouts etc...", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(10.dp))
-                        Button(
-                            onClick = {
-                                SnackbarBus.show("Fonction “Proposer une recette” : à venir 🙂")
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Proposer une recette")
-                        }
-                    }
-                }
             }
 
         }

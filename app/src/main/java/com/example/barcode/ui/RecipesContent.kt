@@ -2,6 +2,8 @@ package com.example.barcode.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -21,6 +23,8 @@ import androidx.compose.ui.Alignment
 import com.example.barcode.ui.components.SnackbarBus
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import kotlinx.coroutines.delay
 
@@ -105,9 +109,49 @@ fun RecipesContent(innerPadding: PaddingValues, isActive: Boolean) {
 
                 // Contenu todo
                 item {
-                    // Empty state temporaire
-                    // (remplace ensuite par tes vraies cartes/recettes)
                     androidx.compose.material3.Text("Aucune recette pour le moment.")
+
+                    // Btn Recette API
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Recettes", style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(10.dp))
+                            Text("(publicité)", style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(10.dp))
+                            Text("(pré-prompt) définir alergies, gouts etc...", style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(10.dp))
+                            Button(
+                                onClick = {
+                                    SnackbarBus.show("Fonction “Proposer une recette” : à venir 🙂")
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Chercher une recette")
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    // Btn Recette IA
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Recettes", style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(10.dp))
+                            Text("(publicité)", style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(10.dp))
+                            Text("(pré-prompt) définir alergies, gouts etc...", style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.height(10.dp))
+                            Button(
+                                onClick = {
+                                    SnackbarBus.show("Fonction “Proposer une recette” : à venir 🙂")
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Générer une recette *IA*")
+                            }
+                        }
+                    }
                 }
             }
 
