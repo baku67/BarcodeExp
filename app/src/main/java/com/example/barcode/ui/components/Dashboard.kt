@@ -45,13 +45,14 @@ fun DashboardRow(
     expiredCount: Int,
     onNavigateToItems: () -> Unit,
     onNavigateToListeCourses: () -> Unit,
+    onNavigateToRecipes: () -> Unit,
 ) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        DashboardCardProducts(
-            modifier = Modifier.weight(1f),
+
+        DashboardCardProductsWide(
             total = totalProducts,
             fresh = freshCount,
             soon = expiringSoonCount,
@@ -60,77 +61,135 @@ fun DashboardRow(
         )
 
         DashboardCardShoppingListFake(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth(),
             onClick = onNavigateToListeCourses
+        )
+
+        DashboardCardRecipesFake(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onNavigateToRecipes
         )
     }
 }
 
+
+
 @Composable
-private fun DashboardCardProducts(
-    modifier: Modifier = Modifier,
+private fun DashboardCardProductsWide(
     total: Int,
     fresh: Int,
     soon: Int,
     expired: Int,
     onClick: () -> Unit,
 ) {
+    // Fake “3 prochains” (à remplacer plus tard par tes vrais items triés par expiryDate)
+    val nextExpiring = listOf(
+        "Jambon — J+1",
+        "Yaourt — J+2",
+        "Salade — J+3",
+    )
+
     Card(
-        modifier = modifier.height(150.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(160.dp),
         shape = RoundedCornerShape(18.dp),
         onClick = onClick
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+
+            // Gauche : chiffres + stats
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .weight(1.15f)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = total.toString(),
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Produits",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column {
+                    Text(
+                        text = total.toString(),
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Produits",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    StatIconColumn(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.Eco,
+                        value = fresh,
+                        color = MaterialTheme.colorScheme.primary,
+                        contentDescription = "Frais"
+                    )
+                    StatIconColumn(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.WarningAmber,
+                        value = soon,
+                        color = Color(0xFFF9A825),
+                        contentDescription = "Expire bientôt"
+                    )
+                    StatIconColumn(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Outlined.BugReport,
+                        value = expired,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        contentDescription = "Périmé"
+                    )
+                }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            // Droite : Top 3 prochainement à expirer
+            Column(
+                modifier = Modifier
+                    .weight(0.85f)
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                StatIconColumn(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Outlined.Eco,
-                    value = fresh,
-                    color = MaterialTheme.colorScheme.primary,
-                    contentDescription = "Frais"
-                )
-                StatIconColumn(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Outlined.WarningAmber,
-                    value = soon,
-                    color = Color(0xFFF9A825),
-                    contentDescription = "Expire bientôt"
-                )
-                StatIconColumn(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Outlined.BugReport,
-                    value = expired,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    contentDescription = "Périmé"
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.Schedule,
+                        contentDescription = "Prochaines expirations",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        text = "À consommer",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                nextExpiring.forEach { line ->
+                    Text(
+                        text = "• $line",
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
 }
+
+
 
 @Composable
 private fun DashboardCardShoppingListFake(
@@ -197,6 +256,60 @@ private fun DashboardCardShoppingListFake(
         }
     }
 }
+
+
+
+@Composable
+private fun DashboardCardRecipesFake(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    // TODO Fake data
+    val totalRecipes = 42
+    val aiRecipes = 8
+    val sharedRecipes = 5
+    val lastGenerated = "Pâtes au thon"
+
+    Card(
+        modifier = modifier.height(150.dp),
+        shape = RoundedCornerShape(18.dp),
+        onClick = onClick
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = totalRecipes.toString(),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Recettes",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("IA : $aiRecipes • Partagées : $sharedRecipes", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = "Dernière : $lastGenerated",
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+
+
 
 
 @Composable

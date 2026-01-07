@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,6 +24,7 @@ import com.example.barcode.ui.components.SnackbarBus
 @Composable
 fun HomeContent(
     onNavigateToListeCourses: () -> Unit,
+    onNavigateToRecipes: () -> Unit,
     onNavigateToItems: () -> Unit,
     innerPadding: PaddingValues,
     totalProducts: Int,
@@ -32,49 +33,53 @@ fun HomeContent(
     expiredCount: Int,
 ) {
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(innerPadding)
-            .padding(16.dp)
+            .padding(innerPadding),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
 
-                // 1) Bloc bienvenue
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Bienvenue 👋", style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "Gère tes produits, surveille les DLC, et trouve des idées recettes.",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+        item {
+            // 1) Bloc bienvenue
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Bienvenue 👋", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Gère tes produits, surveille les DLC, et trouve des idées recettes.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
-
-                // 2) Alerte si autorisations manquantes -> redirection vers section /Settings
-                // Attention: utiliser areNotificationsEnabled() avant envoie de notif,
-                // ET demander permissions au moment où besoin sinon peut bloquer après plusieurs refus si User voit pas l'intéret au lancement de  l'app
-                // PermissionsCard()
-                Text("Attention: autorisations requises ?", style = MaterialTheme.typography.titleMedium)
-
-                // 3) Dashboard (Card Items et Card ListeCourses)
-                DashboardRow(
-                    totalProducts = totalProducts,
-                    freshCount = freshCount,
-                    expiringSoonCount = expiringSoonCount,
-                    expiredCount = expiredCount,
-                    onNavigateToItems = onNavigateToItems,
-                    onNavigateToListeCourses = onNavigateToListeCourses,
-                )
             }
+        }
+
+
+        // 2) Alerte si autorisations manquantes -> redirection vers section /Settings
+        // Attention: utiliser areNotificationsEnabled() avant envoie de notif,
+        // ET demander permissions au moment où besoin sinon peut bloquer après plusieurs refus si User voit pas l'intéret au lancement de  l'app
+        // PermissionsCard()
+        item {
+            Text(
+                "Attention: autorisations requises ?",
+                style = MaterialTheme.typography.titleMedium
+            )
 
         }
+
+        // 3) Dashboard (Card Items et Card ListeCourses)
+        item {
+            DashboardRow(
+                totalProducts = totalProducts,
+                freshCount = freshCount,
+                expiringSoonCount = expiringSoonCount,
+                expiredCount = expiredCount,
+                onNavigateToItems = onNavigateToItems,
+                onNavigateToListeCourses = onNavigateToListeCourses,
+                onNavigateToRecipes = onNavigateToRecipes
+            )
+        }
     }
+
 }

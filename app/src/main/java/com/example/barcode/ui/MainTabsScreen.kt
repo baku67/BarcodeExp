@@ -55,6 +55,7 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
             when (tabs[page]) {
                 "home" -> HomeContent(
                     onNavigateToListeCourses = { goToTab("listeCourses") },
+                    onNavigateToRecipes = { goToTab("recipes") },
                     onNavigateToItems = { goToTab("items") },
                     innerPadding = androidx.compose.foundation.layout.PaddingValues(),
                     14,
