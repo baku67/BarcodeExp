@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Eco
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.TimerOff
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Card
@@ -74,15 +76,24 @@ fun DashboardRow(
             onClick = onNavigateToItems
         )
 
-        DashboardCardShoppingListFake(
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            onClick = onNavigateToListeCourses
-        )
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            DashboardCardShoppingListFake(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(180.dp),
+                onClick = onNavigateToListeCourses
+            )
 
-        DashboardCardRecipesFake(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onNavigateToRecipes
-        )
+            DashboardCardRecipesFake(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(180.dp),
+                onClick = onNavigateToRecipes
+            )
+        }
     }
 }
 
@@ -96,11 +107,12 @@ private fun DashboardCardProductsWide(
     expired: Int,
     onClick: () -> Unit,
 ) {
-    // Fake “3 prochains” (à remplacer plus tard par tes vrais items triés par expiryDate)
+    // Fake “x prochains” (à remplacer plus tard par tes vrais items triés par expiryDate)
     val nextExpiring = listOf(
-        "Jambon — J+1fzfefze",
+        "Jambon — J+1 ezf ze",
         "Yaourt — J+2",
-        "Salade — J+3",
+        "Salade — J+3 fezfez",
+        "Poulait — J+3",
     )
 
     Card(
@@ -178,24 +190,34 @@ private fun DashboardCardProductsWide(
                     )
                 }
 
-                // 3) Droite : mini-liste "À consommer" (inchangée)
+                // 3) Droite : mini-liste "À consommer"
                 Column(
                     modifier = Modifier
                         .weight(0.90f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.18f))
+                        .padding(12.dp)
                 ) {
-                    nextExpiring.forEach { line ->
+                    // Liste (max 3)
+                    nextExpiring.take(4).forEach { line ->
                         Text(
                             text = "• $line",
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
+
+                    Spacer(modifier = Modifier.weight(1f)) // ✅ pousse le bouton en bas
+
+                    Text(
+                        text = "Voir tout →",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.End)
+                    )
                 }
             }
 
@@ -216,69 +238,63 @@ private fun DashboardCardProductsWide(
 @Composable
 private fun DashboardCardShoppingListFake(
     modifier: Modifier = Modifier,
-    onClick: () -> Unit,
+    onClick: () -> Unit
 ) {
-    // TODO Fake data
-    val total = 7
-    val lastAdded = "Lait demi-écrémé"
-    val lastBy = "Basile"
-    val notifCount = 3
+    // Fake data
+    val total = 12
+    val preview = listOf("Lait", "Tomates", "Riz basmati")
 
     Card(
-        modifier = modifier.height(150.dp),
+        modifier = modifier,
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         onClick = onClick,
-        interactionSource = remember { MutableInteractionSource() }  // "ripple" anim au click
+        interactionSource = remember { MutableInteractionSource() }
     ) {
-        Box(Modifier.fillMaxSize()) {
-
-            // Contenu
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Header (nombre + label) centré
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column {
-                    AnimatedCountText(
-                        target = total,
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        durationMillis = 750
-                    )
-                    Text(
-                        text = "Liste de courses",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                AnimatedCountText(
+                    target = total,
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    durationMillis = 650
+                )
+                Text(
+                    text = "Courses",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-                Column {
+            // Mini-liste
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                preview.take(3).forEach { item ->
                     Text(
-                        text = "Dernier ajout : $lastAdded",
+                        text = "• $item",
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = "Par : $lastBy",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
-            }
-
-            // Bulle notification (coin haut droit)
-            if (notifCount > 0) {
-                NotificationBubble(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(10.dp),
-                    count = notifCount
+                Text(
+                    text = "Voir tout →",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.End)
                 )
             }
         }
@@ -290,36 +306,36 @@ private fun DashboardCardShoppingListFake(
 @Composable
 private fun DashboardCardRecipesFake(
     modifier: Modifier = Modifier,
-    onClick: () -> Unit,
+    onClick: () -> Unit
 ) {
-    // TODO Fake data
     val totalRecipes = 42
-    val aiRecipes = 8
-    val sharedRecipes = 5
-    val lastGenerated = "Pâtes au thon"
+    val preview = listOf("Pâtes au thon", "Wrap poulet", "Salade quinoa")
 
     Card(
-        modifier = modifier.height(150.dp),
+        modifier = modifier,
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         onClick = onClick,
-        interactionSource = remember { MutableInteractionSource() } // "ripple" anim au click
+        interactionSource = remember { MutableInteractionSource() }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            // Header (centré)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 AnimatedCountText(
                     target = totalRecipes,
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
-                    durationMillis = 750
+                    fontWeight = FontWeight.Bold,
+                    durationMillis = 650,
+                    delayMillis = 60
                 )
                 Text(
                     text = "Recettes",
@@ -328,20 +344,30 @@ private fun DashboardCardRecipesFake(
                 )
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("IA : $aiRecipes • Partagées : $sharedRecipes", style = MaterialTheme.typography.bodySmall)
+            // Mini-liste (full width pour align End)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                preview.take(3).forEach { r ->
+                    Text(
+                        text = "• $r",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 Text(
-                    text = "Dernière : $lastGenerated",
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "Voir tout →",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.End)
                 )
             }
         }
     }
 }
-
 
 
 

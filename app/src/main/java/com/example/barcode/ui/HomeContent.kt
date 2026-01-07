@@ -63,19 +63,8 @@ fun HomeContent(
             }
         }
 
-        // 2) Alerte si autorisations manquantes -> redirection vers section /Settings
-        // Attention: utiliser areNotificationsEnabled() avant envoie de notif,
-        // ET demander permissions au moment où besoin sinon peut bloquer après plusieurs refus si User voit pas l'intéret au lancement de  l'app
-        // PermissionsCard()
-        item {
-            Text(
-                "Attention: autorisations requises ?",
-                style = MaterialTheme.typography.titleMedium
-            )
 
-        }
-
-        // 3) Dashboard (Card Items et Card ListeCourses)
+        // 2) Dashboard (Card Items et Card ListeCourses)
         item {
             DashboardRow(
                 totalProducts = totalProducts,
