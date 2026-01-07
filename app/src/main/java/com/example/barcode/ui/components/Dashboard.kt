@@ -102,6 +102,13 @@ fun DashboardRow(
 }
 
 
+private enum class ExpiryKind { EXPIRED, SOON, FRESH }
+private data class ExpiringLine(
+    val name: String,
+    val note: String,   // ex: "hier", "1j", "5j", ya une fonction pour ça dans ItemsContent
+    val kind: ExpiryKind
+)
+
 
 @Composable
 private fun DashboardCardProductsWide(
@@ -111,12 +118,14 @@ private fun DashboardCardProductsWide(
     expired: Int,
     onClick: () -> Unit,
 ) {
-    // Fake “x prochains” (à remplacer plus tard par tes vrais items triés par expiryDate)
+    // TODO Fake “x prochains” (à remplacer plus tard par tes vrais items triés par expiryDate)
+    // TODO: n'afficher que les items qui ont -3/-4 jours de conserv (parmis les 4-5 max)
     val nextExpiring = listOf(
-        "Jambon — 1j ezf ze",
-        "Yaourt — 2j",
-        "Salade — 3j fezfez",
-        "Poulait — 3j",
+        ExpiringLine("Jambon", "hier", ExpiryKind.EXPIRED),
+        ExpiringLine("Yaourt nature", "1j", ExpiryKind.SOON),
+        ExpiringLine("Salade", "2j", ExpiryKind.SOON),
+        ExpiringLine("Poulet", "3j", ExpiryKind.FRESH),
+        ExpiringLine("Fromage râpé", "6j", ExpiryKind.FRESH), // on s'en fout 6j ça pollue ici
     )
 
     Card(
@@ -230,14 +239,20 @@ private fun DashboardCardProductsWide(
                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.18f))
                         .padding(12.dp)
                 ) {
-                    // Liste (max 3)
-                    nextExpiring.take(4).forEach { line ->
+                    // Liste (max 5)
+                    nextExpiring.take(5).forEach { item ->
+                        val lineColor = when (item.kind) {
+                            ExpiryKind.EXPIRED -> MaterialTheme.colorScheme.tertiary
+                            ExpiryKind.SOON -> Color(0xFFF9A825)
+                            ExpiryKind.FRESH -> MaterialTheme.colorScheme.onSurface
+                        }
+
                         Text(
-                            text = "• $line",
+                            text = "• ${item.name} — ${item.note}",
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = lineColor
                         )
                     }
 
