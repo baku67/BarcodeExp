@@ -47,11 +47,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.barcode.R
+import com.example.barcode.interfaces.AppIcon
 import kotlinx.coroutines.delay
 
 @Composable
@@ -152,22 +155,37 @@ private fun DashboardCardProductsWide(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Header (tu peux garder le tien)
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
                     ) {
-                        AnimatedCountText(
-                            target = total,
-                            style = MaterialTheme.typography.displaySmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            durationMillis = 750
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_nav_fridge_icon),
+                            contentDescription = "Frigo",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.70f),
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)   // ✅ comme les cards du dessous
+                                .padding(end = 2.dp)       // ✅ léger retrait
+                                .size(18.dp)
                         )
-                        Text(
-                            text = "Produits",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            AnimatedCountText(
+                                target = total,
+                                style = MaterialTheme.typography.displaySmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                durationMillis = 750
+                            )
+                            Text(
+                                text = "Produits",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     Spacer(Modifier.height(10.dp))
@@ -378,7 +396,7 @@ private fun DashboardCardShoppingListFake(
                     )
                 }
                 Text(
-                    text = "Voir tout →",
+                    text = "→",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.align(Alignment.End)
@@ -457,7 +475,7 @@ private fun DashboardCardRecipesFake(
                     )
                 }
                 Text(
-                    text = "Voir tout →",
+                    text = "→",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.align(Alignment.End)
@@ -466,115 +484,6 @@ private fun DashboardCardRecipesFake(
         }
     }
 }
-
-
-
-
-@Composable
-private fun StatIconRow(
-    icon: ImageVector,
-    label: String,
-    value: Int,
-    color: Color,
-    iconAlpha: Float = 0.55f
-) {
-    val hasValue = value > 0
-
-    val baseAlpha = when (label) {
-        "Périmés" -> 0.40f
-        "Bientôt" -> 0.18f
-        else -> 0.20f
-    }
-
-    val borderAlpha = if (hasValue) baseAlpha.coerceAtLeast(0.22f) else 0.06f
-    val borderColor = if (hasValue) {
-        // plus visible quand > 0
-        color.copy(alpha = borderAlpha)
-    } else {
-        // neutre/grisé quand 0
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
-    }
-
-    val numberColor = if (hasValue) color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-    val numberDisplay = if (hasValue) value.coerceIn(0, 99).toString() else "—"
-
-    val iconTint = if (hasValue) {
-        color.copy(alpha = iconAlpha)
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(40.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .border(0.75.dp, borderColor, RoundedCornerShape(12.dp))
-            .padding(top = 6.dp, bottom = 6.dp, start = 10.dp, end = 0.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // ✅ Icône reste colorée (mais tu peux la calmer un peu si value == 0)
-        val effectiveIconAlpha = if (hasValue) iconAlpha else (iconAlpha * 0.75f)
-
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = iconTint,
-            modifier = Modifier.size(18.dp)
-        )
-
-        if (hasValue) {
-            AnimatedCountText(
-                target = value.coerceIn(0, 99),
-                modifier = Modifier.width(22.dp),
-                textAlign = TextAlign.End,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = numberColor,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Clip,
-                durationMillis = 550
-            )
-        } else {
-            Text(
-                text = "—",
-                modifier = Modifier.width(22.dp),
-                textAlign = TextAlign.End,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = numberColor,
-                maxLines = 1,
-                softWrap = false
-            )
-        }
-    }
-}
-
-
-
-@Composable
-private fun NotificationBubble(
-    modifier: Modifier = Modifier,
-    count: Int
-) {
-    Box(
-        modifier = modifier
-            .size(24.dp)
-            .clip(CircleShape)
-            .background(Color(0xFFC62828)),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = if (count > 99) "99+" else count.toString(),
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
 
 
 
