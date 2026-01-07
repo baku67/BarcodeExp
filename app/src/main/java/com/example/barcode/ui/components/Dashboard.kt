@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.TimerOff
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.barcode.ui.theme.LocalIsDarkTheme
 import kotlinx.coroutines.delay
 
 @Composable
@@ -106,6 +108,9 @@ private fun DashboardCardProductsWide(
             .fillMaxWidth()
             .height(170.dp),
         shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
         onClick = onClick,
         interactionSource = remember { MutableInteractionSource() }  // "ripple" anim au click
     ) {
@@ -222,6 +227,9 @@ private fun DashboardCardShoppingListFake(
     Card(
         modifier = modifier.height(150.dp),
         shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
         onClick = onClick,
         interactionSource = remember { MutableInteractionSource() }  // "ripple" anim au click
     ) {
@@ -293,6 +301,9 @@ private fun DashboardCardRecipesFake(
     Card(
         modifier = modifier.height(150.dp),
         shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
         onClick = onClick,
         interactionSource = remember { MutableInteractionSource() } // "ripple" anim au click
     ) {

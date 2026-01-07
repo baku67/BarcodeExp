@@ -27,49 +27,53 @@ fun HeaderBar(
     onIconClick: () -> Unit = {}            // action au clic
 ) {
 
-    TopAppBar(
-        navigationIcon = {
-            IconButton(onClick = onIconClick) {
-                Image(
-                    painter = painterResource(id = R.drawable.frigozen_icon),
-                    contentDescription = "Logo",
-                    modifier = Modifier.size(35.dp),
-                    contentScale = ContentScale.Fit
-                )
-            }
-        },
-        title = {
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                modifier = Modifier.fillMaxHeight()
-            ) {
-                Text(
-                    text = title,
-                    modifier = Modifier.absoluteOffset(x = 0.dp, y = -4.dp),
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontFamily = Manrope,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 25.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                )
-                //subtitle?.let {
-                //    Text(
-                //        text = "- $subtitle",
-                //        fontSize = 14.sp,
-                //        color = Color.White.copy(alpha = .85f),
-                //        modifier = Modifier.absoluteOffset(x = 15.dp, y = -2.dp)
-                //    )
-                //}
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent,   // ou "MaterialTheme.colorScheme.primary"
-            titleContentColor = Color.White,
-            navigationIconContentColor = Color.White
-        ),
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(73.dp)   // hauteur standard d’une app-bar
-    )
+            .padding(bottom = 8.dp) // ✅ padding
+    ) {
+        TopAppBar(
+            navigationIcon = {
+                IconButton(
+                    onClick = onIconClick,
+                    modifier = Modifier.padding(start = 6.dp, top = 6.dp, bottom = 6.dp) // ✅ padding
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.frigozen_icon),
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(38.dp), // plus grand
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .padding(start = 6.dp, bottom = 6.dp) // ✅ + padding autour du titre
+                ) {
+                    Text(
+                        text = title,
+                        modifier = Modifier.absoluteOffset(x = 0.dp, y = -2.dp),
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontFamily = Manrope,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 28.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                titleContentColor = Color.White,
+                navigationIconContentColor = Color.White
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(86.dp) // ✅ + hauteur (avant 73.dp)
+                .padding(horizontal = 3.dp) // ✅ un peu plus “spacieux”
+        )
+    }
 }

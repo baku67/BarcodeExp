@@ -63,7 +63,6 @@ fun AppContentWithBars(
         topBar = {
             HeaderBar(
                 title = title,
-                subtitle = subtitle,
                 onIconClick = {
                     // logo cliqué => retour Home
                     onTabClick("home")
