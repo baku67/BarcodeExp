@@ -2,17 +2,22 @@ package com.example.barcode.ui.components
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,9 +29,11 @@ import androidx.compose.material.icons.outlined.TimerOff
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,9 +99,10 @@ private fun DashboardCardProductsWide(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(160.dp),
+            .height(170.dp),
         shape = RoundedCornerShape(18.dp),
-        onClick = onClick
+        onClick = onClick,
+        interactionSource = remember { MutableInteractionSource() }  // "ripple" anim au click
     ) {
         Row(
             modifier = Modifier
@@ -103,79 +111,65 @@ private fun DashboardCardProductsWide(
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
 
-            // Gauche : chiffres + stats
+            // 1) Gauche : nombre + label (colonne)
             Column(
                 modifier = Modifier
-                    .weight(1.15f)
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .weight(0.55f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column {
-                    Text(
-                        text = total.toString(),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Produits",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    StatIconColumn(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Outlined.Eco,
-                        value = fresh,
-                        color = MaterialTheme.colorScheme.primary,
-                        contentDescription = "Frais"
-                    )
-                    StatIconColumn(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Outlined.WarningAmber,
-                        value = soon,
-                        color = Color(0xFFF9A825),
-                        contentDescription = "Expire bientôt"
-                    )
-                    StatIconColumn(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Outlined.BugReport,
-                        value = expired,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        contentDescription = "Périmé"
-                    )
-                }
+                Text(
+                    text = total.toString(),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Produits",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            // Droite : Top 3 prochainement à expirer
+            // 2) Milieu : 3 mini-sections en colonne (Périmés -> Bientôt -> Sains)
             Column(
                 modifier = Modifier
-                    .weight(0.85f)
-                    .fillMaxSize()
+                    .weight(0.55f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatIconRow(
+                    icon = Icons.Outlined.TimerOff,
+                    label = "Périmés",
+                    value = expired,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    iconAlpha = 0.80f // on boust un peu l'opacité de l'icone périmés (rouge)
+                )
+                StatIconRow(
+                    icon = Icons.Outlined.WarningAmber,
+                    label = "Bientôt",
+                    value = soon,
+                    color = Color(0xFFF9A825)
+                )
+                StatIconRow(
+                    icon = Icons.Outlined.Eco,
+                    label = "Sains",
+                    value = fresh,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // 3) Droite : mini-liste "À consommer" (inchangée)
+            Column(
+                modifier = Modifier
+                    .weight(0.90f)
+                    .fillMaxHeight()
                     .clip(RoundedCornerShape(14.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Outlined.Schedule,
-                        contentDescription = "Prochaines expirations",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.size(8.dp))
-                    Text(
-                        text = "À consommer",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
                 nextExpiring.forEach { line ->
                     Text(
                         text = "• $line",
@@ -186,6 +180,18 @@ private fun DashboardCardProductsWide(
                 }
             }
         }
+
+
+        val safeRatio = if (total > 0) fresh / total.toFloat() else 0f
+        LinearProgressIndicator(
+            progress = { safeRatio }, // nouvelle API (lambda)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp)),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        )
     }
 }
 
@@ -205,7 +211,8 @@ private fun DashboardCardShoppingListFake(
     Card(
         modifier = modifier.height(150.dp),
         shape = RoundedCornerShape(18.dp),
-        onClick = onClick
+        onClick = onClick,
+        interactionSource = remember { MutableInteractionSource() }  // "ripple" anim au click
     ) {
         Box(Modifier.fillMaxSize()) {
 
@@ -273,7 +280,8 @@ private fun DashboardCardRecipesFake(
     Card(
         modifier = modifier.height(150.dp),
         shape = RoundedCornerShape(18.dp),
-        onClick = onClick
+        onClick = onClick,
+        interactionSource = remember { MutableInteractionSource() } // "ripple" anim au click
     ) {
         Column(
             modifier = Modifier
@@ -313,56 +321,60 @@ private fun DashboardCardRecipesFake(
 
 
 @Composable
-private fun StatIconColumn(
-    modifier: Modifier = Modifier,
+private fun StatIconRow(
     icon: ImageVector,
+    label: String,
     value: Int,
     color: Color,
-    contentDescription: String,
     iconAlpha: Float = 0.55f
 ) {
-    val bg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+    val hasValue = value > 0
 
-    Box(
-        modifier = modifier
-            .padding(horizontal = 2.dp)              // espace entre “sections”
-            .clip(RoundedCornerShape(12.dp))
-            .background(bg)
-            .padding(vertical = 10.dp, horizontal = 6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            StatValueText(value = value, color = color)
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                // tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f), // TODO neutre mieux ?
-                tint = color.copy(alpha = iconAlpha),
-                modifier = Modifier.size(18.dp)
-            )
-        }
+    // Base alpha par statut (tu compenses déjà le rouge)
+    val baseAlpha = when (label) {
+        "Périmés" -> 0.35f
+        "Bientôt" -> 0.16f
+        else -> 0.14f
     }
-}
 
-@SuppressLint("UnusedBoxWithConstraintsScope")
-@Composable
-private fun StatValueText(value: Int, color: Color) {
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val txt = value.toString()
-        val style = if (txt.length >= 2) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge
+    // ✅ Si value > 0 -> bord plus présent, sinon très discret
+    val borderAlpha = if (hasValue) baseAlpha.coerceAtLeast(0.22f) else 0.06f
+    val border = color.copy(alpha = borderAlpha)
+
+    // ✅ Chiffre: coloré si >0, sinon grisé
+    val numberColor = if (hasValue) color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+
+    val numberDisplay = if (hasValue) value.coerceIn(0, 99).toString() else "—"
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .border(0.75.dp, border, RoundedCornerShape(12.dp))
+            .padding(top = 6.dp, bottom = 6.dp, start = 10.dp, end = 0.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // ✅ Icône reste colorée (mais tu peux la calmer un peu si value == 0)
+        val effectiveIconAlpha = if (hasValue) iconAlpha else (iconAlpha * 0.75f)
+
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = color.copy(alpha = effectiveIconAlpha),
+            modifier = Modifier.size(18.dp)
+        )
 
         Text(
-            text = txt,
-            style = style,
+            text = numberDisplay,
+            modifier = Modifier.width(22.dp),
+            textAlign = TextAlign.End,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = color,
+            color = numberColor,
             maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Clip,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+            softWrap = false
         )
     }
 }

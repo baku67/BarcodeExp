@@ -61,7 +61,7 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
                     14,
                     10,
                     3,
-                    1
+                    0
                 ) // TODO Data Dashboard factices pour l'instant
 
                 "listeCourses" -> ListeCoursesContent(
