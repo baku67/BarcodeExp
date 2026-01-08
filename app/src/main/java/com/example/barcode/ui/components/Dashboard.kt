@@ -12,18 +12,15 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ReceiptLong
@@ -46,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -57,7 +53,6 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.withSaveLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -159,7 +154,7 @@ private fun DashboardCardProductsWide(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically,     // ✅ centrage vertical
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
@@ -174,8 +169,8 @@ private fun DashboardCardProductsWide(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Header (tu peux garder le tien)
 
+                    // Header
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -222,13 +217,13 @@ private fun DashboardCardProductsWide(
                             Text(
                                 text = "Produits",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.60f)
                             )
                         }
 
                     }
 
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(15.dp))
 
                     // Mini-sections en ligne (ordre cohérent avec la barre : rouge → jaune → vert)
                     Row(
@@ -238,11 +233,10 @@ private fun DashboardCardProductsWide(
                     ) {
                         StatIconPill(
                             modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.TimerOff,
-                            label = "Périmés",
-                            value = expired,
-                            color = MaterialTheme.colorScheme.tertiary,
-                            iconAlpha = 0.80f
+                            icon = Icons.Outlined.Eco,
+                            label = "Sains",
+                            value = fresh,
+                            color = MaterialTheme.colorScheme.primary
                         )
                         StatIconPill(
                             modifier = Modifier.weight(1f),
@@ -253,10 +247,11 @@ private fun DashboardCardProductsWide(
                         )
                         StatIconPill(
                             modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.Eco,
-                            label = "Sains",
-                            value = fresh,
-                            color = MaterialTheme.colorScheme.primary
+                            icon = Icons.Outlined.TimerOff,
+                            label = "Périmés",
+                            value = expired,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            iconAlpha = 0.80f
                         )
                     }
                 }
@@ -328,47 +323,68 @@ private fun StatIconPill(
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
     }
 
-    val numberColor = if (hasValue) color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-    val iconTint = if (hasValue) color.copy(alpha = iconAlpha) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+    val numberColor =
+        if (hasValue) color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
 
-    Row(
+    val iconTint =
+        if (hasValue) color.copy(alpha = iconAlpha)
+        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+
+    // ✅ valeur affichée (tu peux garder — quand 0, ou afficher 0)
+    val safeValue = value.coerceIn(0, 99)
+
+    Column(
         modifier = modifier
-            .height(34.dp)
+            .height(56.dp) // ✅ hauteur fixe => pills identiques
             .clip(RoundedCornerShape(12.dp))
             .border(0.75.dp, borderColor, RoundedCornerShape(12.dp))
-            .padding(horizontal = 6.dp),           // ✅ moins de padding
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center // ✅ centre le contenu
+            .padding(vertical = 6.dp, horizontal = 6.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
             tint = iconTint,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(18.dp)
         )
 
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.height(4.dp))
 
         if (hasValue) {
             AnimatedCountText(
-                target = value.coerceIn(0, 99),
+                target = safeValue,
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
                 color = numberColor,
-                maxLines = 1,             // ✅ important
+                maxLines = 1,
                 softWrap = false,
+                overflow = TextOverflow.Clip,
                 durationMillis = 450
             )
         } else {
             Text(
                 text = "—",
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
                 color = numberColor,
                 maxLines = 1,
-                softWrap = false
+                softWrap = false,
+                overflow = TextOverflow.Clip
             )
         }
+
+        // Optionnel : si tu veux le label (ça peut devenir chargé)
+        /*
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+        )
+        */
     }
 }
 
@@ -396,33 +412,40 @@ private fun DashboardCardShoppingListFake(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             // Header (nombre + label) centré
-            Box(modifier = Modifier.fillMaxWidth()) {
-                // ✅ icône discrète en haut à droite
-                Icon(
-                    imageVector = Icons.Filled.ReceiptLong,
-                    contentDescription = "Courses",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.70f),
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(18.dp)
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                // Gauche : icône alignée à droite
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ReceiptLong,
+                        contentDescription = "Courses",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
+                        modifier = Modifier.size(60.dp)
+                    )
+                }
 
-                // ✅ header centré
+                // Droite : nombre + label alignés à gauche
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.Start
                 ) {
                     AnimatedCountText(
                         target = total,
-                        style = MaterialTheme.typography.headlineLarge,
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
                         durationMillis = 650
                     )
                     Text(
                         text = "Courses",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.60f)
                     )
                 }
             }
@@ -476,32 +499,41 @@ private fun DashboardCardRecipesFake(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             // Header (centré)
-            Box(modifier = Modifier.fillMaxWidth()) {
-                Icon(
-                    imageVector = Icons.Outlined.RestaurantMenu,
-                    contentDescription = "Recettes",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.70f),
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(18.dp)
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                // Gauche : icône alignée à droite
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.RestaurantMenu,
+                        contentDescription = "Recettes",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
+                        modifier = Modifier.size(60.dp)
+                    )
+                }
 
+                // Droite : nombre + label alignés à gauche
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.Start
                 ) {
                     AnimatedCountText(
                         target = totalRecipes,
-                        style = MaterialTheme.typography.headlineLarge,
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
                         durationMillis = 650,
                         delayMillis = 60
                     )
                     Text(
                         text = "Recettes",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.60f)
                     )
                 }
             }
@@ -583,12 +615,12 @@ private fun ExpiryProgressBar(
                 .fillMaxSize()
                 .graphicsLayer {
                     scaleX = reveal
-                    transformOrigin = TransformOrigin(0f, 0.5f) // ✅ reveal depuis la gauche
+                    transformOrigin = TransformOrigin(0f, 0.5f)
                 }
         ) {
-            if (we > 0f) Box(Modifier.weight(we).fillMaxHeight().background(MaterialTheme.colorScheme.tertiary))
-            if (ws > 0f) Box(Modifier.weight(ws).fillMaxHeight().background(Color(0xFFF9A825)))
             if (wf > 0f) Box(Modifier.weight(wf).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+            if (ws > 0f) Box(Modifier.weight(ws).fillMaxHeight().background(Color(0xFFF9A825)))
+            if (we > 0f) Box(Modifier.weight(we).fillMaxHeight().background(MaterialTheme.colorScheme.tertiary))
         }
     }
 }
