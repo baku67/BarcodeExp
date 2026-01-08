@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,6 +50,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.barcode.R
@@ -57,7 +59,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-enum class ViewMode { List, Grid }
+enum class ViewMode { List, Fridge }
 
 // TODO: bouton explicite de rafraichissement ou alors padding en haut de liste (mais caché) qui permet de ne pas activer le pull-to-refresh sans faire expres (BAD UX°
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,6 +100,12 @@ fun ItemsContent(
             compareBy<com.example.barcode.data.Item> { it.expiryDate ?: Long.MAX_VALUE }
                 .thenBy { (it.name ?: "").lowercase() }
         )
+    }
+
+    // Etageres grid
+    val itemsPerShelf = 5
+    val shelves = remember(sorted) {
+        sorted.chunked(itemsPerShelf)
     }
 
     // Viewer d'Image plein écran (click sur images BottomSheet)
@@ -353,47 +361,27 @@ fun ItemsContent(
                         }
                     }
 
-                    ViewMode.Grid -> {
-                        val tileMin = 60.dp // A peu près 4 produits par ligne
-                        val hSpace = 10.dp
-
-                        BoxWithConstraints(modifier = Modifier.weight(1f)) {
-                            val available = maxWidth
-                            val cols = remember(available) {
-                                val a = available.value
-                                val t = tileMin.value
-                                val s = hSpace.value
-                                kotlin.math.max(1, ((a + s) / (t + s)).toInt())
-                            }
-
-                            Box(modifier = Modifier.fillMaxSize()) {
-
-                                // ✅ Background seulement en Grid
-                                FridgeBackground(scrimAlpha = 0.40f)
-
-                                // ✅ Foreground : ta grille
-                                LazyVerticalGrid(
-                                    columns = GridCells.Fixed(cols),
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    contentPadding = PaddingValues(bottom = 4.dp) // évite le bord collé
-                                ) {
-                                    items(sorted, key = { it.id }) { it ->
-                                        ItemGridTile(
-                                            item = it,
-                                            selected = selectionMode && selectedIds.contains(it.id),
-                                            selectionMode = selectionMode,
-                                            onClick = {
-                                                if (selectionMode) toggleSelect(it.id) else sheetItem = it
-                                            },
-                                            onLongPress = {
-                                                if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
-                                            }
-                                        )
+                    ViewMode.Fridge -> {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                            contentPadding = PaddingValues(bottom = 8.dp)
+                        ) {
+                            itemsIndexed(shelves) { index, shelfItems ->
+                                ShelfRow(
+                                    index = index,
+                                    items = shelfItems,
+                                    selectionMode = selectionMode,
+                                    selectedIds = selectedIds,
+                                    onClickItem = { item ->
+                                        if (selectionMode) toggleSelect(item.id)
+                                        else sheetItem = item
+                                    },
+                                    onLongPressItem = { item ->
+                                        if (!selectionMode) enterSelectionWith(item.id)
+                                        else toggleSelect(item.id)
                                     }
-                                    item { Spacer(Modifier.height(4.dp)) }
-                                }
+                                )
                             }
                         }
                     }
@@ -620,38 +608,91 @@ private fun ProductThumb(imageUrl: String?) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ItemGridTile(
-    item: com.example.barcode.data.Item,
-    selected: Boolean,
+fun ShelfRow(
+    index: Int,
+    items: List<com.example.barcode.data.Item>,
     selectionMode: Boolean,
-    onClick: () -> Unit,
-    onLongPress: () -> Unit
+    selectedIds: Set<String>,
+    onClickItem: (com.example.barcode.data.Item) -> Unit,
+    onLongPressItem: (com.example.barcode.data.Item) -> Unit,
 ) {
-    Card(
-        modifier = Modifier
-            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected)
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
-            else MaterialTheme.colorScheme.surface.copy(alpha = 0.0f) // pas de bg en temps normal
-        ),
-        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null, // pas de border en temps normal
-        shape = RoundedCornerShape(16.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+
+        // ---- PRODUITS POSÉS SUR L’ÉTAGÈRE
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
         ) {
-            // Image
-            ProductThumb(item.imageUrl)
+            items.forEach { item ->
+                Box(
+                    modifier = Modifier.combinedClickable(
+                        onClick = { onClickItem(item) },
+                        onLongClick = { onLongPressItem(item) }
+                    )
+                ) {
+                    ProductThumb(item.imageUrl)
+                }
+            }
+
+            // placeholders pour garder l’alignement
+            repeat(5 - items.size) {
+                Spacer(Modifier.size(56.dp))
+            }
         }
+
+        // ---- SVG D’ÉTAGÈRE selon index row
+        ShelfSvg(
+            type = shelfTypeForIndex(index),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(10.dp)
+        )
     }
 }
 
+enum class ShelfType {
+    TOP1,
+    TOP2,
+    MIDDLE,
+    BOTTOM,
+    VEGETABLE
+}
+fun shelfTypeForIndex(index: Int): ShelfType =
+    when {
+        index == 0 -> ShelfType.TOP1
+        index == 1 -> ShelfType.TOP2
+        // TODO BOTTOM (index selon le nombre de MIDDLES inséré)
+        index % 6 == 5 -> ShelfType.VEGETABLE
+        else -> ShelfType.MIDDLE
+    }
 
+@Composable
+fun ShelfSvg(
+    type: ShelfType,
+    modifier: Modifier = Modifier
+) {
+    val res = when (type) {
+        ShelfType.TOP1 -> R.drawable.etagere_1_xml
+        ShelfType.TOP2 -> R.drawable.etagere_1_xml
+        ShelfType.MIDDLE -> R.drawable.etagere_1_xml
+        ShelfType.BOTTOM -> R.drawable.etagere_1_xml
+        ShelfType.VEGETABLE -> R.drawable.etagere_1_xml
+    }
 
-
-
+    Image(
+        painter = painterResource(res),
+        contentDescription = null,
+        modifier = modifier,
+        contentScale = ContentScale.FillWidth,
+        alignment = Alignment.Center
+    )
+}
 
 
 /* ——— Utils ——— */

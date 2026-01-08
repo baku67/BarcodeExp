@@ -45,10 +45,10 @@ fun FridgeDisplayIconToggle(
         )
 
         SegIcon(
-            active = selected == ViewMode.Grid,
+            active = selected == ViewMode.Fridge,
             // icon = AppIcon.Drawable(R.drawable.display_fridge_grid), // icon custom fridge bof bof
             icon = AppIcon.Vector(Icons.Filled.GridView),
-            onClick = { onSelect(ViewMode.Grid) },
+            onClick = { onSelect(ViewMode.Fridge) },
             shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
         )
     }
