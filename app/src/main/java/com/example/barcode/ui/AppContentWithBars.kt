@@ -3,14 +3,8 @@ package com.example.barcode.ui
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.LocalDining
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.RestaurantMenu
-import androidx.compose.material.icons.filled.SetMeal
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -37,7 +31,7 @@ fun AppContentWithBars(
     val items = listOf(
         NavBarItem(label = "Accueil", route = "home", icon = AppIcon.Vector(Icons.Filled.Home)),
         NavBarItem(label = "Courses", route = "listeCourses", icon = AppIcon.Vector(Icons.Filled.ReceiptLong)),
-        NavBarItem(label = "Items", route = "items", icon = AppIcon.Drawable(R.drawable.ic_nav_fridge_icon)),
+        NavBarItem(label = "Items", route = "items", icon = AppIcon.Drawable(R.drawable.ic_nav_fridge_icon_thicc)),
         NavBarItem(label = "Recettes", route = "recipes", icon = AppIcon.Vector(Icons.Filled.RestaurantMenu)), // ReceiptLong, MenuBook, RestaurantMenu(!), Restaurant
         NavBarItem(label = "Paramètres", route = "settings", icon = AppIcon.Vector(Icons.Filled.Settings))
     )

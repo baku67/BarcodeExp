@@ -400,12 +400,6 @@ private fun ProductThumb(imageUrl: String?) {
 
 /* ——— Utils ——— */
 
-private fun formatAbsoluteDate(ms: Long): String =
-    Instant.ofEpochMilli(ms)
-        .atZone(ZoneId.systemDefault())
-        .toLocalDate()
-        .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-
 private fun formatRelativeDaysCompact(targetMillis: Long): String {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now(zone)
