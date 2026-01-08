@@ -369,7 +369,7 @@ fun ItemsContent(
                             Box(modifier = Modifier.fillMaxSize()) {
 
                                 // ✅ Background seulement en Grid
-                                FridgeBackground(alpha = 0.10f, scrimAlpha = 0.40f)
+                                FridgeBackground(scrimAlpha = 0.40f)
 
                                 // ✅ Foreground : ta grille
                                 LazyVerticalGrid(
@@ -906,41 +906,58 @@ private fun ImageViewerDialog(
 
 @Composable
 private fun FridgeBackground(
-    alpha: Float = 0.12f,
     scrimAlpha: Float = 0.35f
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
 
         // ✅ Fond opaque derrière (empêche toute transparence vers l’AppBackground)
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(MaterialTheme.colorScheme.onPrimary) // ou surfaceVariant
-        )
+        //Box(
+        //    modifier = Modifier
+        //        .matchParentSize()
+        //        .background(MaterialTheme.colorScheme.onPrimary) // ou surfaceVariant
+        //)
 
         Column(modifier = Modifier.matchParentSize()) {
-            Image(
-                painter = painterResource(R.drawable.fridge_background_top),
+            /* Image(
+                painter = painterResource(R.drawable.fridge_background_global),
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth().weight(1f).alpha(alpha),
+                modifier = Modifier.fillMaxWidth(),
+                contentScale = ContentScale.FillWidth
+            )*/
+            Image(
+                painter = painterResource(R.drawable.etagere_1),
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 contentScale = ContentScale.Crop
             )
             Image(
-                painter = painterResource(R.drawable.fridge_background_middle),
+                painter = painterResource(R.drawable.etagere2),
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth().weight(1f).alpha(alpha),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 contentScale = ContentScale.Crop
             )
             Image(
-                painter = painterResource(R.drawable.fridge_background_bottom),
+                painter = painterResource(R.drawable.etagere3),
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth().weight(1f).alpha(alpha),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 contentScale = ContentScale.Crop
             )
             Image(
-                painter = painterResource(R.drawable.fridge_background_bottom_vege),
+                painter = painterResource(R.drawable.etagere4),
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth().weight(1f).alpha(alpha),
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentScale = ContentScale.Crop
+            )
+            Image(
+                painter = painterResource(R.drawable.etagere5),
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentScale = ContentScale.Crop
+            )
+            Image(
+                painter = painterResource(R.drawable.etagere6),
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 contentScale = ContentScale.Crop
             )
         }
@@ -949,7 +966,7 @@ private fun FridgeBackground(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = scrimAlpha))
+
         )
     }
 }
