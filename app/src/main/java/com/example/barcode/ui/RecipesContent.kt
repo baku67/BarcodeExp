@@ -75,7 +75,10 @@ fun RecipesContent(innerPadding: PaddingValues, isActive: Boolean) {
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.TopCenter) // ✅ OK car on est dans BoxScope
+                    .height(2.dp)
+                    .align(Alignment.TopCenter),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
             )
         }
 

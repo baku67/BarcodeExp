@@ -200,12 +200,15 @@ fun ItemsContent(
 
     Box(Modifier.fillMaxSize()) {
 
-        // Barre de chargement top (jolie + non intrusive)
+        // Barre de chargement top
         if (initialLoading) {
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.TopCenter)
+                    .height(2.dp)
+                    .align(Alignment.TopCenter),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
             )
         }
 

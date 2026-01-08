@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import com.example.barcode.ui.components.SnackbarBus
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import kotlinx.coroutines.delay
 
@@ -71,7 +72,10 @@ fun ListeCoursesContent(innerPadding: PaddingValues, isActive: Boolean) {
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.TopCenter) // ✅ OK car on est dans BoxScope
+                    .height(2.dp)
+                    .align(Alignment.TopCenter),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
             )
         }
 
