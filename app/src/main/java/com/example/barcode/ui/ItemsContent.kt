@@ -906,56 +906,46 @@ private fun ImageViewerDialog(
 
 @Composable
 private fun FridgeBackground(
-    alpha: Float = 0.12f,          // opacité des images
-    scrimAlpha: Float = 0.35f      // voile par-dessus (pour “fondre” l’image au thème)
+    alpha: Float = 0.12f,
+    scrimAlpha: Float = 0.35f
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // 4 sections empilées : top / middle / bottom / bac légumes
-        Column(modifier = Modifier.matchParentSize()) {
+        // ✅ Fond opaque derrière (empêche toute transparence vers l’AppBackground)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(MaterialTheme.colorScheme.onPrimary) // ou surfaceVariant
+        )
 
+        Column(modifier = Modifier.matchParentSize()) {
             Image(
                 painter = painterResource(R.drawable.fridge_background_top),
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .alpha(alpha),
+                modifier = Modifier.fillMaxWidth().weight(1f).alpha(alpha),
                 contentScale = ContentScale.Crop
             )
-
             Image(
                 painter = painterResource(R.drawable.fridge_background_middle),
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .alpha(alpha),
+                modifier = Modifier.fillMaxWidth().weight(1f).alpha(alpha),
                 contentScale = ContentScale.Crop
             )
-
             Image(
                 painter = painterResource(R.drawable.fridge_background_bottom),
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .alpha(alpha),
+                modifier = Modifier.fillMaxWidth().weight(1f).alpha(alpha),
                 contentScale = ContentScale.Crop
             )
-
             Image(
                 painter = painterResource(R.drawable.fridge_background_bottom_vege),
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .alpha(alpha),
+                modifier = Modifier.fillMaxWidth().weight(1f).alpha(alpha),
                 contentScale = ContentScale.Crop
             )
         }
 
-        // Voile : indispensable car tes images ne sont pas transparentes
+        // Voile par-dessus (optionnel)
         Box(
             modifier = Modifier
                 .matchParentSize()
