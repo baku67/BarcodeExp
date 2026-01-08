@@ -249,7 +249,7 @@ private fun DashboardCardProductsWide(
                             Text(
                                 text = "Produits",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.60f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.80f)
                             )
                         }
 
@@ -477,7 +477,7 @@ private fun DashboardCardShoppingListFake(
                     Text(
                         text = "Courses",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.60f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.80f)
                     )
                 }
             }
@@ -565,7 +565,7 @@ private fun DashboardCardRecipesFake(
                     Text(
                         text = "Recettes",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.60f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.80f)
                     )
                 }
             }
