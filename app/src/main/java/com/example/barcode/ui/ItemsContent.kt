@@ -43,15 +43,15 @@ import com.example.barcode.auth.AppMode
 import com.example.barcode.auth.SessionManager
 import com.example.barcode.ui.components.FridgeDisplayIconToggle
 import java.time.*
-import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.barcode.R
 import com.example.barcode.ui.components.SnackbarBus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -366,26 +366,34 @@ fun ItemsContent(
                                 kotlin.math.max(1, ((a + s) / (t + s)).toInt())
                             }
 
-                            LazyVerticalGrid(
-                                columns = GridCells.Fixed(cols),
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                items(sorted, key = { it.id }) { it ->
-                                    ItemGridTile(
-                                        item = it,
-                                        selected = selectionMode && selectedIds.contains(it.id),
-                                        selectionMode = selectionMode,
-                                        onClick = {
-                                            if (selectionMode) toggleSelect(it.id) else sheetItem = it
-                                        },
-                                        onLongPress = {
-                                            if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
-                                        }
-                                    )
+                            Box(modifier = Modifier.fillMaxSize()) {
+
+                                // ✅ Background seulement en Grid
+                                FridgeBackground(alpha = 0.10f, scrimAlpha = 0.40f)
+
+                                // ✅ Foreground : ta grille
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(cols),
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    contentPadding = PaddingValues(bottom = 4.dp) // évite le bord collé
+                                ) {
+                                    items(sorted, key = { it.id }) { it ->
+                                        ItemGridTile(
+                                            item = it,
+                                            selected = selectionMode && selectedIds.contains(it.id),
+                                            selectionMode = selectionMode,
+                                            onClick = {
+                                                if (selectionMode) toggleSelect(it.id) else sheetItem = it
+                                            },
+                                            onLongPress = {
+                                                if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
+                                            }
+                                        )
+                                    }
+                                    item { Spacer(Modifier.height(4.dp)) }
                                 }
-                                item { Spacer(Modifier.height(4.dp)) }
                             }
                         }
                     }
@@ -891,5 +899,67 @@ private fun ImageViewerDialog(
                 Icon(Icons.Filled.Close, contentDescription = "Fermer", tint = Color.White)
             }
         }
+    }
+}
+
+
+
+@Composable
+private fun FridgeBackground(
+    alpha: Float = 0.12f,          // opacité des images
+    scrimAlpha: Float = 0.35f      // voile par-dessus (pour “fondre” l’image au thème)
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        // 4 sections empilées : top / middle / bottom / bac légumes
+        Column(modifier = Modifier.matchParentSize()) {
+
+            Image(
+                painter = painterResource(R.drawable.fridge_background_top),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .alpha(alpha),
+                contentScale = ContentScale.Crop
+            )
+
+            Image(
+                painter = painterResource(R.drawable.fridge_background_middle),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .alpha(alpha),
+                contentScale = ContentScale.Crop
+            )
+
+            Image(
+                painter = painterResource(R.drawable.fridge_background_bottom),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .alpha(alpha),
+                contentScale = ContentScale.Crop
+            )
+
+            Image(
+                painter = painterResource(R.drawable.fridge_background_bottom_vege),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .alpha(alpha),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        // Voile : indispensable car tes images ne sont pas transparentes
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = scrimAlpha))
+        )
     }
 }
