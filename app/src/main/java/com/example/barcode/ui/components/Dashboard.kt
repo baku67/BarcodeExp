@@ -224,13 +224,11 @@ private fun DashboardCardProductsWide(
                             modifier = Modifier.weight(1f),
                             horizontalArrangement = Arrangement.End
                         ) {
-                            AnimatedStrokeFillIcon(
-                                iconRes = R.drawable.ic_dashboard_fridge_icon_thinn,
-                                healthyCount = fresh,
-                                soonCount = soon,
-                                expiredCount = expired,
-                                modifier = Modifier.size(56.dp),
-                                startDelayMillis = 300
+                            Icon(
+                                painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
+                                contentDescription = "Produits",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
+                                modifier = Modifier.size(60.dp)
                             )
                         }
 
@@ -703,98 +701,3 @@ fun AnimatedCountText(
     )
 }
 
-
-// Anim Remplissage de l'icone fridge
-@Composable
-fun AnimatedStrokeFillIcon(
-    @DrawableRes iconRes: Int,
-    healthyCount: Int,
-    soonCount: Int,
-    expiredCount: Int,
-    modifier: Modifier = Modifier,
-    outlineColor: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-    durationMillis: Int = 900,
-    startDelayMillis: Int = 0,
-) {
-    val painter = painterResource(id = iconRes)
-
-    // Animation fiable (snap -> delay -> animate)
-    val progress = remember { Animatable(0f) }
-    LaunchedEffect(iconRes, healthyCount, soonCount, expiredCount) {
-        progress.snapTo(0f)
-        if (startDelayMillis > 0) delay(startDelayMillis.toLong())
-        progress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = durationMillis, easing = FastOutSlowInEasing)
-        )
-    }
-
-    // Proportions
-    val total = (healthyCount + soonCount + expiredCount).coerceAtLeast(1)
-    val greenFrac = healthyCount.toFloat() / total
-    val yellowFrac = soonCount.toFloat() / total
-    val redFrac = expiredCount.toFloat() / total
-
-    // Stops (0 = top, 1 = bottom). On veut bottom=green -> yellow -> top=red
-    // Positions “depuis le bas” :
-    val yGreenTop = (1f - greenFrac).coerceIn(0f, 1f)
-    val yYellowTop = (1f - (greenFrac + yellowFrac)).coerceIn(0f, 1f)
-
-    // On évite les stops dupliqués si une frac = 0
-    fun addStop(list: MutableList<Pair<Float, Color>>, pos: Float, color: Color) {
-        if (list.lastOrNull()?.first != pos) list += pos to color
-        else list[list.lastIndex] = pos to color // remplace si même pos
-    }
-
-    val stops = buildList {
-        val tmp = mutableListOf<Pair<Float, Color>>()
-        // Top
-        addStop(tmp, 0f, MaterialTheme.colorScheme.tertiary) // rouge
-        // Transition jaune/rouge
-        addStop(tmp, yYellowTop, Color(0xFFF9A825)) // jaune
-        // Transition vert/jaune
-        addStop(tmp, yGreenTop, MaterialTheme.colorScheme.primary) // vert
-        // Bottom
-        addStop(tmp, 1f, MaterialTheme.colorScheme.primary) // vert
-        addAll(tmp)
-    }
-
-    val gradientBrush = remember(stops) {
-        Brush.verticalGradient(
-            colorStops = stops.toTypedArray()
-        )
-    }
-
-    Canvas(modifier = modifier) {
-        // 1) Outline (icône “contour”)
-        with(painter) {
-            draw(size = size, colorFilter = ColorFilter.tint(outlineColor))
-        }
-
-        // 2) Remplissage animé (bottom -> top)
-        val fillHeight = size.height * progress.value
-        val topY = size.height - fillHeight
-
-        clipRect(left = 0f, top = topY, right = size.width, bottom = size.height) {
-            // Layer pour appliquer le gradient UNIQUEMENT là où l’icône est opaque
-            drawIntoCanvas { canvas ->
-                val bounds = Rect(0f, 0f, size.width, size.height)
-                canvas.saveLayer(bounds, Paint())
-            }
-
-            // Destination = l’icône en blanc (sert de masque alpha)
-            with(painter) {
-                draw(size = size, colorFilter = ColorFilter.tint(Color.White))
-            }
-
-            // Source = le gradient, “in” dans l’alpha de l’icône
-            drawRect(
-                brush = gradientBrush,
-                size = size,
-                blendMode = BlendMode.SrcIn
-            )
-
-            drawIntoCanvas { canvas -> canvas.restore() }
-        }
-    }
-}
