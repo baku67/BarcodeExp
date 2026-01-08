@@ -63,8 +63,56 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.R
 import kotlinx.coroutines.delay
 
+
+// TODO: vraies données route dashboard (counts et 5 nextExpiring)
+private enum class ExpiryKind { EXPIRED, SOON, FRESH }
+private data class ExpiringLine(
+    val name: String,
+    val note: String,   // ex: "hier", "1j", "5j", ya une fonction pour ça dans ItemsContent
+    val kind: ExpiryKind
+)
+private data class FakeDashboardProducts(
+    val fresh: Int,
+    val soon: Int,
+    val expired: Int,
+    val nextExpiring: List<ExpiringLine>
+) {
+    val total: Int get() = fresh + soon + expired
+}
 @Composable
-fun DashboardRow(
+private fun rememberFakeDashboardProducts(): FakeDashboardProducts {
+    // Stable entre recompositions (pas de flicker)
+    return remember {
+        val fresh = 18
+        val soon = 3
+        val expired = 1
+
+        // ✅ cohérent avec les counts (1 EXPIRED, 2 SOON, 2 FRESH = 5 lignes)
+        val nextExpiring = listOf(
+            ExpiringLine("Jambon", "hier", ExpiryKind.EXPIRED),
+            ExpiringLine("Yaourt nature", "1j", ExpiryKind.SOON),
+            ExpiringLine("Salade", "2j", ExpiryKind.SOON),
+            ExpiringLine("Poulet", "3j", ExpiryKind.FRESH),
+            ExpiringLine("Fromage râpé", "6j", ExpiryKind.FRESH),
+        )
+
+        FakeDashboardProducts(
+            fresh = fresh,
+            soon = soon,
+            expired = expired,
+            nextExpiring = nextExpiring
+        )
+    }
+}
+// Fin TODO
+
+
+
+
+
+
+@Composable
+fun Dashboard(
     totalProducts: Int,
     freshCount: Int,
     expiringSoonCount: Int,
@@ -108,14 +156,9 @@ fun DashboardRow(
 }
 
 
-private enum class ExpiryKind { EXPIRED, SOON, FRESH }
-private data class ExpiringLine(
-    val name: String,
-    val note: String,   // ex: "hier", "1j", "5j", ya une fonction pour ça dans ItemsContent
-    val kind: ExpiryKind
-)
 
-@Preview
+
+
 @Composable
 private fun DashboardCardProductsWide(
     total: Int,
@@ -126,13 +169,13 @@ private fun DashboardCardProductsWide(
 ) {
     // TODO Fake “x prochains” (à remplacer plus tard par tes vrais items triés par expiryDate)
     // TODO: n'afficher que les items qui ont -3/-4 jours de conserv (parmis les 4-5 max)
-    val nextExpiring = listOf(
-        ExpiringLine("Jambon", "hier", ExpiryKind.EXPIRED),
-        ExpiringLine("Yaourt nature", "1j", ExpiryKind.SOON),
-        ExpiringLine("Salade", "2j", ExpiryKind.SOON),
-        ExpiringLine("Poulet", "3j", ExpiryKind.FRESH),
-        ExpiringLine("Fromage râpé", "6j", ExpiryKind.FRESH), // on s'en fout 6j ça pollue ici
-    )
+    val fake = rememberFakeDashboardProducts()
+
+    val total = fake.total
+    val fresh = fake.fresh
+    val soon = fake.soon
+    val expired = fake.expired
+    val nextExpiring = fake.nextExpiring
 
     Card(
         modifier = Modifier
@@ -181,24 +224,13 @@ private fun DashboardCardProductsWide(
                             modifier = Modifier.weight(1f),
                             horizontalArrangement = Arrangement.End
                         ) {
-                            // TODO vrais count stats
-                            data class FridgeStats(
-                                val healthy: Int,
-                                val soon: Int,
-                                val expired: Int
-                            )
-                            val fakeStats = FridgeStats(
-                                healthy = 18,  // vert
-                                soon = 3,      // jaune
-                                expired = 1    // rouge
-                            )
                             AnimatedStrokeFillIcon(
                                 iconRes = R.drawable.ic_dashboard_fridge_icon_thinn,
-                                healthyCount = fakeStats.healthy,
-                                soonCount = fakeStats.soon,
-                                expiredCount = fakeStats.expired,
+                                healthyCount = fresh,
+                                soonCount = soon,
+                                expiredCount = expired,
                                 modifier = Modifier.size(56.dp),
-                                startDelayMillis = 300, // optionnel pour debug
+                                startDelayMillis = 300
                             )
                         }
 

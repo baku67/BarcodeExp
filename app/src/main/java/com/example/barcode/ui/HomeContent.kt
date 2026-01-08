@@ -16,7 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.barcode.ui.components.DashboardRow
+import com.example.barcode.ui.components.Dashboard
 
 
 @Composable
@@ -62,7 +62,7 @@ fun HomeContent(
 
         // 2) Dashboard (Card Items et Card ListeCourses)
         item {
-            DashboardRow(
+            Dashboard(
                 totalProducts = totalProducts,
                 freshCount = freshCount,
                 expiringSoonCount = expiringSoonCount,
