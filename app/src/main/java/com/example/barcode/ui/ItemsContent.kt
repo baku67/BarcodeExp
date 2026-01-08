@@ -359,86 +359,82 @@ fun ItemsContent(
                 Spacer(Modifier.height(8.dp))
 
                 if(selectionMode) {
-                    if (selectionMode) {
+                    // ✅ mini ligne au-dessus : compteur + Annuler (secondaire)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${selectedIds.size} sélectionné(s)",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
 
-                        // ✅ mini ligne au-dessus : compteur + Annuler (secondaire)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "${selectedIds.size} sélectionné(s)",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                        Spacer(Modifier.weight(1f))
 
-                            Spacer(Modifier.weight(1f))
-
-                            TextButton(onClick = { exitSelection() }) {
-                                Icon(Icons.Filled.Close, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Annuler")
-                            }
-                        }
-
-                        // ✅ action bar flottante “premium”
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                            shape = RoundedCornerShape(18.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-
-                                // 🧠 Chercher recette (primaire, mais non destructif)
-                                Button(
-                                    onClick = {
-                                        // TODO plus tard: récupérer ingrédients depuis les items sélectionnés
-                                        SnackbarBus.show("Bientôt: recherche de recette avec les ingrédients sélectionnés.")
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(48.dp),
-                                    shape = RoundedCornerShape(14.dp)
-                                ) {
-                                    Icon(Icons.Filled.Add, contentDescription = null) // TODO: remplace par une icône "restaurant" plus tard
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Recette", fontWeight = FontWeight.SemiBold)
-                                }
-
-                                // 🗑 Supprimer (destructif, mais sans wording culpabilisant)
-                                OutlinedButton(
-                                    onClick = {
-                                        selectedIds.forEach { id -> vm.deleteItem(id) }
-                                        exitSelection()
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(48.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.error
-                                    ),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.8f))
-                                ) {
-                                    Icon(Icons.Filled.Delete, contentDescription = null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Retirer", fontWeight = FontWeight.SemiBold)
-                                }
-                            }
+                        TextButton(onClick = { exitSelection() }) {
+                            Icon(Icons.Filled.Close, contentDescription = null)
+                            Spacer(Modifier.width(6.dp))
+                            Text("Annuler")
                         }
                     }
 
+                    // ✅ action bar flottante “premium”
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+
+                            // 🧠 Chercher recette (primaire, mais non destructif)
+                            Button(
+                                onClick = {
+                                    // TODO plus tard: récupérer ingrédients depuis les items sélectionnés
+                                    SnackbarBus.show("Bientôt: recherche de recette avec les ingrédients sélectionnés.")
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null) // TODO: remplace par une icône "restaurant" plus tard
+                                Spacer(Modifier.width(8.dp))
+                                Text("Recette", fontWeight = FontWeight.SemiBold)
+                            }
+
+                            // 🗑 Supprimer (destructif, mais sans wording culpabilisant)
+                            OutlinedButton(
+                                onClick = {
+                                    selectedIds.forEach { id -> vm.deleteItem(id) }
+                                    exitSelection()
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.8f))
+                            ) {
+                                Icon(Icons.Filled.Delete, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Retirer", fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
                 }
 
 
