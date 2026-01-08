@@ -14,7 +14,10 @@ import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -323,37 +326,69 @@ fun ItemsContent(
 
                 Spacer(Modifier.height(12.dp))
 
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(sorted, key = { it.id }) { it ->
-                        ItemCard(
-                            name = it.name ?: "(sans nom)",
-                            brand = it.brand,
-                            expiry = it.expiryDate,
-                            imageUrl = it.imageUrl,
-                            selected = selectionMode && selectedIds.contains(it.id),
-                            selectionMode = selectionMode,
-
-                            onClick = {
-                                if (selectionMode) {
-                                    toggleSelect(it.id)
-                                } else {
-                                    sheetItem = it
-                                }
-                            },
-                            onLongPress = {
-                                if (!selectionMode) {
-                                    enterSelectionWith(it.id)
-                                } else {
-                                    toggleSelect(it.id)
-                                }
-                            },
-                            onDelete = { vm.deleteItem(it.id) }
-                        )
+                when (viewMode) {
+                    ViewMode.List -> {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(sorted, key = { it.id }) { it ->
+                                ItemCard(
+                                    name = it.name ?: "(sans nom)",
+                                    brand = it.brand,
+                                    expiry = it.expiryDate,
+                                    imageUrl = it.imageUrl,
+                                    selected = selectionMode && selectedIds.contains(it.id),
+                                    selectionMode = selectionMode,
+                                    onClick = {
+                                        if (selectionMode) toggleSelect(it.id) else sheetItem = it
+                                    },
+                                    onLongPress = {
+                                        if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
+                                    },
+                                    onDelete = { vm.deleteItem(it.id) }
+                                )
+                            }
+                            item { Spacer(Modifier.height(4.dp)) }
+                        }
                     }
-                    item { Spacer(Modifier.height(4.dp)) }
+
+                    ViewMode.Grid -> {
+                        val tileMin = 60.dp // A peu près 4 produits par ligne
+                        val hSpace = 10.dp
+
+                        BoxWithConstraints(modifier = Modifier.weight(1f)) {
+                            val available = maxWidth
+                            val cols = remember(available) {
+                                val a = available.value
+                                val t = tileMin.value
+                                val s = hSpace.value
+                                kotlin.math.max(1, ((a + s) / (t + s)).toInt())
+                            }
+
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(cols),
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                items(sorted, key = { it.id }) { it ->
+                                    ItemGridTile(
+                                        item = it,
+                                        selected = selectionMode && selectedIds.contains(it.id),
+                                        selectionMode = selectionMode,
+                                        onClick = {
+                                            if (selectionMode) toggleSelect(it.id) else sheetItem = it
+                                        },
+                                        onLongPress = {
+                                            if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
+                                        }
+                                    )
+                                }
+                                item { Spacer(Modifier.height(4.dp)) }
+                            }
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(8.dp))
@@ -572,6 +607,44 @@ private fun ProductThumb(imageUrl: String?) {
         }
     }
 }
+
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ItemGridTile(
+    item: com.example.barcode.data.Item,
+    selected: Boolean,
+    selectionMode: Boolean,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+            else MaterialTheme.colorScheme.surface.copy(alpha = 0.0f) // pas de bg en temps normal
+        ),
+        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null, // pas de border en temps normal
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Image
+            ProductThumb(item.imageUrl)
+        }
+    }
+}
+
+
+
+
+
+
 
 /* ——— Utils ——— */
 
