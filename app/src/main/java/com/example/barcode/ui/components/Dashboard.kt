@@ -10,8 +10,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,6 +51,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.barcode.R
 import kotlinx.coroutines.delay
@@ -105,7 +108,7 @@ private data class ExpiringLine(
     val kind: ExpiryKind
 )
 
-
+@Preview
 @Composable
 private fun DashboardCardProductsWide(
     total: Int,
@@ -160,23 +163,29 @@ private fun DashboardCardProductsWide(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Header (tu peux garder le tien)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_nav_fridge_icon_thicc),
-                            contentDescription = "Frigo",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.70f),
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)   // ✅ comme les cards du dessous
-                                .padding(end = 2.dp)       // ✅ léger retrait
-                                .size(18.dp)
-                        )
+
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_dashboard_fridge_icon_thinn),
+                                contentDescription = "Frigo",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.30f),
+                                modifier = Modifier.size(65.dp).padding(2.dp) // ajustement: taille et padding
+                            )
+                        }
+
 
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.Start
                         ) {
                             AnimatedCountText(
                                 target = total,
@@ -191,6 +200,7 @@ private fun DashboardCardProductsWide(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+
                     }
 
                     Spacer(Modifier.height(10.dp))
