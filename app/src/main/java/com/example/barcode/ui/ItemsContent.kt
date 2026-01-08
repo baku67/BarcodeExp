@@ -181,6 +181,23 @@ fun ItemsContent(
     }
 
 
+// --- Sélection multiple (IDs = String)
+    var selectionMode by rememberSaveable { mutableStateOf(false) }
+    var selectedIds by rememberSaveable { mutableStateOf<Set<String>>(emptySet()) }
+    fun toggleSelect(id: String) {
+        selectedIds = if (selectedIds.contains(id)) selectedIds - id else selectedIds + id
+        if (selectedIds.isEmpty()) selectionMode = false
+    }
+    fun enterSelectionWith(id: String) {
+        selectionMode = true
+        selectedIds = setOf(id)
+    }
+    fun exitSelection() {
+        selectionMode = false
+        selectedIds = emptySet()
+    }
+
+
     Box(Modifier.fillMaxSize()) {
 
         // Barre de chargement top (jolie + non intrusive)
@@ -250,7 +267,23 @@ fun ItemsContent(
                             brand = it.brand,
                             expiry = it.expiryDate,
                             imageUrl = it.imageUrl,
-                            onLongPress = { sheetItem = it },
+                            selected = selectionMode && selectedIds.contains(it.id),
+                            selectionMode = selectionMode,
+
+                            onClick = {
+                                if (selectionMode) {
+                                    toggleSelect(it.id)
+                                } else {
+                                    sheetItem = it
+                                }
+                            },
+                            onLongPress = {
+                                if (!selectionMode) {
+                                    enterSelectionWith(it.id)
+                                } else {
+                                    toggleSelect(it.id)
+                                }
+                            },
                             onDelete = { vm.deleteItem(it.id) }
                         )
                     }
@@ -258,16 +291,52 @@ fun ItemsContent(
                 }
 
                 Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = onAddItem,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Ajouter un produit")
+
+                if(selectionMode) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${selectedIds.size} sélectionné(s)",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Spacer(Modifier.weight(1f))
+
+                        TextButton(onClick = { exitSelection() }) { Text("Annuler") }
+
+                        Button(
+                            onClick = {
+                                // suppression multiple (simple et efficace)
+                                selectedIds.forEach { id -> vm.deleteItem(id) }
+                                exitSelection()
+                            },
+                            enabled = selectedIds.isNotEmpty()
+                        ) {
+                            Icon(Icons.Filled.Delete, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Supprimer")
+                        }
+                    }
+
                 }
+
+
+                if(!selectionMode) {
+                    Button(
+                        onClick = onAddItem,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Ajouter un produit")
+                    }
+                }
+
             }
         }
     }
@@ -281,6 +350,9 @@ private fun ItemCard(
     brand: String?,
     expiry: Long?,
     imageUrl: String?,
+    selected: Boolean,
+    selectionMode: Boolean,
+    onClick: () -> Unit,
     onLongPress: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -290,19 +362,21 @@ private fun ItemCard(
 
     Card(
         modifier = Modifier.combinedClickable(
-            onClick = { /* rien pour l'instant */ },
+            onClick = onClick,
             onLongClick = onLongPress
         ),
-        colors = CardDefaults.cardColors(containerColor = surface),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+            else surface
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         border = when {
+            selected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
             expiry == null -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             expiry != null && isSoon(expiry) -> BorderStroke(1.dp, Color.Yellow)
             expiry != null && isExpired(expiry) -> BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary)
-            // Si encore bien frais: gris
             else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            // Ou alors primary:
-            // else -> BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
         }
     ) {
         Row(
@@ -355,19 +429,6 @@ private fun ItemCard(
                     },
                     style = MaterialTheme.typography.bodySmall
                 )
-
-                // DATE absolue en plus petit
-                //if (absolute != "—") {
-                //    Text(
-                //        "($absolute)",
-                //        color = onSurface.copy(alpha = 0.5f),
-                //        style = MaterialTheme.typography.bodySmall
-                //    )
-                //}
-            }
-
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = "Supprimer")
             }
         }
     }
