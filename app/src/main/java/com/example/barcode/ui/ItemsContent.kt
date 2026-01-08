@@ -15,6 +15,7 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -181,7 +182,7 @@ fun ItemsContent(
     }
 
 
-// --- Sélection multiple (IDs = String)
+    // --- Sélection multiple (IDs = String)
     var selectionMode by rememberSaveable { mutableStateOf(false) }
     var selectedIds by rememberSaveable { mutableStateOf<Set<String>>(emptySet()) }
     fun toggleSelect(id: String) {
@@ -196,6 +197,46 @@ fun ItemsContent(
         selectionMode = false
         selectedIds = emptySet()
     }
+
+
+    var showHelp by rememberSaveable { mutableStateOf(false) }
+    // Modal d'aide onClick sur "?" à coté du titre page
+    if (showHelp) {
+        Dialog(onDismissRequest = { showHelp = false }) {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        "Comment utiliser le Frigo",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    HelpRow("👆", "Appuie sur un produit pour voir ses détails")
+                    HelpRow("✋", "Appui long pour sélectionner plusieurs produits")
+                    HelpRow("🗑", "Supprime plusieurs produits d’un coup")
+                    HelpRow("🍳", "Cherche des recettes avec les produits sélectionnés")
+                    HelpRow("⬇️", "Tire vers le bas pour synchroniser")
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Button(
+                        onClick = { showHelp = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("J’ai compris")
+                    }
+                }
+            }
+        }
+    }
+
+
 
 
     Box(Modifier.fillMaxSize()) {
@@ -250,6 +291,28 @@ fun ItemsContent(
                         fontWeight = FontWeight.SemiBold
                     )
 
+                    Spacer(Modifier.width(6.dp))
+
+                    IconButton(
+                        onClick = { showHelp = true },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                .clip(CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "?",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
                     Spacer(Modifier.weight(1f))
 
                     FridgeDisplayIconToggle(
@@ -296,31 +359,83 @@ fun ItemsContent(
                 Spacer(Modifier.height(8.dp))
 
                 if(selectionMode) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${selectedIds.size} sélectionné(s)",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                    if (selectionMode) {
 
-                        Spacer(Modifier.weight(1f))
-
-                        TextButton(onClick = { exitSelection() }) { Text("Annuler") }
-
-                        Button(
-                            onClick = {
-                                // suppression multiple (simple et efficace)
-                                selectedIds.forEach { id -> vm.deleteItem(id) }
-                                exitSelection()
-                            },
-                            enabled = selectedIds.isNotEmpty()
+                        // ✅ mini ligne au-dessus : compteur + Annuler (secondaire)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Filled.Delete, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Supprimer")
+                            Text(
+                                text = "${selectedIds.size} sélectionné(s)",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(Modifier.weight(1f))
+
+                            TextButton(onClick = { exitSelection() }) {
+                                Icon(Icons.Filled.Close, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Annuler")
+                            }
+                        }
+
+                        // ✅ action bar flottante “premium”
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+
+                                // 🧠 Chercher recette (primaire, mais non destructif)
+                                Button(
+                                    onClick = {
+                                        // TODO plus tard: récupérer ingrédients depuis les items sélectionnés
+                                        SnackbarBus.show("Bientôt: recherche de recette avec les ingrédients sélectionnés.")
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Icon(Icons.Filled.Add, contentDescription = null) // TODO: remplace par une icône "restaurant" plus tard
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Recette", fontWeight = FontWeight.SemiBold)
+                                }
+
+                                // 🗑 Supprimer (destructif, mais sans wording culpabilisant)
+                                OutlinedButton(
+                                    onClick = {
+                                        selectedIds.forEach { id -> vm.deleteItem(id) }
+                                        exitSelection()
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    ),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.8f))
+                                ) {
+                                    Icon(Icons.Filled.Delete, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Retirer", fontWeight = FontWeight.SemiBold)
+                                }
+                            }
                         }
                     }
 
@@ -492,6 +607,17 @@ private fun isSoon(expiry: Long): Boolean {
     val target = Instant.ofEpochMilli(expiry).atZone(zone).toLocalDate()
     val days = ChronoUnit.DAYS.between(today, target).toInt()
     return days in 0..2
+}
+
+
+// Template ligne/étape contenu Modal d'aide (click "?"):
+@Composable
+private fun HelpRow(icon: String, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(icon, fontSize = 18.sp)
+        Spacer(Modifier.width(10.dp))
+        Text(text)
+    }
 }
 
 
