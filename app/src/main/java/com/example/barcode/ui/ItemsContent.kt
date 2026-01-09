@@ -582,20 +582,23 @@ private fun ItemCard(
 }
 
 @Composable
-private fun ProductThumb(imageUrl: String?) {
+private fun ProductThumb(
+    imageUrl: String?,
+    modifier: Modifier = Modifier
+) {
     val shape = RoundedCornerShape(12.dp)
+
     if (!imageUrl.isNullOrBlank()) {
         Image(
             painter = rememberAsyncImagePainter(imageUrl),
             contentDescription = null,
-            modifier = Modifier
+            modifier = modifier
                 .size(56.dp)
                 .clip(shape)
         )
     } else {
-        // Placeholder simple si pas d'image
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .size(56.dp)
                 .clip(shape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
@@ -632,14 +635,26 @@ fun ShelfRow(
             verticalAlignment = Alignment.Bottom
         ) {
             items.forEach { item ->
-                Box(
-                    modifier = Modifier.combinedClickable(
-                        onClick = { onClickItem(item) },
-                        onLongClick = { onLongPressItem(item) }
-                    )
-                ) {
-                    ProductThumb(item.imageUrl)
-                }
+                val isSelected = selectionMode && selectedIds.contains(item.id)
+
+                ProductThumb(
+                    imageUrl = item.imageUrl,
+                    modifier = Modifier
+                        .combinedClickable(
+                            onClick = { onClickItem(item) },
+                            onLongClick = { onLongPressItem(item) }
+                        )
+                        .border(
+                            width = if (isSelected) 2.dp else 0.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .background(
+                            color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .clip(RoundedCornerShape(12.dp))
+                )
             }
 
             // placeholders pour garder l’alignement
