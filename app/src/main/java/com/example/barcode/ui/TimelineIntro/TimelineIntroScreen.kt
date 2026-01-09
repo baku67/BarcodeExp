@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalDensity
@@ -377,13 +378,12 @@ private fun TimelineSteps(
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        // Spacer(Modifier.height(5.dp))
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp) // Augmenté pour les cards
-                .padding(horizontal = 6.dp)
+                .height(60.dp)
         ) {
             @Composable
             fun placeStepLabels(
@@ -410,6 +410,15 @@ private fun TimelineSteps(
                         }
                         .alpha(alpha)
                 ) {
+
+                    fun tintedDark(dayColor: Color): Color {
+                        val base = Color.Black.copy(alpha = 0.85f)          // noir de base
+                        val tint = dayColor.copy(alpha = 1f)
+                        return lerp(base, tint, 0.22f).copy(alpha = 0.55f)  // 0.15..0.30 selon ton goût
+                    }
+                    val cardBg = tintedDark(dayColor)
+
+
                     // Flèche pointant vers le haut
                     Canvas(
                         modifier = Modifier
@@ -424,7 +433,7 @@ private fun TimelineSteps(
                         }
                         drawPath(
                             path = path,
-                            color = Color.Black.copy(alpha = 0.35f)
+                            color = cardBg // SAME
                         )
                     }
 
@@ -432,8 +441,8 @@ private fun TimelineSteps(
                     Surface(
                         modifier = Modifier,
                         shape = RoundedCornerShape(10.dp),
-                        color = Color.Black.copy(alpha = 0.35f),
-                        tonalElevation = 0.dp
+                        color = cardBg, // SAME
+                        tonalElevation = 0.dp,
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
