@@ -847,31 +847,14 @@ private fun ItemDetailsBottomSheet(
 
     Column(Modifier.fillMaxWidth()) {
 
-        // Border top gris
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f))
+        CornerRadiusEtPoignee(
+            radius = 28.dp,
+            strokeWidth = 2.dp,
+            strokeColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+            handleHeight = 4.dp
         )
 
-        // Poignée custom
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp, bottom = 10.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(44.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f))
-            )
-        }
-
-        Spacer(Modifier.width(5.dp))
+        Spacer(Modifier.height(5.dp))
 
         Column(
             modifier = Modifier
@@ -880,13 +863,8 @@ private fun ItemDetailsBottomSheet(
                 .padding(bottom = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // ✅ Header stylé
-            ItemDetailsHeader(
-                item = item,
-                onClose = onClose
-            )
+            ItemDetailsHeader(item = item, onClose = onClose)
 
-            // ✅ 2 boutons (segmented) : Ingrédients / Nutrition
             DetailsTabs(
                 selected = tab,
                 onSelect = { tab = it },
@@ -894,18 +872,9 @@ private fun ItemDetailsBottomSheet(
                 hasNutrition = !item.imageNutritionUrl.isNullOrBlank()
             )
 
-            // ✅ Contenu : 1 seule zone qui change
             when (tab) {
-                DetailsTab.Ingredients -> DetailsImagePanel(
-                    title = "Ingrédients",
-                    url = item.imageIngredientsUrl,
-                    onOpenViewer = onOpenViewer
-                )
-                DetailsTab.Nutrition -> DetailsImagePanel(
-                    title = "Valeurs nutritives",
-                    url = item.imageNutritionUrl,
-                    onOpenViewer = onOpenViewer
-                )
+                DetailsTab.Ingredients -> DetailsImagePanel("Ingrédients", item.imageIngredientsUrl, onOpenViewer)
+                DetailsTab.Nutrition -> DetailsImagePanel("Valeurs nutritives", item.imageNutritionUrl, onOpenViewer)
             }
 
             Spacer(Modifier.height(6.dp))
@@ -927,12 +896,10 @@ private fun ItemDetailsHeader(
 
         // ✅ Contenu header normal
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = 40.dp), // laisse de la place au X
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
         ) {
-            // Image à gauche (grande)
+            // Image...
             Box(
                 modifier = Modifier
                     .size(96.dp)
@@ -963,7 +930,8 @@ private fun ItemDetailsHeader(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Text(
@@ -989,26 +957,110 @@ private fun ItemDetailsHeader(
                 )
             }
         }
-
-        // ✅ Bouton X discret (absolute)
-        IconButton(
-            onClick = onClose,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .size(34.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Close,
-                contentDescription = "Fermer",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                modifier = Modifier.size(18.dp)
-            )
-        }
     }
 }
+
+
+
+@Composable
+private fun CornerRadiusEtPoignee(
+    modifier: Modifier = Modifier,
+    radius: Dp = 28.dp,
+    strokeWidth: Dp = 2.dp,
+    strokeColor: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+    handleWidth: Dp = 44.dp,
+    handleHeight: Dp = 4.dp
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(radius) // ✅ la zone de rayon sert à la fois au trait ET à la poignée
+    ) {
+        // ✅ Trait arrondi
+        TopRoundedStroke(
+            modifier = Modifier.matchParentSize(),
+            strokeWidth = strokeWidth,
+            radius = radius,
+            color = strokeColor
+        )
+
+        // ✅ Poignée DANS la zone (pas en dessous)
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 6.dp) // ajuste visuellement
+                .width(handleWidth)
+                .height(handleHeight)
+                .clip(RoundedCornerShape(999.dp))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f))
+        )
+    }
+}
+
+
+@Composable
+private fun TopRoundedStroke(
+    modifier: Modifier = Modifier,
+    strokeWidth: Dp = 2.dp,
+    radius: Dp = 28.dp,
+    color: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+    edgeFadePct: Float = 0.05f // 5%
+) {
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(radius)
+    ) {
+        val w = size.width
+        val sw = strokeWidth.toPx()
+        val r = radius.toPx().coerceAtMost(w / 2f)
+        val y = sw / 2f
+
+        val leftRect = androidx.compose.ui.geometry.Rect(0f, y, 2 * r, 2 * r + y)
+        val rightRect = androidx.compose.ui.geometry.Rect(w - 2 * r, y, w, 2 * r + y)
+
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(0f, r + y)
+            arcTo(leftRect, 180f, 90f, false)
+            lineTo(w - r, y)
+            arcTo(rightRect, 270f, 90f, false)
+        }
+
+        val fade = edgeFadePct.coerceIn(0f, 0.49f)
+
+        // ✅ Brush: transparent -> color -> transparent
+        val brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+            colorStops = arrayOf(
+                0f to color.copy(alpha = 0f),
+                fade to color,
+                (1f - fade) to color,
+                1f to color.copy(alpha = 0f)
+            ),
+            startX = 0f,
+            endX = w
+        )
+
+        drawPath(
+            path = path,
+            brush = brush,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = sw,
+                cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                join = androidx.compose.ui.graphics.StrokeJoin.Round
+            )
+        )
+    }
+}
+
+
+
+
+
+
+
+
+
+
 
 
 
