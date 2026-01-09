@@ -90,7 +90,7 @@ fun TimelineIntroScreen(nav: NavHostController) {
         fill.animateTo(
             targetValue = 1f,
             animationSpec = tween(
-                durationMillis = 1600,
+                durationMillis = 1500,
                 easing = CubicBezierEasing(0.05f, 0.05f, 0.95f, 0.95f) // filling “linéaire” mais enlève un peu l’aspect “robot”
             )
         )
@@ -162,6 +162,11 @@ private fun TimelineSteps(
     lineHeight: Dp = 6.dp,
     dotRadius: Dp = 12.dp // taille du rond
 ) {
+    val stepRed = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.95f)
+    val stepYellow = Color(0xFFF9A825) // ou secondary/tertiary selon ton thème
+    val stepGreen = MaterialTheme.colorScheme.primary.copy(alpha = 0.90f)   // si tu as un vrai green dans ton thème, remplace
+
+
     val total0 = expired[0] + soon[0]
     val total1 = expired[1] + soon[1]
     val total2 = expired[2] + soon[2]
@@ -225,6 +230,69 @@ private fun TimelineSteps(
             else -> -1
         }
 
+        val alpha0 = remember { Animatable(0f) }
+        val alpha1 = remember { Animatable(0f) }
+        val alpha2 = remember { Animatable(0f) }
+
+        val darkFill = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+
+        // Labels du haut (jour) - alignés sur les ronds
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(22.dp)
+                .padding(horizontal = 6.dp)
+        ) {
+            @Composable
+            fun placeTopLabelMeasured(xPx: Float, alpha: Float, text: String, color: Color) {
+                var w by remember(text) { mutableStateOf(0) }
+
+                Text(
+                    text = text,
+                    modifier = Modifier
+                        .alpha(alpha)
+                        .onSizeChanged { w = it.width }
+                        .offset {
+                            val left = (xPx - w / 2f).toInt()
+                            val maxLeft = (timelineSize.width - w).coerceAtLeast(0)
+                            IntOffset(left.coerceIn(0, maxLeft), 0)
+                        },
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = color
+                )
+            }
+
+            if (timelineSize.width > 0) {
+                placeTopLabelMeasured(
+                    xPx = x0Px,
+                    alpha = alpha0.value,
+                    text = "Aujourd’hui",
+                    color = stepRed
+                )
+                placeTopLabelMeasured(
+                    xPx = x1Px,
+                    alpha = alpha1.value,
+                    text = "Demain",
+                    color = stepYellow
+                )
+                placeTopLabelMeasured(
+                    xPx = x2Px,
+                    alpha = alpha2.value,
+                    text = "J+2",
+                    color = stepGreen
+                )
+            }
+        }
+
+
+
+
+
+
+
+
+
+        // CANVA JAUGE
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -233,13 +301,18 @@ private fun TimelineSteps(
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
 
-                fun DrawScope.drawCenteredIcon(painter: Painter, center: Offset, sizePx: Float) {
+                fun DrawScope.drawCenteredIcon(
+                    painter: Painter,
+                    center: Offset,
+                    sizePx: Float,
+                    tint: Color
+                ) {
                     with(painter) {
                         val topLeft = Offset(center.x - sizePx / 2f, center.y - sizePx / 2f)
                         translate(topLeft.x, topLeft.y) {
                             draw(
                                 size = androidx.compose.ui.geometry.Size(sizePx, sizePx),
-                                colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.92f))
+                                colorFilter = ColorFilter.tint(tint)
                             )
                         }
                     }
@@ -370,15 +443,30 @@ private fun TimelineSteps(
                     }
 
                     if (isDone) {
-                        drawCircle(color = color, radius = rPx, center = center)
+                        // fond sombre (constant)
 
-                        val iconSize = rPx * 1.25f // ajuste (1.15..1.35)
+                        drawCircle(color = darkFill, radius = rPx, center = center)
+
+                        // fine bordure colorée (optionnel mais très joli)
+                        drawCircle(
+                            color = color.copy(alpha = 0.95f),
+                            radius = rPx,
+                            center = center,
+                            style = Stroke(width = max(2f, rPx * 0.16f))
+                        )
+
+                        val iconSize = rPx * 1.25f
                         val painter = when (kind) {
                             StepKind.TODAY -> todayPainter
                             StepKind.TOMORROW -> tomorrowPainter
                             StepKind.SOON -> soonPainter
                         }
-                        drawCenteredIcon(painter, center, iconSize)
+                        drawCenteredIcon(
+                            painter = painter,
+                            center = center,
+                            sizePx = iconSize,
+                            tint = color.copy(alpha = 0.95f) // icône colorée
+                        )
                     } else {
                         // outlined
                         drawCircle(
@@ -400,31 +488,42 @@ private fun TimelineSteps(
                 }
 
 
-                drawStepperDot(x0Px, c0, isDone = done0, isCurrent = haloIndex == 0, kind = StepKind.TODAY)
-                drawStepperDot(x1Px, c1, isDone = done1, isCurrent = haloIndex == 1, kind = StepKind.TOMORROW)
-                drawStepperDot(x2Px, c2, isDone = done2, isCurrent = haloIndex == 2, kind = StepKind.SOON)
+                drawStepperDot(x0Px, stepRed,    isDone = done0, isCurrent = haloIndex == 0, kind = StepKind.TODAY)
+                drawStepperDot(x1Px, stepYellow, isDone = done1, isCurrent = haloIndex == 1, kind = StepKind.TOMORROW)
+                drawStepperDot(x2Px, stepGreen,  isDone = done2, isCurrent = haloIndex == 2, kind = StepKind.SOON)
             }
         }
 
+
+
+
+
+
+
+
+
         Spacer(Modifier.height(8.dp))
 
-        // Labels
+
+
+
+
+
+
+
+
+        // ----------------------------------  "x Produits"
         val p0 = total0
         val p1 = total1
         val p2 = total2
 
         fun productLabel(n: Int): String = if (n == 1) "1 produit" else "$n produits"
 
-        val alpha0 = remember { Animatable(0f) }
-        val alpha1 = remember { Animatable(0f) }
-        val alpha2 = remember { Animatable(0f) }
-
         var shown0 by remember { mutableStateOf(false) }
         var shown1 by remember { mutableStateOf(false) }
         var shown2 by remember { mutableStateOf(false) }
 
         LaunchedEffect(done0, done1, done2) {
-
             if (!shown0 && done0) {
                 shown0 = true
                 delay(120)
@@ -442,11 +541,7 @@ private fun TimelineSteps(
             }
         }
 
-        val x0Label = x0Px
-        val x1Label = x1Px
-        val x2Label = x2Px
-
-// petit offset vertical sous la ligne
+        // petit offset vertical sous la ligne
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -455,16 +550,17 @@ private fun TimelineSteps(
         ) {
             @Composable
             fun placeLabel(xPx: Float, alpha: Float, text: String) {
-                // centre le texte sur x (approximatif mais efficace pour label court)
+                var w by remember(text) { mutableStateOf(0) }
+
                 Text(
                     text = text,
                     modifier = Modifier
                         .alpha(alpha)
+                        .onSizeChanged { w = it.width }
                         .offset {
-                            IntOffset(
-                                x = (xPx - 30.dp.toPx()).toInt(), // 30dp ~ demi-largeur moyenne
-                                y = 0
-                            )
+                            val left = (xPx - w / 2f).toInt()
+                            val maxLeft = (timelineSize.width - w).coerceAtLeast(0)
+                            IntOffset(left.coerceIn(0, maxLeft), 0)
                         },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
@@ -472,11 +568,14 @@ private fun TimelineSteps(
             }
 
             // Variante plus propre : on centre avec WrapContent + align, mais offset suffit ici
-            placeLabel(x0Label, alpha0.value, productLabel(p0))
-            placeLabel(x1Label, alpha1.value, productLabel(p1))
-            placeLabel(x2Label, alpha2.value, productLabel(p2))
+            if (timelineSize.width > 0) {
+                placeLabel(x0Px, alpha0.value, productLabel(p0))
+                placeLabel(x1Px, alpha1.value, productLabel(p1))
+                placeLabel(x2Px, alpha2.value, productLabel(p2))
+            }
         }
     }
+    // ----------------------------------  FIN  "x Produits"
 }
 
 

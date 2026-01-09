@@ -78,7 +78,7 @@ fun GlobalLoaderScreen(nav: NavHostController) {
         val today = java.time.LocalDate.now().toString()
         val lastSeen = timelineIntroStore.getLastSeenDate()
         // val alreadySeenToday = lastSeen == today // FONCTIONNEL
-        val alreadySeenToday = false // TODO :DEBUG (always displayed)
+        val alreadySeenToday = false // TODO ICI DEBUG (= always displayed si data utiles)
 
         val shouldShow = hasInteresting && !alreadySeenToday
         if (!shouldShow) {
