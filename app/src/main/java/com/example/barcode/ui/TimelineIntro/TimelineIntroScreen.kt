@@ -104,40 +104,50 @@ fun TimelineIntroScreen(nav: NavHostController) {
         color = Color.Transparent,
         tonalElevation = 0.dp
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 22.dp, vertical = 24.dp),
-            contentAlignment = Alignment.Center
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 22.dp, vertical = 24.dp)
         ) {
+
+            Spacer(Modifier.weight(1f))
+
             Column(
-                modifier = Modifier.alpha(reveal.value),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .alpha(reveal.value),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
                 Text(
                     text = "Revue quotidienne",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Spacer(Modifier.height(14.dp))
+                // + d’air entre titre et timeline
+                Spacer(Modifier.height(32.dp))
 
-                // ---- 3) Jauge chronologique (3 segments)
                 TimelineSteps(
                     expired = expired,
                     soon = soon,
-                    progress = fill.value // 0..1
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                Text(
-                    text = "Tap pour passer",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                    progress = fill.value
                 )
             }
+
+            Spacer(Modifier.weight(1f))
+
+            // Footer bas d’écran
+            Text(
+                text = "Tap pour passer",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
         }
     }
 }
@@ -189,15 +199,15 @@ private fun TimelineSteps(
 
         // --- Géométrie (hors Canvas) pour réutiliser xp/done aussi pour les labels
         val widthPx = with(density) { timelineSize.width.toFloat() }.takeIf { it > 0f } ?: 0f
-
         val linePaddingPx = rPx * 1.2f
         val lineStartXPx = linePaddingPx
         val lineEndXPx = (widthPx - linePaddingPx).coerceAtLeast(lineStartXPx)
-
         val dotInsetPx = widthPx * 0.12f
+
         val x0Px = (lineStartXPx + dotInsetPx).coerceIn(lineStartXPx, lineEndXPx)
         val x2Px = (lineEndXPx - dotInsetPx).coerceIn(lineStartXPx, lineEndXPx)
         val x1Px = (x0Px + x2Px) / 2f
+
         val p = progress.coerceIn(0f, 1f)
         val xp = lineStartXPx + (lineEndXPx - lineStartXPx) * p
 
@@ -205,6 +215,15 @@ private fun TimelineSteps(
         val done0 = widthPx > 0f && xp >= (x0Px - eps)
         val done1 = widthPx > 0f && xp >= (x1Px - eps)
         val done2 = widthPx > 0f && xp >= (x2Px - eps)
+
+        val snap = rPx * 0.6f
+        val haloIndex = when {
+            widthPx <= 0f -> -1
+            kotlin.math.abs(xp - x0Px) <= snap -> 0
+            kotlin.math.abs(xp - x1Px) <= snap -> 1
+            kotlin.math.abs(xp - x2Px) <= snap -> 2
+            else -> -1
+        }
 
         Box(
             modifier = Modifier
@@ -226,31 +245,6 @@ private fun TimelineSteps(
                     }
                 }
 
-                // Ligne pleine largeur
-                val linePadding = rPx * 1.2f
-                val lineStartX = linePadding
-                val lineEndX = size.width - linePadding
-
-                // Points un peu rentrés (la ligne reste full width)
-                val dotInset = size.width * 0.12f
-                val x0 = lineStartX + dotInset
-                val x2 = lineEndX - dotInset
-                val x1 = (x0 + x2) / 2f
-
-
-                // Step-by-step fill (pas un fill continu)
-                val p = progress.coerceIn(0f, 1f)
-
-                val xp = lineStartX + (lineEndX - lineStartX) * p
-
-                val snap = rPx * 0.6f  // tolérance: augmente si ça ne s’allume pas
-                val haloIndex = when {
-                    kotlin.math.abs(xp - x0) <= snap -> 0
-                    kotlin.math.abs(xp - x1) <= snap -> 1
-                    kotlin.math.abs(xp - x2) <= snap -> 2
-                    else -> -1
-                }
-
                 val y = size.height / 2f
 
 // Track
@@ -270,13 +264,6 @@ private fun TimelineSteps(
                     strokeWidth = linePx,
                     cap = StrokeCap.Round
                 )
-
-                // États : outlined (todo), current (outlined+halo), done (filled+check)
-                val eps = 0.5f
-                val done0 = xp >= (x0 - eps)
-                val done1 = xp >= (x1 - eps)
-                val done2 = xp >= (x2 - eps)
-
 
 
                 fun drawStepIcon(kind: StepKind, center: Offset, r: Float) {
@@ -437,6 +424,7 @@ private fun TimelineSteps(
         var shown2 by remember { mutableStateOf(false) }
 
         LaunchedEffect(done0, done1, done2) {
+
             if (!shown0 && done0) {
                 shown0 = true
                 delay(120)
@@ -454,14 +442,9 @@ private fun TimelineSteps(
             }
         }
 
-        val linePadding = rPx * 1.2f
-        val lineStartX = linePadding
-        val lineEndX = widthPx - linePadding
-
-        val dotInset = widthPx * 0.12f
-        val x0Label = lineStartX + dotInset
-        val x2Label = lineEndX - dotInset
-        val x1Label = (x0Label + x2Label) / 2f
+        val x0Label = x0Px
+        val x1Label = x1Px
+        val x2Label = x2Px
 
 // petit offset vertical sous la ligne
         Box(
