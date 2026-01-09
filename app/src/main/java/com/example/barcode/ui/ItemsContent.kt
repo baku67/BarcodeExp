@@ -841,20 +841,21 @@ private fun HelpRow(icon: String, text: String) {
 private fun ItemDetailsBottomSheet(
     item: com.example.barcode.data.Item,
     onClose: () -> Unit,
-    onOpenViewer: (String) -> Unit // ouverture du viewer d'image
+    onOpenViewer: (String) -> Unit
 ) {
+    var tab by rememberSaveable(item.id) { mutableStateOf(DetailsTab.Ingredients) }
 
     Column(Modifier.fillMaxWidth()) {
 
-        // Border top coloré AU TOP, avant tout
+        // Border top gris
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(MaterialTheme.colorScheme.primary)
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f))
         )
 
-        // Poignée custom en haut
+        // Poignée custom
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -864,45 +865,266 @@ private fun ItemDetailsBottomSheet(
             Box(
                 modifier = Modifier
                     .width(44.dp)
-                    .height(5.dp)
+                    .height(4.dp)
                     .clip(RoundedCornerShape(999.dp))
                     .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f))
             )
         }
 
+        Spacer(Modifier.width(5.dp))
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp) // pour laisser respirer la barre top(Box au dessus)
-                .padding(16.dp),
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Images (infos produit)",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+            // ✅ Header stylé
+            ItemDetailsHeader(
+                item = item,
+                onClose = onClose
+            )
+
+            // ✅ 2 boutons (segmented) : Ingrédients / Nutrition
+            DetailsTabs(
+                selected = tab,
+                onSelect = { tab = it },
+                hasIngredients = !item.imageIngredientsUrl.isNullOrBlank(),
+                hasNutrition = !item.imageNutritionUrl.isNullOrBlank()
+            )
+
+            // ✅ Contenu : 1 seule zone qui change
+            when (tab) {
+                DetailsTab.Ingredients -> DetailsImagePanel(
+                    title = "Ingrédients",
+                    url = item.imageIngredientsUrl,
+                    onOpenViewer = onOpenViewer
                 )
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = onClose) { Text("Fermer") }
+                DetailsTab.Nutrition -> DetailsImagePanel(
+                    title = "Valeurs nutritives",
+                    url = item.imageNutritionUrl,
+                    onOpenViewer = onOpenViewer
+                )
             }
-
-            ExtraImageBlockCollapsible(
-                title = "Ingrédients",
-                url = item.imageIngredientsUrl,
-                onOpenViewer = onOpenViewer
-            )
-
-            ExtraImageBlockCollapsible(
-                title = "Nutrition",
-                url = item.imageNutritionUrl,
-                onOpenViewer = onOpenViewer
-            )
 
             Spacer(Modifier.height(6.dp))
         }
     }
 }
+
+
+@Composable
+private fun ItemDetailsHeader(
+    item: com.example.barcode.data.Item,
+    onClose: () -> Unit
+) {
+    val name = item.name?.takeIf { it.isNotBlank() } ?: "(sans nom)"
+    val brand = item.brand?.takeIf { it.isNotBlank() } ?: "—"
+    val daysText = item.expiryDate?.let { formatRelativeDaysCompact(it) } ?: "—"
+
+    Box(Modifier.fillMaxWidth()) {
+
+        // ✅ Contenu header normal
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = 40.dp), // laisse de la place au X
+            verticalAlignment = Alignment.Top
+        ) {
+            // Image à gauche (grande)
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!item.imageUrl.isNullOrBlank()) {
+                    Image(
+                        painter = rememberAsyncImagePainter(item.imageUrl),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text("🧺", fontSize = 22.sp)
+                }
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = brand,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(daysText, fontWeight = FontWeight.SemiBold) },
+                    colors = AssistChipDefaults.assistChipColors(
+                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                        disabledLabelColor = MaterialTheme.colorScheme.primary
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
+                    )
+                )
+            }
+        }
+
+        // ✅ Bouton X discret (absolute)
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Fermer",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+
+
+
+
+
+@Composable
+private fun DetailsTabs(
+    selected: DetailsTab,
+    onSelect: (DetailsTab) -> Unit,
+    hasIngredients: Boolean,
+    hasNutrition: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        DetailsTabButton(
+            text = "Ingrédients",
+            selected = selected == DetailsTab.Ingredients,
+            enabled = hasIngredients,
+            onClick = { onSelect(DetailsTab.Ingredients) },
+            modifier = Modifier.weight(1f)
+        )
+        DetailsTabButton(
+            text = "Nutrition",
+            selected = selected == DetailsTab.Nutrition,
+            enabled = hasNutrition,
+            onClick = { onSelect(DetailsTab.Nutrition) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun DetailsTabButton(
+    text: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+    else MaterialTheme.colorScheme.surface
+
+    val border = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+    else MaterialTheme.colorScheme.outlineVariant
+
+    val content = if (!enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+    else if (selected) MaterialTheme.colorScheme.primary
+    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+
+    Box(
+        modifier = modifier
+            .height(44.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(bg)
+            .border(1.dp, border, RoundedCornerShape(14.dp))
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, fontWeight = FontWeight.SemiBold, color = content)
+    }
+}
+
+
+@Composable
+private fun DetailsImagePanel(
+    title: String,
+    url: String?,
+    onOpenViewer: (String) -> Unit
+) {
+    if (url.isNullOrBlank()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "Aucune image disponible.",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        }
+        return
+    }
+
+    Image(
+        painter = rememberAsyncImagePainter(url),
+        contentDescription = title,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(280.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+            .combinedClickable(
+                onClick = { onOpenViewer(url) },
+                onLongClick = null
+            ),
+        contentScale = ContentScale.Fit
+    )
+}
+
+
+
+
+
+
+
+
+
+
+
+private enum class DetailsTab { Ingredients, Nutrition }
 // BOTTOM SHEET 2/2:
 @Composable
 private fun ExtraImageBlockCollapsible(
@@ -1038,78 +1260,6 @@ private fun ImageViewerDialog(
         }
     }
 }
-
-
-
-@Composable
-private fun FridgeBackground(
-    scrimAlpha: Float = 0.35f
-) {
-    Box(modifier = Modifier.fillMaxSize()) {
-
-        // ✅ Fond opaque derrière (empêche toute transparence vers l’AppBackground)
-        //Box(
-        //    modifier = Modifier
-        //        .matchParentSize()
-        //        .background(MaterialTheme.colorScheme.onPrimary) // ou surfaceVariant
-        //)
-
-        Column(modifier = Modifier.matchParentSize()) {
-            /* Image(
-                painter = painterResource(R.drawable.fridge_background_global),
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth(),
-                contentScale = ContentScale.FillWidth
-            )*/
-            Image(
-                painter = painterResource(R.drawable.etagere_1),
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentScale = ContentScale.Crop
-            )
-            Image(
-                painter = painterResource(R.drawable.etagere2),
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentScale = ContentScale.Crop
-            )
-            Image(
-                painter = painterResource(R.drawable.etagere3),
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentScale = ContentScale.Crop
-            )
-            Image(
-                painter = painterResource(R.drawable.etagere4),
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentScale = ContentScale.Crop
-            )
-            Image(
-                painter = painterResource(R.drawable.etagere5),
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentScale = ContentScale.Crop
-            )
-            Image(
-                painter = painterResource(R.drawable.etagere6),
-                contentDescription = null,
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentScale = ContentScale.Crop
-            )
-        }
-
-        // Voile par-dessus (optionnel)
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-
-        )
-    }
-}
-
-
-
 
 
 
