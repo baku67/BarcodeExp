@@ -224,6 +224,8 @@ private fun TimelineSteps(
 
         val darkFill = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
 
+        val placeholderFill = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+
 
         // CANVA JAUGE
         Box(
@@ -315,22 +317,20 @@ private fun TimelineSteps(
                             tint = color.copy(alpha = 0.95f) // icône colorée
                         )
                     } else {
-                        // outlined
+                        // placeholder plein opaque (couvre la ligne derrière)
                         drawCircle(
-                            color = track,
+                            color = placeholderFill,
+                            radius = rPx,
+                            center = center
+                        )
+
+                        // bordure grise (celle que tu avais)
+                        drawCircle(
+                            color = track.copy(alpha = 0.9f),
                             radius = rPx,
                             center = center,
                             style = Stroke(width = max(2f, rPx * 0.22f))
                         )
-
-                        // current : petit fill interne discret (sinon ça fait trop vide)
-                        if (isCurrent) {
-                            drawCircle(
-                                color = color.copy(alpha = 0.25f),
-                                radius = rPx * 0.55f,
-                                center = center
-                            )
-                        }
                     }
                 }
 
