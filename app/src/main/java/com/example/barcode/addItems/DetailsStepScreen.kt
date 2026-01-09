@@ -3,7 +3,9 @@ package com.example.barcode.addItems
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
@@ -19,6 +21,8 @@ import java.time.temporal.ChronoUnit
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 
@@ -39,6 +43,7 @@ fun DetailsStepScreen(
 
     val relative = remember(expiry) { expiry?.let { formatRelativeDaysAnyDistance(it) } ?: "—" }
     val absolute = remember(expiry) { expiry?.let { formatAbsoluteDate(it) } ?: "—" }
+    val scrollState = rememberScrollState()
 
     AddItemStepScaffold(
         step = 3,
@@ -46,131 +51,150 @@ fun DetailsStepScreen(
         onCancel = onCancel
     ) { innerPadding ->
 
+        val footerHeight = 84.dp // zone bouton + gradient
+        val footerPadding = 14.dp
+
         Column(
-            Modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-
-            // Image et Bouton pour switcher entres les 4 images candidates
-            val canCycleImage = draft.imageCandidates.size > 1
-
-            Box(
+            // ✅ Zone scrollable (ne chevauche jamais le bouton)
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .weight(1f)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                val url = draft.imageUrl
+                // --- Garde TOUT ton contenu actuel ici SAUF le Button("Confirmer") ---
 
-                if (!url.isNullOrBlank()) {
-                    AsyncImage(
-                        model = url,
-                        contentDescription = "Image produit",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable(enabled = canCycleImage) { onCycleImage() },
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Filled.Image,
-                        contentDescription = null,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
+                // Image et Bouton pour switcher entres les 4 images candidates
+                val canCycleImage = draft.imageCandidates.size > 1
 
-                if (canCycleImage) {
-                    FilledIconButton(
-                        onClick = onCycleImage,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(10.dp)
-                    ) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Changer l'image")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    val url = draft.imageUrl
+
+                    if (!url.isNullOrBlank()) {
+                        AsyncImage(
+                            model = url,
+                            contentDescription = "Image produit",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable(enabled = canCycleImage) { onCycleImage() },
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Image,
+                            contentDescription = null,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
                     }
 
-                    Text(
-                        text = "Image ${draft.imageCandidateIndex + 1}/${draft.imageCandidates.size}",
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(10.dp),
-                        style = MaterialTheme.typography.labelMedium
-                    )
+                    if (canCycleImage) {
+                        FilledIconButton(
+                            onClick = onCycleImage,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(10.dp)
+                        ) {
+                            Icon(Icons.Filled.Refresh, contentDescription = "Changer l'image")
+                        }
+
+                        Text(
+                            text = "Image ${draft.imageCandidateIndex + 1}/${draft.imageCandidates.size}",
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(10.dp),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
                 }
-            }
-            Spacer(Modifier.height(16.dp))
 
+                Spacer(Modifier.height(16.dp))
 
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nom") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = brand,
+                    onValueChange = { brand = it },
+                    label = { Text("Marque") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            // —— Édition ——
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Nom") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = brand,
-                onValueChange = { brand = it },
-                label = { Text("Marque") },
-                modifier = Modifier.fillMaxWidth()
-            )
+                Spacer(Modifier.height(16.dp))
+                Text("Date d’expiration : $relative${if (absolute != "—") " ($absolute)" else ""}")
 
-            Spacer(Modifier.height(16.dp))
-
-            Text("Date d’expiration : $relative${if (absolute != "—") " ($absolute)" else ""}")
-
-            Spacer(Modifier.height(8.dp))
-
-            OutlinedButton(onClick = { showPicker = true }) {
-                Text(if (expiry == null) "Choisir une date" else "Modifier la date")
-            }
-
-            if (showPicker) {
-                val initial = expiry ?: System.currentTimeMillis()
-                val state = rememberDatePickerState(initialSelectedDateMillis = initial)
-                DatePickerDialog(
-                    onDismissRequest = { showPicker = false },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            val selectedUtc = state.selectedDateMillis
-                            expiry = selectedUtc?.let { utcMillisToLocalMidnight(it) }
-                            showPicker = false
-                        }) { Text("OK") }
-                    },
-                    dismissButton = { TextButton(onClick = { showPicker = false }) { Text("Annuler") } }
-                ) {
-                    DatePicker(state = state, showModeToggle = false)
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = { showPicker = true }) {
+                    Text(if (expiry == null) "Choisir une date" else "Modifier la date")
                 }
+
+                if (showPicker) {
+                    val initial = expiry ?: System.currentTimeMillis()
+                    val state = rememberDatePickerState(initialSelectedDateMillis = initial)
+                    DatePickerDialog(
+                        onDismissRequest = { showPicker = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                val selectedUtc = state.selectedDateMillis
+                                expiry = selectedUtc?.let { utcMillisToLocalMidnight(it) }
+                                showPicker = false
+                            }) { Text("OK") }
+                        },
+                        dismissButton = { TextButton(onClick = { showPicker = false }) { Text("Annuler") } }
+                    ) {
+                        DatePicker(state = state, showModeToggle = false)
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    "Récapitulatif",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(6.dp))
+
+                Text("Nom : ${name.ifBlank { draft.name ?: "—" }}")
+                Text("Marque : ${brand.ifBlank { draft.brand ?: "—" }}")
+                Text("Code-barres : ${draft.barcode ?: "—"}")
+                Text("Date : ${if (expiry != null) absolute else "—"}")
+
+                // (Plus de Button ici)
+                Spacer(Modifier.height(24.dp))
             }
 
-            Spacer(Modifier.height(24.dp))
+            // Footer fixe : bouton confirmé
+            Spacer(Modifier.height(12.dp))
 
-            Text("Récapitulatif", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-
-            Spacer(Modifier.height(6.dp))
-
-            Text("Nom : ${name.ifBlank { draft.name ?: "—" }}")
-            Text("Marque : ${brand.ifBlank { draft.brand ?: "—" }}")
-            Text("Code-barres : ${draft.barcode ?: "—"}")
-            Text("Date : ${if (expiry != null) absolute else "—"}")
-
-            Spacer(Modifier.height(24.dp))
-
+            // ✅ Bouton en bas (dans le flux, comme ItemsContent)
             Button(
                 onClick = { onConfirm(name.ifBlank { null }, brand.ifBlank { null }, expiry) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
                 enabled = (name.isNotBlank() || (draft.name?.isNotBlank() == true))
             ) {
                 Text("Confirmer")
             }
+            }
         }
+
     }
-}
+
 
 
 // ——— Utils ——————————————————————————————————————————————————————————————
