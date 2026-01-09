@@ -3,6 +3,7 @@ package com.example.barcode.ui.TimelineIntro
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -27,6 +28,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.delay
 import kotlin.math.max
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntOffset
 
 /**
  * Mini écran "timeline 3 jours" :
@@ -61,7 +66,6 @@ fun TimelineIntroScreen(nav: NavHostController) {
     }
 
     LaunchedEffect(Unit) {
-        val fillEasing = CubicBezierEasing(0.18f, 0.90f, 0.18f, 1.00f) // démarre vif, termine smooth
 
         reveal.animateTo(
             targetValue = 1f,
@@ -69,27 +73,17 @@ fun TimelineIntroScreen(nav: NavHostController) {
         )
 
         // Micro pause = “respiration” (fait très moderne)
-        delay(180)
+        delay(150)
 
-        // Fill plus lent + easing plus marqué
-        // Fill stepper (DEV : exagéré + pauses)
         fill.snapTo(0f)
 
-        fill.animateTo(
-            targetValue = 1f / 3f,
-            animationSpec = tween(durationMillis = 1600, easing = fillEasing)
-        )
-        delay(700)
-
-        fill.animateTo(
-            targetValue = 2f / 3f,
-            animationSpec = tween(durationMillis = 1600, easing = fillEasing)
-        )
-        delay(700)
 
         fill.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 1600, easing = fillEasing)
+            animationSpec = tween(
+                durationMillis = 1600,
+                easing = CubicBezierEasing(0.05f, 0.05f, 0.95f, 0.95f) // filling “linéaire” mais enlève un peu l’aspect “robot”
+            )
         )
     }
 
@@ -175,15 +169,47 @@ private fun TimelineSteps(
 
     Column(Modifier.fillMaxWidth()) {
 
-        // --- Ligne + ronds (Canvas = parfait pour ça)
+        // --- Ligne + ronds (Canvas =
+        var timelineSize by remember { mutableStateOf(IntSize.Zero) }
+
+
+        // --- Géométrie (hors Canvas) pour réutiliser xp/done aussi pour les labels
+        val widthPx = with(density) { timelineSize.width.toFloat() }.takeIf { it > 0f } ?: 0f
+
+        val linePaddingPx = rPx * 1.2f
+        val lineStartXPx = linePaddingPx
+        val lineEndXPx = (widthPx - linePaddingPx).coerceAtLeast(lineStartXPx)
+
+        val dotInsetPx = widthPx * 0.12f
+        val x0Px = (lineStartXPx + dotInsetPx).coerceIn(lineStartXPx, lineEndXPx)
+        val x2Px = (lineEndXPx - dotInsetPx).coerceIn(lineStartXPx, lineEndXPx)
+        val x1Px = (x0Px + x2Px) / 2f
+
+        val p = progress.coerceIn(0f, 1f)
+        val xp = lineStartXPx + (lineEndXPx - lineStartXPx) * p
+
+        val eps = 0.5f
+        val done0 = widthPx > 0f && xp >= (x0Px - eps)
+        val done1 = widthPx > 0f && xp >= (x1Px - eps)
+        val done2 = widthPx > 0f && xp >= (x2Px - eps)
+
+        val snap = rPx * 0.6f
+        val haloIndex = when {
+            ! (widthPx > 0f) -> -1
+            kotlin.math.abs(xp - x0Px) <= snap -> 0
+            kotlin.math.abs(xp - x1Px) <= snap -> 1
+            kotlin.math.abs(xp - x2Px) <= snap -> 2
+            else -> -1
+        }
+
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(34.dp)
+                .onSizeChanged { timelineSize = it }
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-
-                val y = size.height / 2f
 
                 // Ligne pleine largeur
                 val linePadding = rPx * 1.2f
@@ -199,55 +225,46 @@ private fun TimelineSteps(
 
                 // Step-by-step fill (pas un fill continu)
                 val p = progress.coerceIn(0f, 1f)
-                val t1 = 1f / 3f
-                val t2 = 2f / 3f
 
-                val xp = when {
-                    p < t1 -> {
-                        // segment 1 : start -> x1
-                        val local = (p / t1).coerceIn(0f, 1f)
-                        lineStartX + (x1 - lineStartX) * local
-                    }
-                    p < t2 -> {
-                        // segment 2 : x1 -> x2
-                        val local = ((p - t1) / (t2 - t1)).coerceIn(0f, 1f)
-                        x1 + (x2 - x1) * local
-                    }
-                    else -> {
-                        // fin : x2 -> end (petit bonus visuel)
-                        val local = ((p - t2) / (1f - t2)).coerceIn(0f, 1f)
-                        x2 + (lineEndX - x2) * local
-                    }
+                val a = 1f / 6f
+                val b = 1f / 2f
+                val c = 5f / 6f
+
+                val xp = lineStartX + (lineEndX - lineStartX) * p
+
+                val snap = rPx * 0.6f  // tolérance: augmente si ça ne s’allume pas
+                val haloIndex = when {
+                    kotlin.math.abs(xp - x0) <= snap -> 0
+                    kotlin.math.abs(xp - x1) <= snap -> 1
+                    kotlin.math.abs(xp - x2) <= snap -> 2
+                    else -> -1
                 }
 
-                // Track
+                val y = size.height / 2f
+
+// Track
                 drawLine(
                     color = track,
-                    start = Offset(lineStartX, y),
-                    end = Offset(lineEndX, y),
+                    start = Offset(lineStartXPx, y),
+                    end = Offset(lineEndXPx, y),
                     strokeWidth = linePx,
                     cap = StrokeCap.Round
                 )
 
-                // Fill (segment par segment)
+// Fill
                 drawLine(
                     color = fillColor,
-                    start = Offset(lineStartX, y),
+                    start = Offset(lineStartXPx, y),
                     end = Offset(xp, y),
                     strokeWidth = linePx,
                     cap = StrokeCap.Round
                 )
 
                 // États : outlined (todo), current (outlined+halo), done (filled+check)
-                val done0 = p >= t1
-                val done1 = p >= t2
-                val done2 = p >= 0.999f
-
-                val currentIndex = when {
-                    !done0 -> 0
-                    !done1 -> 1
-                    else -> 2
-                }
+                val eps = 0.5f
+                val done0 = xp >= (x0 - eps)
+                val done1 = xp >= (x1 - eps)
+                val done2 = xp >= (x2 - eps)
 
                 fun drawCheck(center: Offset, size: Float, color: Color) {
                     // check simple: 2 segments
@@ -303,25 +320,86 @@ private fun TimelineSteps(
                     }
                 }
 
-                drawStepperDot(x0, c0, isDone = done0, isCurrent = currentIndex == 0)
-                drawStepperDot(x1, c1, isDone = done1, isCurrent = currentIndex == 1)
-                drawStepperDot(x2, c2, isDone = done2, isCurrent = currentIndex == 2)
+
+                drawStepperDot(x0Px, c0, isDone = done0, isCurrent = haloIndex == 0)
+                drawStepperDot(x1Px, c1, isDone = done1, isCurrent = haloIndex == 1)
+                drawStepperDot(x2Px, c2, isDone = done2, isCurrent = haloIndex == 2)
             }
         }
 
         Spacer(Modifier.height(8.dp))
 
-        // Labels (tu m’as dit “plus tard”, mais je te les mets déjà en minimal)
+        // Labels
         val p0 = total0
         val p1 = total1
         val p2 = total2
 
         fun productLabel(n: Int): String = if (n == 1) "1 produit" else "$n produits"
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(productLabel(p0), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f))
-            Text(productLabel(p1), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f))
-            Text(productLabel(p2), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f))
+        val alpha0 = remember { Animatable(0f) }
+        val alpha1 = remember { Animatable(0f) }
+        val alpha2 = remember { Animatable(0f) }
+
+        var shown0 by remember { mutableStateOf(false) }
+        var shown1 by remember { mutableStateOf(false) }
+        var shown2 by remember { mutableStateOf(false) }
+
+        LaunchedEffect(done0, done1, done2) {
+            if (!shown0 && done0) {
+                shown0 = true
+                delay(120)
+                alpha0.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
+            }
+            if (!shown1 && done1) {
+                shown1 = true
+                delay(120)
+                alpha1.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
+            }
+            if (!shown2 && done2) {
+                shown2 = true
+                delay(120)
+                alpha2.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
+            }
+        }
+
+        val linePadding = rPx * 1.2f
+        val lineStartX = linePadding
+        val lineEndX = widthPx - linePadding
+
+        val dotInset = widthPx * 0.12f
+        val x0Label = lineStartX + dotInset
+        val x2Label = lineEndX - dotInset
+        val x1Label = (x0Label + x2Label) / 2f
+
+// petit offset vertical sous la ligne
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(28.dp)
+                .padding(horizontal = 6.dp)
+        ) {
+            @Composable
+            fun placeLabel(xPx: Float, alpha: Float, text: String) {
+                // centre le texte sur x (approximatif mais efficace pour label court)
+                Text(
+                    text = text,
+                    modifier = Modifier
+                        .alpha(alpha)
+                        .offset {
+                            IntOffset(
+                                x = (xPx - 30.dp.toPx()).toInt(), // 30dp ~ demi-largeur moyenne
+                                y = 0
+                            )
+                        },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
+                )
+            }
+
+            // Variante plus propre : on centre avec WrapContent + align, mais offset suffit ici
+            placeLabel(x0Label, alpha0.value, productLabel(p0))
+            placeLabel(x1Label, alpha1.value, productLabel(p1))
+            placeLabel(x2Label, alpha2.value, productLabel(p2))
         }
     }
 }
