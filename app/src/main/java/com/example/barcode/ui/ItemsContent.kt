@@ -1,6 +1,7 @@
 package com.example.barcode.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.MarqueeAnimationMode
@@ -51,6 +52,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.barcode.R
@@ -647,11 +649,11 @@ fun ShelfRow(
         }
 
         // ---- SVG D’ÉTAGÈRE selon index row
-        ShelfSvg(
-            type = shelfTypeForIndex(index),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(10.dp)
+        ShelfTrapezoid(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            height = 10.dp,
+            insetTop = 22.dp,
+            lipHeight = 2.dp
         )
     }
 }
@@ -694,6 +696,56 @@ fun ShelfSvg(
     )
 }
 
+
+@Composable
+fun ShelfTrapezoid(
+    modifier: Modifier = Modifier,
+    height: Dp = 10.dp,
+    insetTop: Dp = 18.dp,     // combien le bord du haut est “rentré”
+    lipHeight: Dp = 2.dp      // petite lèvre devant
+) {
+    val shelfColor = MaterialTheme.colorScheme.surfaceVariant
+    val edgeColor = MaterialTheme.colorScheme.primary
+
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+    ) {
+        val w = size.width
+        val h = size.height
+
+        val inset = insetTop.toPx().coerceAtMost(w / 3f)
+        val lip = lipHeight.toPx().coerceAtMost(h)
+
+        // Trapèze : haut plus court, bas plein
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(inset, 0f)          // haut gauche
+            lineTo(w - inset, 0f)      // haut droite
+            lineTo(w, h - lip)         // bas droite
+            lineTo(0f, h - lip)        // bas gauche
+            close()
+        }
+
+        // Remplissage étagère
+        drawPath(path, color = shelfColor)
+
+        // Petite lèvre en bas (donne l'effet 3D)
+        drawRect(
+            color = edgeColor,
+            topLeft = androidx.compose.ui.geometry.Offset(0f, h - lip),
+            size = androidx.compose.ui.geometry.Size(w, lip)
+        )
+
+        // Ligne fine en haut de l'etagere
+/*        drawLine(
+            color = edgeColor,
+            start = androidx.compose.ui.geometry.Offset(inset, 0f),
+            end = androidx.compose.ui.geometry.Offset(w - inset, 0f),
+            strokeWidth = 0.5.dp.toPx()
+        )*/
+    }
+}
 
 /* ——— Utils ——— */
 
