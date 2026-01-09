@@ -10,6 +10,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Today
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,8 +23,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -133,13 +142,15 @@ fun TimelineIntroScreen(nav: NavHostController) {
     }
 }
 
+enum class StepKind { TODAY, TOMORROW, SOON }
+
 @Composable
 private fun TimelineSteps(
     expired: IntArray,
     soon: IntArray,
     progress: Float,
     lineHeight: Dp = 6.dp,
-    dotRadius: Dp = 8.dp
+    dotRadius: Dp = 12.dp // taille du rond
 ) {
     val total0 = expired[0] + soon[0]
     val total1 = expired[1] + soon[1]
@@ -167,11 +178,14 @@ private fun TimelineSteps(
     val linePx = with(density) { lineHeight.toPx() }
     val rPx = with(density) { dotRadius.toPx() }
 
+    val todayPainter = rememberVectorPainter(Icons.Rounded.Today)
+    val tomorrowPainter = rememberVectorPainter(Icons.Rounded.Schedule)
+    val soonPainter = rememberVectorPainter(Icons.Rounded.CalendarMonth)
+
     Column(Modifier.fillMaxWidth()) {
 
         // --- Ligne + ronds (Canvas =
         var timelineSize by remember { mutableStateOf(IntSize.Zero) }
-
 
         // --- Géométrie (hors Canvas) pour réutiliser xp/done aussi pour les labels
         val widthPx = with(density) { timelineSize.width.toFloat() }.takeIf { it > 0f } ?: 0f
@@ -184,7 +198,6 @@ private fun TimelineSteps(
         val x0Px = (lineStartXPx + dotInsetPx).coerceIn(lineStartXPx, lineEndXPx)
         val x2Px = (lineEndXPx - dotInsetPx).coerceIn(lineStartXPx, lineEndXPx)
         val x1Px = (x0Px + x2Px) / 2f
-
         val p = progress.coerceIn(0f, 1f)
         val xp = lineStartXPx + (lineEndXPx - lineStartXPx) * p
 
@@ -193,16 +206,6 @@ private fun TimelineSteps(
         val done1 = widthPx > 0f && xp >= (x1Px - eps)
         val done2 = widthPx > 0f && xp >= (x2Px - eps)
 
-        val snap = rPx * 0.6f
-        val haloIndex = when {
-            ! (widthPx > 0f) -> -1
-            kotlin.math.abs(xp - x0Px) <= snap -> 0
-            kotlin.math.abs(xp - x1Px) <= snap -> 1
-            kotlin.math.abs(xp - x2Px) <= snap -> 2
-            else -> -1
-        }
-
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -210,6 +213,18 @@ private fun TimelineSteps(
                 .onSizeChanged { timelineSize = it }
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
+
+                fun DrawScope.drawCenteredIcon(painter: Painter, center: Offset, sizePx: Float) {
+                    with(painter) {
+                        val topLeft = Offset(center.x - sizePx / 2f, center.y - sizePx / 2f)
+                        translate(topLeft.x, topLeft.y) {
+                            draw(
+                                size = androidx.compose.ui.geometry.Size(sizePx, sizePx),
+                                colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.92f))
+                            )
+                        }
+                    }
+                }
 
                 // Ligne pleine largeur
                 val linePadding = rPx * 1.2f
@@ -225,10 +240,6 @@ private fun TimelineSteps(
 
                 // Step-by-step fill (pas un fill continu)
                 val p = progress.coerceIn(0f, 1f)
-
-                val a = 1f / 6f
-                val b = 1f / 2f
-                val c = 5f / 6f
 
                 val xp = lineStartX + (lineEndX - lineStartX) * p
 
@@ -266,23 +277,99 @@ private fun TimelineSteps(
                 val done1 = xp >= (x1 - eps)
                 val done2 = xp >= (x2 - eps)
 
-                fun drawCheck(center: Offset, size: Float, color: Color) {
-                    // check simple: 2 segments
-                    val x = center.x
-                    val y0 = center.y
-                    val p1 = Offset(x - size * 0.35f, y0 + size * 0.02f)
-                    val p2 = Offset(x - size * 0.10f, y0 + size * 0.28f)
-                    val p3 = Offset(x + size * 0.40f, y0 - size * 0.25f)
 
-                    drawLine(color, p1, p2, strokeWidth = size * 0.18f, cap = StrokeCap.Round)
-                    drawLine(color, p2, p3, strokeWidth = size * 0.18f, cap = StrokeCap.Round)
+
+                fun drawStepIcon(kind: StepKind, center: Offset, r: Float) {
+                    val stroke = max(2f, r * 0.14f)
+                    val white = Color.White.copy(alpha = 0.92f)
+
+                    when (kind) {
+                        StepKind.TODAY -> {
+                            // "Alerte" simple : triangle + point
+                            val top = Offset(center.x, center.y - r * 0.55f)
+                            val left = Offset(center.x - r * 0.45f, center.y + r * 0.40f)
+                            val right = Offset(center.x + r * 0.45f, center.y + r * 0.40f)
+
+                            val path = androidx.compose.ui.graphics.Path().apply {
+                                moveTo(top.x, top.y)
+                                lineTo(left.x, left.y)
+                                lineTo(right.x, right.y)
+                                close()
+                            }
+                            drawPath(path, color = white.copy(alpha = 0.90f))
+
+                            // petit "!" en overlay (2 traits)
+                            drawLine(
+                                color = Color.Black.copy(alpha = 0.35f),
+                                start = Offset(center.x, center.y - r * 0.18f),
+                                end = Offset(center.x, center.y + r * 0.18f),
+                                strokeWidth = stroke,
+                                cap = StrokeCap.Round
+                            )
+                            drawCircle(
+                                color = Color.Black.copy(alpha = 0.35f),
+                                radius = stroke * 0.55f,
+                                center = Offset(center.x, center.y + r * 0.30f)
+                            )
+                        }
+
+                        StepKind.TOMORROW -> {
+                            // "Horloge" : cercle + aiguilles
+                            drawCircle(
+                                color = white,
+                                radius = r * 0.52f,
+                                center = center,
+                                style = Stroke(width = stroke)
+                            )
+                            drawLine(
+                                color = white,
+                                start = center,
+                                end = Offset(center.x, center.y - r * 0.22f),
+                                strokeWidth = stroke,
+                                cap = StrokeCap.Round
+                            )
+                            drawLine(
+                                color = white,
+                                start = center,
+                                end = Offset(center.x + r * 0.18f, center.y + r * 0.10f),
+                                strokeWidth = stroke,
+                                cap = StrokeCap.Round
+                            )
+                        }
+
+                        StepKind.SOON -> {
+                            // "Calendrier" : rectangle arrondi + barre
+                            val w = r * 0.95f
+                            val h = r * 0.80f
+                            val topLeft = Offset(center.x - w / 2f, center.y - h / 2f)
+                            val bottomRight = Offset(center.x + w / 2f, center.y + h / 2f)
+
+                            // contour
+                            drawRoundRect(
+                                color = white,
+                                topLeft = topLeft,
+                                size = androidx.compose.ui.geometry.Size(w, h),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(r * 0.18f, r * 0.18f),
+                                style = Stroke(width = stroke)
+                            )
+                            // barre haute
+                            drawLine(
+                                color = white,
+                                start = Offset(topLeft.x, topLeft.y + h * 0.28f),
+                                end = Offset(bottomRight.x, topLeft.y + h * 0.28f),
+                                strokeWidth = stroke,
+                                cap = StrokeCap.Round
+                            )
+                        }
+                    }
                 }
 
                 fun drawStepperDot(
                     x: Float,
                     color: Color,
                     isDone: Boolean,
-                    isCurrent: Boolean
+                    isCurrent: Boolean,
+                    kind: StepKind
                 ) {
                     val center = Offset(x, y)
 
@@ -296,10 +383,15 @@ private fun TimelineSteps(
                     }
 
                     if (isDone) {
-                        // filled
                         drawCircle(color = color, radius = rPx, center = center)
-                        // check en blanc
-                        drawCheck(center = center, size = rPx, color = Color.White.copy(alpha = 0.92f))
+
+                        val iconSize = rPx * 1.25f // ajuste (1.15..1.35)
+                        val painter = when (kind) {
+                            StepKind.TODAY -> todayPainter
+                            StepKind.TOMORROW -> tomorrowPainter
+                            StepKind.SOON -> soonPainter
+                        }
+                        drawCenteredIcon(painter, center, iconSize)
                     } else {
                         // outlined
                         drawCircle(
@@ -321,9 +413,9 @@ private fun TimelineSteps(
                 }
 
 
-                drawStepperDot(x0Px, c0, isDone = done0, isCurrent = haloIndex == 0)
-                drawStepperDot(x1Px, c1, isDone = done1, isCurrent = haloIndex == 1)
-                drawStepperDot(x2Px, c2, isDone = done2, isCurrent = haloIndex == 2)
+                drawStepperDot(x0Px, c0, isDone = done0, isCurrent = haloIndex == 0, kind = StepKind.TODAY)
+                drawStepperDot(x1Px, c1, isDone = done1, isCurrent = haloIndex == 1, kind = StepKind.TOMORROW)
+                drawStepperDot(x2Px, c2, isDone = done2, isCurrent = haloIndex == 2, kind = StepKind.SOON)
             }
         }
 
