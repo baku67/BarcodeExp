@@ -88,6 +88,10 @@ fun ItemsContent(
     var initialLoading by rememberSaveable { mutableStateOf(false) }
     var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
 
+    // Bac à legumes
+    var vegDrawerPinned by rememberSaveable { mutableStateOf(true) }
+    val vegDrawerHeight = 88.dp // ajuste
+
     // bottom sheet au clic sur ItemCard
     var sheetItem by remember { mutableStateOf<com.example.barcode.data.Item?>(null) }
     val sheetState = rememberModalBottomSheetState(
@@ -364,10 +368,12 @@ fun ItemsContent(
                     }
 
                     ViewMode.Fridge -> {
+                        val footerHeight = if (!selectionMode && vegDrawerPinned) vegDrawerHeight + 56.dp /* bouton */ + 16.dp else 8.dp
+
                         LazyColumn(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
-                            contentPadding = PaddingValues(bottom = 8.dp)
+                            contentPadding = PaddingValues(bottom = footerHeight)
                         ) {
                             itemsIndexed(shelves) { index, shelfItems ->
                                 ShelfRow(
@@ -376,14 +382,24 @@ fun ItemsContent(
                                     selectionMode = selectionMode,
                                     selectedIds = selectedIds,
                                     onClickItem = { item ->
-                                        if (selectionMode) toggleSelect(item.id)
-                                        else sheetItem = item
+                                        if (selectionMode) toggleSelect(item.id) else sheetItem = item
                                     },
                                     onLongPressItem = { item ->
-                                        if (!selectionMode) enterSelectionWith(item.id)
-                                        else toggleSelect(item.id)
+                                        if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id)
                                     }
                                 )
+                            }
+
+                            // ✅ Si désancré : bac DANS le scroll (à la fin)
+                            if (!selectionMode && !vegDrawerPinned) {
+                                item {
+                                    VegetableDrawer(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 6.dp),
+                                        height = vegDrawerHeight,
+                                    )
+                                }
                             }
                         }
                     }
@@ -471,7 +487,20 @@ fun ItemsContent(
                 }
 
 
-                if(!selectionMode) {
+                if (!selectionMode) {
+
+                    // ✅ Si ancré : bac FIXE juste au-dessus du bouton
+                    if (vegDrawerPinned) {
+                        VegetableDrawer(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 6.dp),
+                            height = vegDrawerHeight,
+                        )
+
+                        Spacer(Modifier.height(10.dp))
+                    }
+
                     Button(
                         onClick = onAddItem,
                         modifier = Modifier
@@ -1076,5 +1105,71 @@ private fun FridgeBackground(
                 .matchParentSize()
 
         )
+    }
+}
+
+
+
+
+
+
+
+
+@Composable
+fun VegetableDrawer(
+    modifier: Modifier = Modifier,
+    height: Dp = 92.dp,
+    lipHeight: Dp = 10.dp,
+    corner: Dp = 16.dp,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+    content: @Composable BoxScope.() -> Unit = {}
+) {
+    val binColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.90f)
+    val lipColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+    val outline = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+
+    Box(
+        modifier = modifier
+            .height(height)
+            .clip(RoundedCornerShape(corner))
+    ) {
+        // Fond + lèvre (dessin)
+        Canvas(Modifier.matchParentSize()) {
+            val w = size.width
+            val h = size.height
+
+            val lipH = lipHeight.toPx()
+            val cornerPx = corner.toPx()
+
+            // ✅ Fond principal
+            drawRoundRect(
+                color = binColor,
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerPx, cornerPx)
+            )
+
+            // ✅ Lèvre en haut (bande)
+            drawRect(
+                color = lipColor,
+                topLeft = androidx.compose.ui.geometry.Offset(0f, 0f),
+                size = androidx.compose.ui.geometry.Size(w, lipH)
+            )
+
+            // ✅ Ligne fine sous la lèvre (donne du relief)
+            drawLine(
+                color = outline,
+                start = androidx.compose.ui.geometry.Offset(10f, lipH + 1f),
+                end = androidx.compose.ui.geometry.Offset(w - 10f, lipH + 1f),
+                strokeWidth = 1.2f
+            )
+        }
+
+        // Contenu au-dessus (tes produits “légumes”)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .padding(contentPadding)
+        ) {
+            content()
+        }
     }
 }
