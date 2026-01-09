@@ -604,7 +604,7 @@ private fun ProductThumb(
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            Text("🧴", fontSize = 20.sp) // TODO: afficher une image par défaut (minimisée) coorespondant au generic_name
+            Text("🧴", fontSize = 20.sp) // TODO: afficher une image par défaut (minimisée) coorespondant au generic_namef
         }
     }
 }

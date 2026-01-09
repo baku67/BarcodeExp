@@ -6,7 +6,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -28,7 +32,9 @@ import com.example.barcode.addItems.ScanDlcStepScreen
 import com.example.barcode.auth.ui.LoginScreen
 import com.example.barcode.addItems.ItemsViewModel
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.barcode.addItems.AddItemChooseScreen
 import com.example.barcode.auth.*
 import com.example.barcode.auth.ui.RegisterScreen
 import com.example.barcode.ui.MainTabsScreen
@@ -148,7 +154,7 @@ class MainActivity : ComponentActivity() {
 
 
                             // Parcours addItem (choix -> ScanBarCode -> ScanDate -> Confirm) ou (choix -> type -> selection/remplissage)
-                            navigation(startDestination = "addItem/scan", route = "addItem") {
+                            navigation(startDestination = "addItem/choose", route = "addItem") {
 
                                 fun close(addVm: AddItemViewModel) {
                                     addVm.reset()
@@ -156,7 +162,22 @@ class MainActivity : ComponentActivity() {
                                     if (!popped) navController.navigate("tabs") { launchSingleTop = true }
                                 }
 
-                                composable("addItem/scan") { backStackEntry ->
+                                // ✅ 0) Choix méthode
+                                composable("addItem/choose") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addItem")
+                                    }
+                                    val addVm: AddItemViewModel = viewModel(parentEntry)
+
+                                    AddItemChooseScreen(
+                                        onPickScan = { navController.navigate("addItem/scan/barcode") },
+                                        onPickManual = { navController.navigate("addItem/manual") }, // placeholder
+                                        onCancel = { close(addVm) }
+                                    )
+                                }
+
+                                // ✅ 1) Scan barcode
+                                composable("addItem/scan/barcode") { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
                                         navController.getBackStackEntry("addItem")
                                     }
@@ -167,22 +188,20 @@ class MainActivity : ComponentActivity() {
                                             addVm.setBarcode(code)
                                             addVm.setDetails(product.name, product.brand)
                                             addVm.setImage(product.imageUrl)
-                                            addVm.setImageCandidates(product.imageCandidates) // Ajout des images candidates au choix Step3 confirm
+                                            addVm.setImageCandidates(product.imageCandidates)
                                             addVm.setIngredientsImage(product.imageIngredientsUrl)
                                             addVm.setNutritionImage(product.imageNutritionUrl)
-                                            navController.navigate("addItem/date")
+                                            navController.navigate("addItem/scan/expiry")
                                         },
                                         onCancel = { close(addVm) }
                                     )
                                 }
 
-                                composable("addItem/date") { backStackEntry ->
-                                    val parentEntry =
-                                        remember(backStackEntry) {
-                                            navController.getBackStackEntry(
-                                                "addItem"
-                                            )
-                                        }
+                                // ✅ 2) Scan DLC
+                                composable("addItem/scan/expiry") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addItem")
+                                    }
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
                                     val draft by addVm.draft.collectAsState()
 
@@ -192,30 +211,24 @@ class MainActivity : ComponentActivity() {
                                         productImageUrl = draft.imageUrl,
                                         onValidated = { expiryMs ->
                                             addVm.setExpiryDate(expiryMs)
-                                            navController.navigate("addItem/details")
+                                            navController.navigate("addItem/scan/confirm")
                                         },
                                         onBack = { navController.popBackStack() },
                                         onCancel = { close(addVm) }
                                     )
                                 }
 
-                                composable("addItem/details") { backStackEntry ->
-                                    val parentEntry =
-                                        remember(backStackEntry) {
-                                            navController.getBackStackEntry(
-                                                "addItem"
-                                            )
-                                        }
+                                // ✅ 3) Confirm (ex-details)
+                                composable("addItem/scan/confirm") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addItem")
+                                    }
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
                                     val draft by addVm.draft.collectAsState()
 
-                                    // ✅ partage la même instance que ItemsScreen via l’entrée "home"
-                                    val homeEntry =
-                                        remember(backStackEntry) {
-                                            navController.getBackStackEntry(
-                                                "tabs"
-                                            )
-                                        }
+                                    val homeEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("tabs")
+                                    }
                                     val itemsVm: ItemsViewModel = viewModel(homeEntry)
 
                                     DetailsStepScreen(
@@ -224,7 +237,6 @@ class MainActivity : ComponentActivity() {
                                             addVm.setDetails(name, brand)
                                             addVm.setExpiryDate(expiry)
 
-                                            // commit direct
                                             itemsVm.addItem(
                                                 name = (name ?: draft.name ?: "(sans nom)"),
                                                 brand = (brand ?: draft.brand ?: "(sans brand)"),
@@ -239,9 +251,28 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onBack = { navController.popBackStack() },
                                         onCancel = { close(addVm) },
-                                        // Nécessaire pour le choix entres les images candidates dans Step3
                                         onCycleImage = { addVm.cycleNextImage() }
                                     )
+                                }
+
+                                // ✅ placeholder manuel (le temps de faire le vrai flow)
+                                composable("addItem/manual") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addItem")
+                                    }
+                                    val addVm: AddItemViewModel = viewModel(parentEntry)
+
+                                    Column(
+                                        modifier = Modifier.fillMaxSize().padding(18.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Text("Ajout manuel", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                                        Text("À venir : sélection type (légume/viande/restes), détails, date optionnelle…")
+                                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            OutlinedButton(onClick = { navController.popBackStack() }) { Text("Retour") }
+                                            Button(onClick = { close(addVm) }) { Text("Annuler") }
+                                        }
+                                    }
                                 }
                             }
                         }
