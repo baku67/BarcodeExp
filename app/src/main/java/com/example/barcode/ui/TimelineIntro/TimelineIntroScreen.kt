@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
@@ -59,8 +60,8 @@ fun TimelineIntroScreen(nav: NavHostController) {
 
     // Données: 3 jours (today, tomorrow, d+2)
     // On sépare bien de ce qui alimente le dashboard (ici c'est juste un "snapshot" dédié)
-    val expired = prev?.get<IntArray>("timeline_expired") ?: intArrayOf(1, 0, 0)
-    val soon = prev?.get<IntArray>("timeline_soon") ?: intArrayOf(2, 3, 1)
+    val expired = prev?.get<IntArray>("timeline_expired") ?: intArrayOf(1, 0)
+    val soon = prev?.get<IntArray>("timeline_soon") ?: intArrayOf(2, 3)
 
     // ---- 2) Animations (simple + propre)
     val reveal = remember { Animatable(0f) }   // 0 → 1
@@ -152,7 +153,7 @@ fun TimelineIntroScreen(nav: NavHostController) {
     }
 }
 
-enum class StepKind { TODAY, TOMORROW, SOON }
+enum class StepKind { TODAY, TOMORROW }
 
 @Composable
 private fun TimelineSteps(
@@ -162,29 +163,8 @@ private fun TimelineSteps(
     lineHeight: Dp = 6.dp,
     dotRadius: Dp = 12.dp // taille du rond
 ) {
-    val stepRed = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.95f)
-    val stepYellow = Color(0xFFF9A825) // ou secondary/tertiary selon ton thème
-    val stepGreen = MaterialTheme.colorScheme.primary.copy(alpha = 0.90f)   // si tu as un vrai green dans ton thème, remplace
-
-
-    val total0 = expired[0] + soon[0]
-    val total1 = expired[1] + soon[1]
-    val total2 = expired[2] + soon[2]
-
-    val colorNone = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
-    val colorExpired = MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
-    val colorSoon = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.75f)
-
-    // Couleur par étape
-    fun stepColor(total: Int, ex: Int): Color = when {
-        total <= 0 -> colorNone
-        ex > 0 -> colorExpired
-        else -> colorSoon
-    }
-
-    val c0 = stepColor(total0, expired[0])
-    val c1 = stepColor(total1, expired[1])
-    val c2 = stepColor(total2, expired[2])
+    val total0 = expired.getOrNull(0)?.let { it + (soon.getOrNull(0) ?: 0) } ?: 0
+    val total1 = expired.getOrNull(1)?.let { it + (soon.getOrNull(1) ?: 0) } ?: 0
 
     val track = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
     val fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
@@ -195,7 +175,6 @@ private fun TimelineSteps(
 
     val todayPainter = rememberVectorPainter(Icons.Rounded.Today)
     val tomorrowPainter = rememberVectorPainter(Icons.Rounded.Schedule)
-    val soonPainter = rememberVectorPainter(Icons.Rounded.CalendarMonth)
 
     Column(Modifier.fillMaxWidth()) {
 
@@ -207,11 +186,21 @@ private fun TimelineSteps(
         val linePaddingPx = rPx * 1.2f
         val lineStartXPx = linePaddingPx
         val lineEndXPx = (widthPx - linePaddingPx).coerceAtLeast(lineStartXPx)
-        val dotInsetPx = widthPx * 0.12f
+        val dotInsetPx = widthPx * 0.25f
+
+        val stepRed = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.95f)
+        val stepYellow = Color(0xFFF9A825) // ou secondary/tertiary selon ton thème
+
+        val fillBrush = remember(stepRed, stepYellow, lineStartXPx, lineEndXPx) {
+            Brush.linearGradient(
+                colors = listOf(stepRed, stepYellow),
+                start = Offset(lineStartXPx, 0f),
+                end = Offset(lineEndXPx, 0f)
+            )
+        }
 
         val x0Px = (lineStartXPx + dotInsetPx).coerceIn(lineStartXPx, lineEndXPx)
-        val x2Px = (lineEndXPx - dotInsetPx).coerceIn(lineStartXPx, lineEndXPx)
-        val x1Px = (x0Px + x2Px) / 2f
+        val x1Px = (lineEndXPx - dotInsetPx).coerceIn(lineStartXPx, lineEndXPx)
 
         val p = progress.coerceIn(0f, 1f)
         val xp = lineStartXPx + (lineEndXPx - lineStartXPx) * p
@@ -219,20 +208,18 @@ private fun TimelineSteps(
         val eps = 0.5f
         val done0 = widthPx > 0f && xp >= (x0Px - eps)
         val done1 = widthPx > 0f && xp >= (x1Px - eps)
-        val done2 = widthPx > 0f && xp >= (x2Px - eps)
 
         val snap = rPx * 0.6f
+
         val haloIndex = when {
             widthPx <= 0f -> -1
             kotlin.math.abs(xp - x0Px) <= snap -> 0
             kotlin.math.abs(xp - x1Px) <= snap -> 1
-            kotlin.math.abs(xp - x2Px) <= snap -> 2
             else -> -1
         }
 
         val alpha0 = remember { Animatable(0f) }
         val alpha1 = remember { Animatable(0f) }
-        val alpha2 = remember { Animatable(0f) }
 
         val darkFill = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
 
@@ -275,12 +262,6 @@ private fun TimelineSteps(
                     text = "Demain",
                     color = stepYellow
                 )
-                placeTopLabelMeasured(
-                    xPx = x2Px,
-                    alpha = alpha2.value,
-                    text = "J+2",
-                    color = stepGreen
-                )
             }
         }
 
@@ -320,7 +301,7 @@ private fun TimelineSteps(
 
                 val y = size.height / 2f
 
-// Track
+                // Track
                 drawLine(
                     color = track,
                     start = Offset(lineStartXPx, y),
@@ -329,9 +310,9 @@ private fun TimelineSteps(
                     cap = StrokeCap.Round
                 )
 
-// Fill
+                // Fill
                 drawLine(
-                    color = fillColor,
+                    brush = fillBrush,
                     start = Offset(lineStartXPx, y),
                     end = Offset(xp, y),
                     strokeWidth = linePx,
@@ -396,31 +377,6 @@ private fun TimelineSteps(
                                 cap = StrokeCap.Round
                             )
                         }
-
-                        StepKind.SOON -> {
-                            // "Calendrier" : rectangle arrondi + barre
-                            val w = r * 0.95f
-                            val h = r * 0.80f
-                            val topLeft = Offset(center.x - w / 2f, center.y - h / 2f)
-                            val bottomRight = Offset(center.x + w / 2f, center.y + h / 2f)
-
-                            // contour
-                            drawRoundRect(
-                                color = white,
-                                topLeft = topLeft,
-                                size = androidx.compose.ui.geometry.Size(w, h),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(r * 0.18f, r * 0.18f),
-                                style = Stroke(width = stroke)
-                            )
-                            // barre haute
-                            drawLine(
-                                color = white,
-                                start = Offset(topLeft.x, topLeft.y + h * 0.28f),
-                                end = Offset(bottomRight.x, topLeft.y + h * 0.28f),
-                                strokeWidth = stroke,
-                                cap = StrokeCap.Round
-                            )
-                        }
                     }
                 }
 
@@ -459,7 +415,6 @@ private fun TimelineSteps(
                         val painter = when (kind) {
                             StepKind.TODAY -> todayPainter
                             StepKind.TOMORROW -> tomorrowPainter
-                            StepKind.SOON -> soonPainter
                         }
                         drawCenteredIcon(
                             painter = painter,
@@ -490,7 +445,6 @@ private fun TimelineSteps(
 
                 drawStepperDot(x0Px, stepRed,    isDone = done0, isCurrent = haloIndex == 0, kind = StepKind.TODAY)
                 drawStepperDot(x1Px, stepYellow, isDone = done1, isCurrent = haloIndex == 1, kind = StepKind.TOMORROW)
-                drawStepperDot(x2Px, stepGreen,  isDone = done2, isCurrent = haloIndex == 2, kind = StepKind.SOON)
             }
         }
 
@@ -515,15 +469,13 @@ private fun TimelineSteps(
         // ----------------------------------  "x Produits"
         val p0 = total0
         val p1 = total1
-        val p2 = total2
 
         fun productLabel(n: Int): String = if (n == 1) "1 produit" else "$n produits"
 
         var shown0 by remember { mutableStateOf(false) }
         var shown1 by remember { mutableStateOf(false) }
-        var shown2 by remember { mutableStateOf(false) }
 
-        LaunchedEffect(done0, done1, done2) {
+        LaunchedEffect(done0, done1) {
             if (!shown0 && done0) {
                 shown0 = true
                 delay(120)
@@ -533,11 +485,6 @@ private fun TimelineSteps(
                 shown1 = true
                 delay(120)
                 alpha1.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
-            }
-            if (!shown2 && done2) {
-                shown2 = true
-                delay(120)
-                alpha2.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
             }
         }
 
@@ -571,7 +518,6 @@ private fun TimelineSteps(
             if (timelineSize.width > 0) {
                 placeLabel(x0Px, alpha0.value, productLabel(p0))
                 placeLabel(x1Px, alpha1.value, productLabel(p1))
-                placeLabel(x2Px, alpha2.value, productLabel(p2))
             }
         }
     }
