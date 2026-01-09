@@ -146,6 +146,8 @@ class MainActivity : ComponentActivity() {
                                 )
                             } // contient la navigation au Swipe (Home/Items/Liste/Settings)
 
+
+                            // Parcours addItem (choix -> ScanBarCode -> ScanDate -> Confirm) ou (choix -> type -> selection/remplissage)
                             navigation(startDestination = "addItem/scan", route = "addItem") {
 
                                 fun close(addVm: AddItemViewModel) {
@@ -242,8 +244,6 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
-                            composable("dateOCR") { ScanDlcScreen() }
-                            composable("barCodeOCR") { ScanBarCodeScreen() }
                         }
                     }
                 }
