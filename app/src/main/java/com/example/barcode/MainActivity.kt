@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.auth.*
 import com.example.barcode.auth.ui.RegisterScreen
 import com.example.barcode.ui.MainTabsScreen
+import com.example.barcode.ui.TimelineIntro.TimelineIntroScreen
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import com.example.barcode.ui.components.SnackbarBus
@@ -100,7 +101,11 @@ class MainActivity : ComponentActivity() {
                             startDestination = "splash",
                         ) {
 
+                            // GloablLoaderScreen
                             composable("splash") { GlobalLoaderScreen(navController) }
+
+                            // Ecran anim chronologie
+                            composable("introTimeline") { TimelineIntroScreen(navController) }
 
                             navigation(startDestination = "auth/login", route = "auth") {
 

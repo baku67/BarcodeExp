@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import com.example.barcode.R
 import com.example.barcode.auth.AppMode
 import com.example.barcode.auth.SessionManager
+import com.example.barcode.ui.TimelineIntro.IntroStore
 import kotlinx.coroutines.flow.first
 
 
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.first
 fun GlobalLoaderScreen(nav: NavHostController) {
 
     val appContext = LocalContext.current.applicationContext
+    val timelineIntroStore = remember { IntroStore(appContext) }
 
     val gradient = remember {
         Brush.horizontalGradient(
@@ -50,7 +52,7 @@ fun GlobalLoaderScreen(nav: NavHostController) {
 
         val session = SessionManager(appContext)
 
-        // TODO: remplacer ce delay par check AUTH + RefreshToken voir capture
+        // TODO: remplacer ce delay par check AUTH + RefreshToken voir capture + données Dashboard ET donnée chronologie
         delay(1900)
         // exemple : pré-initialiser MLKit, charger prefs, réhydrater cache, ping API…
         // BarcodeScanning.getClient() // warm-up éventuel
@@ -65,14 +67,41 @@ fun GlobalLoaderScreen(nav: NavHostController) {
             AppMode.AUTH -> if (!token.isNullOrBlank()) "tabs" else "auth/login"
         }
 
-        nav.navigate(target) {
-            popUpTo("splash") { inclusive = true }
-            launchSingleTop = true
+        // --- Données simulées (route spécifique, séparées de celles du dashboard) ?
+        val timelineExpired = intArrayOf(1, 0, 0) // ici pour simuler/tester 0 data util (auj, demain, 2-3j)
+        val timelineSoon = intArrayOf(2, 3, 1) // ici pour simuler/tester 0 data util (auj, demain, 2-3j)
+
+        // 1) Calcul de l'intéret à afficher l'anim (donnéees utiles ?)
+        val hasInteresting = (timelineExpired.sum() + timelineSoon.sum()) > 0
+
+        // 2) Déjà vu aujourd’hui ?
+        val today = java.time.LocalDate.now().toString()
+        val lastSeen = timelineIntroStore.getLastSeenDate()
+        // val alreadySeenToday = lastSeen == today // FONCTIONNEL
+        val alreadySeenToday = false // TODO :DEBUG (always displayed)
+
+        val shouldShow = hasInteresting && !alreadySeenToday
+        if (!shouldShow) {
+            nav.navigate(target) {
+                popUpTo("splash") { inclusive = true }
+                launchSingleTop = true
+            }
+            return@LaunchedEffect
         }
 
-        // nav.navigate("home") {
-        //     popUpTo("splash") { inclusive = true } // retire l’écran de la back stack
-        // }
+        // Marquer "vu" (important: ici c'est ok, tu vas l'afficher)
+        timelineIntroStore.setLastSeenToday()
+
+        // On injecte dans l'entrée courante (splash) -> l'écran suivant les lit via previousBackStackEntry
+        nav.currentBackStackEntry?.savedStateHandle?.set("timeline_target", target)
+        nav.currentBackStackEntry?.savedStateHandle?.set("timeline_expired", timelineExpired)
+        nav.currentBackStackEntry?.savedStateHandle?.set("timeline_soon", timelineSoon)
+
+        // Puis on passe par l’écran timeline
+        nav.navigate("introTimeline") {
+            popUpTo("splash") { inclusive = false } // on garde splash derrière, l’intro la supprimera ensuite
+            launchSingleTop = true
+        }
     }
 
     // UI
