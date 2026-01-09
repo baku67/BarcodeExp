@@ -52,12 +52,12 @@ fun GlobalLoaderScreen(nav: NavHostController) {
 
         val session = SessionManager(appContext)
 
+
+
         // TODO: remplacer ce delay par check AUTH + RefreshToken voir capture + données Dashboard ET donnée chronologie
         delay(1900)
-        // exemple : pré-initialiser MLKit, charger prefs, réhydrater cache, ping API…
-        // BarcodeScanning.getClient() // warm-up éventuel
-        // repository.prefetch()
-        // database.warmup()
+
+
 
         val mode = session.appMode.first()
         val token = session.token.first() // String? :contentReference[oaicite:2]{index=2}
@@ -77,8 +77,8 @@ fun GlobalLoaderScreen(nav: NavHostController) {
         // 2) Déjà vu aujourd’hui ?
         val today = java.time.LocalDate.now().toString()
         val lastSeen = timelineIntroStore.getLastSeenDate()
-        // val alreadySeenToday = lastSeen == today // FONCTIONNEL
-        val alreadySeenToday = false // TODO ICI DEBUG (= always displayed si data utiles)
+        val alreadySeenToday = lastSeen == today // FONCTIONNEL
+        // val alreadySeenToday = false // TODO ICI DEBUG (= always displayed si data utiles)
 
         val shouldShow = hasInteresting && !alreadySeenToday
         if (!shouldShow) {
