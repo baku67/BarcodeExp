@@ -25,6 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -82,7 +83,7 @@ fun TimelineIntroScreen(nav: NavHostController) {
             animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing)
         )
 
-        // Micro pause = “respiration” (fait très moderne)
+        // Micro pause = "respiration" (fait très moderne)
         delay(150)
 
         fill.snapTo(0f)
@@ -92,7 +93,7 @@ fun TimelineIntroScreen(nav: NavHostController) {
             targetValue = 1f,
             animationSpec = tween(
                 durationMillis = 1300,
-                easing = CubicBezierEasing(0.05f, 0.05f, 0.95f, 0.95f) // filling “linéaire” mais enlève un peu l’aspect “robot”
+                easing = CubicBezierEasing(0.05f, 0.05f, 0.95f, 0.95f) // filling "linéaire" mais enlève un peu l'aspect "robot"
             )
         )
     }
@@ -127,7 +128,7 @@ fun TimelineIntroScreen(nav: NavHostController) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                // + d’air entre titre et timeline
+                // + d'air entre titre et timeline
                 Spacer(Modifier.height(42.dp))
 
                 TimelineSteps(
@@ -139,7 +140,7 @@ fun TimelineIntroScreen(nav: NavHostController) {
 
             Spacer(Modifier.weight(1f))
 
-            // Footer bas d’écran
+            // Footer bas d'écran
             Text(
                 text = "Tap pour passer",
                 modifier = Modifier
@@ -350,13 +351,7 @@ private fun TimelineSteps(
             }
         }
 
-
-
-
-
-
         Spacer(Modifier.height(8.dp))
-
 
         // ----------------------------------  "x Produits"
         val p0 = total0
@@ -387,7 +382,7 @@ private fun TimelineSteps(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp) // 2 lignes
+                .height(60.dp) // Augmenté pour les cards
                 .padding(horizontal = 6.dp)
         ) {
             @Composable
@@ -406,7 +401,6 @@ private fun TimelineSteps(
                         .onSizeChanged { w = it.width }
                         .offset {
                             if (w == 0 || timelineSize.width == 0) {
-                                // Tant que ce n'est pas mesuré, on laisse à 0, l'alpha est 0 donc invisible
                                 IntOffset(0, 0)
                             } else {
                                 val left = (xPx - w / 2f).toInt()
@@ -414,19 +408,50 @@ private fun TimelineSteps(
                                 IntOffset(left.coerceIn(0, maxLeft), 0)
                             }
                         }
-                        .alpha(alpha) // Appliqué APRÈS onSizeChanged et offset
+                        .alpha(alpha)
                 ) {
-                    Text(
-                        text = dayText,
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = dayColor
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = bottomText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
-                    )
+                    // Flèche pointant vers le haut
+                    Canvas(
+                        modifier = Modifier
+                            .width(12.dp)
+                            .height(6.dp)
+                    ) {
+                        val path = Path().apply {
+                            moveTo(size.width / 2f, 0f)
+                            lineTo(size.width, size.height)
+                            lineTo(0f, size.height)
+                            close()
+                        }
+                        drawPath(
+                            path = path,
+                            color = Color.Black.copy(alpha = 0.35f)
+                        )
+                    }
+
+                    // Card avec contenu
+                    Surface(
+                        modifier = Modifier,
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.Black.copy(alpha = 0.35f),
+                        tonalElevation = 0.dp
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = dayText,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = dayColor
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                text = bottomText,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -434,7 +459,7 @@ private fun TimelineSteps(
                 placeStepLabels(
                     xPx = x0Px,
                     alpha = alpha0.value,
-                    dayText = "Aujourd’hui",
+                    dayText = "Aujourd'hui",
                     dayColor = dayTodayColor,
                     bottomText = productLabel(p0)
                 )
@@ -448,8 +473,4 @@ private fun TimelineSteps(
             }
         }
     }
-// ---------------------------------- FIN Labels combinés
 }
-
-
-
