@@ -28,6 +28,7 @@ class AddItemViewModel(
     fun setIngredientsImage(url: String?) = _draft.update { it.copy(imageIngredientsUrl = url) }
     fun setNutritionImage(url: String?) = _draft.update { it.copy(imageNutritionUrl = url) }
     fun setNutriScore(v: String?) = _draft.update { it.copy(nutriScore = v) }
+    fun setAddMode(mode: ItemAddMode) = _draft.update { it.copy(addMode = mode) }
 
     fun reset() { _draft.value = AddItemDraft() }
 

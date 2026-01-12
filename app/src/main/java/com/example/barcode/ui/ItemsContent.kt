@@ -714,43 +714,6 @@ fun ShelfRow(
     }
 }
 
-enum class ShelfType {
-    TOP1,
-    TOP2,
-    MIDDLE,
-    BOTTOM,
-    VEGETABLE
-}
-fun shelfTypeForIndex(index: Int): ShelfType =
-    when {
-        index == 0 -> ShelfType.TOP1
-        index == 1 -> ShelfType.TOP2
-        // TODO BOTTOM (index selon le nombre de MIDDLES inséré)
-        index % 6 == 5 -> ShelfType.VEGETABLE
-        else -> ShelfType.MIDDLE
-    }
-
-@Composable
-fun ShelfSvg(
-    type: ShelfType,
-    modifier: Modifier = Modifier
-) {
-    val res = when (type) {
-        ShelfType.TOP1 -> R.drawable.etagere_1_xml
-        ShelfType.TOP2 -> R.drawable.etagere_1_xml
-        ShelfType.MIDDLE -> R.drawable.etagere_1_xml
-        ShelfType.BOTTOM -> R.drawable.etagere_1_xml
-        ShelfType.VEGETABLE -> R.drawable.etagere_1_xml
-    }
-
-    Image(
-        painter = painterResource(res),
-        contentDescription = null,
-        modifier = modifier,
-        contentScale = ContentScale.FillWidth,
-        alignment = Alignment.Center
-    )
-}
 
 
 @Composable
@@ -902,6 +865,7 @@ private fun ItemDetailsHeader(
 ) {
     val name = item.name?.takeIf { it.isNotBlank() } ?: "(sans nom)"
     val brand = item.brand?.takeIf { it.isNotBlank() } ?: "—"
+    val nutriScore = item.nutriScore?.takeIf { it.isNotBlank() } ?: "—"
     val daysText = item.expiryDate?.let { formatRelativeDaysCompact(it) } ?: "—"
 
     Box(Modifier.fillMaxWidth()) {
@@ -948,6 +912,14 @@ private fun ItemDetailsHeader(
 
                 Text(
                     text = brand,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = nutriScore,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
                     maxLines = 1,

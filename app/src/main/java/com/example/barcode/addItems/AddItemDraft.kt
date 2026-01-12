@@ -18,5 +18,7 @@ data class AddItemDraft(
 
     // Pour tester les 4 images candidates récupérées
     val imageCandidates: List<String> = emptyList(),
-    val imageCandidateIndex: Int = 0
+    val imageCandidateIndex: Int = 0,
+
+    val addMode: ItemAddMode = ItemAddMode.BARCODE_SCAN,
 ) : Parcelable

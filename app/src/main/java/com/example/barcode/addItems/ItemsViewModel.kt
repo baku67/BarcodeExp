@@ -26,7 +26,8 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
         imageUrl: String?,
         imageIngredientsUrl: String?,
         imageNutritionUrl: String?,
-        nutriScore: String?
+        nutriScore: String?,
+        addMode: String
     ) =
         viewModelScope.launch {
             repo.addOrUpdate(
@@ -37,7 +38,8 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
                     imageUrl = imageUrl,
                     imageIngredientsUrl = imageIngredientsUrl,
                     imageNutritionUrl = imageNutritionUrl,
-                    nutriScore = nutriScore
+                    nutriScore = nutriScore,
+                    addMode = addMode
                 )
             )
         }

@@ -20,5 +20,7 @@ data class Item(
     val nutriScore: String? = null,
 
     val addedAt: Long? = System.currentTimeMillis(),
-    val expiryDate: Long? = null // en epoch millis
+    val expiryDate: Long? = null, // en epoch millis
+
+    val addMode: String = "barcode_scan",
 )

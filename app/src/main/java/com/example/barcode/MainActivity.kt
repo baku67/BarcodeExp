@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barcode.addItems.AddItemChooseScreen
+import com.example.barcode.addItems.ItemAddMode
 import com.example.barcode.auth.*
 import com.example.barcode.auth.ui.RegisterScreen
 import com.example.barcode.ui.MainTabsScreen
@@ -170,8 +171,14 @@ class MainActivity : ComponentActivity() {
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
 
                                     AddItemChooseScreen(
-                                        onPickScan = { navController.navigate("addItem/scan/barcode") },
-                                        onPickManual = { navController.navigate("addItem/manual") }, // placeholder
+                                        onPickScan = {
+                                            addVm.setAddMode(ItemAddMode.BARCODE_SCAN)
+                                            navController.navigate("addItem/scan/barcode")
+                                        },
+                                        onPickManual = {
+                                            addVm.setAddMode(ItemAddMode.MANUAL)
+                                            navController.navigate("addItem/manual")
+                                        },
                                         onCancel = { close(addVm) }
                                     )
                                 }
@@ -191,6 +198,7 @@ class MainActivity : ComponentActivity() {
                                             addVm.setImageCandidates(product.imageCandidates)
                                             addVm.setIngredientsImage(product.imageIngredientsUrl)
                                             addVm.setNutritionImage(product.imageNutritionUrl)
+                                            addVm.setNutriScore(product.nutriScore)
                                             navController.navigate("addItem/scan/expiry")
                                         },
                                         onCancel = { close(addVm) }
@@ -244,7 +252,8 @@ class MainActivity : ComponentActivity() {
                                                 imageUrl = draft.imageUrl,
                                                 imageIngredientsUrl = draft.imageIngredientsUrl,
                                                 imageNutritionUrl = draft.imageNutritionUrl,
-                                                nutriScore = draft.nutriScore
+                                                nutriScore = draft.nutriScore,
+                                                addMode = draft.addMode.value
                                             )
 
                                             close(addVm)

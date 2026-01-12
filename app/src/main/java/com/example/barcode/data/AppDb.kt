@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Item::class], version = 2, exportSchema = true)
+@Database(entities = [Item::class], version = 3, exportSchema = true)
 abstract class AppDb : RoomDatabase() {
 
     abstract fun itemDao(): ItemDao
@@ -21,6 +21,12 @@ abstract class AppDb : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE items ADD COLUMN imageIngredientsUrl TEXT")
                 db.execSQL("ALTER TABLE items ADD COLUMN imageNutritionUrl TEXT")
+            }
+        }
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE items ADD COLUMN addMode TEXT NOT NULL DEFAULT 'barcode_scan'")
             }
         }
 
@@ -39,6 +45,7 @@ abstract class AppDb : RoomDatabase() {
 
                     // Choix Migration en Dev (plus propre):
                     .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_2_3)
 
 
                     // Toujours à la fin
