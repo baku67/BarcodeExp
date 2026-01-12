@@ -26,6 +26,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.FactCheck
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -49,6 +52,7 @@ import java.time.temporal.ChronoUnit
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -818,8 +822,6 @@ private fun ItemDetailsBottomSheet(
     onClose: () -> Unit,
     onOpenViewer: (String) -> Unit
 ) {
-    var tab by rememberSaveable(item.id) { mutableStateOf(DetailsTab.Ingredients) }
-
     Column(Modifier.fillMaxWidth()) {
 
         CornerRadiusEtPoignee(
@@ -840,23 +842,46 @@ private fun ItemDetailsBottomSheet(
         ) {
             ItemDetailsHeader(item = item, onClose = onClose)
 
-            DetailsTabs(
-                selected = tab,
-                onSelect = { tab = it },
-                hasIngredients = !item.imageIngredientsUrl.isNullOrBlank(),
-                hasNutrition = !item.imageNutritionUrl.isNullOrBlank()
+            DetailsOpenImageButtons(
+                ingredientsUrl = item.imageIngredientsUrl,
+                nutritionUrl = item.imageNutritionUrl,
+                onOpenViewer = onOpenViewer
             )
-
-            when (tab) {
-                DetailsTab.Ingredients -> DetailsImagePanel("Ingrédients", item.imageIngredientsUrl, onOpenViewer)
-                DetailsTab.Nutrition -> DetailsImagePanel("Valeurs nutritives", item.imageNutritionUrl, onOpenViewer)
-            }
 
             Spacer(Modifier.height(6.dp))
         }
     }
 }
 
+@Composable
+private fun DetailsOpenImageButtons(
+    ingredientsUrl: String?,
+    nutritionUrl: String?,
+    onOpenViewer: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        DetailsTabButton(
+            text = "Ingrédients",
+            icon = Icons.Outlined.Science,
+            selected = false,
+            enabled = !ingredientsUrl.isNullOrBlank(),
+            onClick = { ingredientsUrl?.let(onOpenViewer) },
+            modifier = Modifier.weight(1f)
+        )
+
+        DetailsTabButton(
+            text = "Nutrition",
+            icon = Icons.Outlined.FactCheck,
+            selected = false,
+            enabled = !nutritionUrl.isNullOrBlank(),
+            onClick = { nutritionUrl?.let(onOpenViewer) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
 
 @Composable
 private fun ItemDetailsHeader(
@@ -902,7 +927,7 @@ private fun ItemDetailsHeader(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = name,
+                    text = name.replaceFirstChar { it.titlecase() }, // Majuscule
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
@@ -1052,36 +1077,9 @@ private fun TopRoundedStroke(
 
 
 @Composable
-private fun DetailsTabs(
-    selected: DetailsTab,
-    onSelect: (DetailsTab) -> Unit,
-    hasIngredients: Boolean,
-    hasNutrition: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        DetailsTabButton(
-            text = "Ingrédients",
-            selected = selected == DetailsTab.Ingredients,
-            enabled = hasIngredients,
-            onClick = { onSelect(DetailsTab.Ingredients) },
-            modifier = Modifier.weight(1f)
-        )
-        DetailsTabButton(
-            text = "Nutrition",
-            selected = selected == DetailsTab.Nutrition,
-            enabled = hasNutrition,
-            onClick = { onSelect(DetailsTab.Nutrition) },
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
 private fun DetailsTabButton(
     text: String,
+    icon: ImageVector? = null,
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -1106,7 +1104,22 @@ private fun DetailsTabButton(
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, fontWeight = FontWeight.SemiBold, color = content)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = content,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+
+            Text(text, fontWeight = FontWeight.SemiBold, color = content)
+        }
     }
 }
 
@@ -1160,7 +1173,6 @@ private fun DetailsImagePanel(
 
 
 
-private enum class DetailsTab { Ingredients, Nutrition }
 // BOTTOM SHEET 2/2:
 @Composable
 private fun ExtraImageBlockCollapsible(

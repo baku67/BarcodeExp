@@ -103,7 +103,7 @@ suspend fun fetchProductInfo(code: String): FetchResult =
             val frontUrl = images?.let { selectedTypeUrl(code, it, "front", langs) }
 
             val name = pickProductName(obj, lang)
-            val brand = obj.optString("brands", "Inconnue")
+            val brand = obj.optString("brands", "Marque inconnue") // TODO: null et géré dans View/VM pour trad entre autre
             val nutri = obj.optString("nutrition_grade_fr", "").ifEmpty {
                 obj.optJSONArray("nutrition_grades_tags")?.optString(0)?.substringAfterLast('-')
                     ?: ""
