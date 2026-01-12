@@ -1,5 +1,6 @@
 package com.example.barcode.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -954,13 +955,22 @@ private fun ItemDetailsHeader(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = nutriScore,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    val nutriRes = nutriScoreRes(item.nutriScore)
+
+                    if (nutriRes != null) {
+                        Image(
+                            painter = painterResource(nutriRes),
+                            contentDescription = "Nutri-Score ${item.nutriScore}",
+                            modifier = Modifier.height(22.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "—",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                            maxLines = 1
+                        )
+                    }
 
                     Spacer(Modifier.weight(1f))
 
@@ -1136,7 +1146,15 @@ private fun TopRoundedStroke(
 
 
 
-
+@DrawableRes
+private fun nutriScoreRes(score: String?): Int? = when (score?.trim()?.uppercase()) {
+    "A" -> R.drawable.nutri_score_a
+    "B" -> R.drawable.nutri_score_b
+    "C" -> R.drawable.nutri_score_c
+    "D" -> R.drawable.nutri_score_d
+    "E" -> R.drawable.nutri_score_e
+    else -> null
+}
 
 
 
