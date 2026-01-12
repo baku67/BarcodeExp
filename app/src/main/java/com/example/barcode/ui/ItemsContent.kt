@@ -56,7 +56,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.barcode.R
+import com.example.barcode.auth.AuthViewModel
 import com.example.barcode.ui.components.SnackbarBus
+import com.example.barcode.user.FrigoLayout
+import com.example.barcode.user.UserPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -68,6 +71,7 @@ enum class ViewMode { List, Fridge }
 @Composable
 fun ItemsContent(
     innerPadding: PaddingValues,
+    authVm: AuthViewModel,
     onAddItem: () -> Unit,
     vm: ItemsViewModel = viewModel(),
     isActive: Boolean,
@@ -82,6 +86,14 @@ fun ItemsContent(
 
     val mode = session.appMode.collectAsState(initial = AppMode.AUTH).value
     val token = session.token.collectAsState(initial = null).value
+
+    // Préférences User (displayFridge)
+    val prefs = authVm.preferences.collectAsState(initial = UserPreferences()).value
+
+    val selectedViewMode = when (prefs.frigoLayout) {
+        FrigoLayout.LIST -> ViewMode.List
+        FrigoLayout.DESIGN -> ViewMode.Fridge
+    }
 
     // --- Pull-to-refresh + initial load
     var refreshing by rememberSaveable { mutableStateOf(false) }
@@ -333,14 +345,14 @@ fun ItemsContent(
                     Spacer(Modifier.weight(1f))
 
                     FridgeDisplayIconToggle(
-                        selected = viewMode,
-                        onSelect = { viewMode = it }
+                        selected = selectedViewMode,
+                        onSelect = { vm -> authVm.onFridgeDisplaySelected(vm) }
                     )
                 }
 
                 Spacer(Modifier.height(12.dp))
 
-                when (viewMode) {
+                when (selectedViewMode) {
                     ViewMode.List -> {
                         LazyColumn(
                             modifier = Modifier.weight(1f),

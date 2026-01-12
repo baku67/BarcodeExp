@@ -71,6 +71,7 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
 
                 "items" -> ItemsContent(
                     innerPadding = PaddingValues(),
+                    authVm = authVm,
                     onAddItem = {
                         navController.navigate("addItem/choose") {
                             launchSingleTop = true

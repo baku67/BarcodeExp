@@ -2,7 +2,9 @@ package com.example.barcode.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.barcode.ui.ViewMode
 import com.example.barcode.ui.components.SnackbarBus
+import com.example.barcode.user.FrigoLayout
 import com.example.barcode.user.ThemeMode
 import com.example.barcode.user.UserPreferences
 import com.example.barcode.user.UserProfile
@@ -153,6 +155,32 @@ class AuthViewModel(
 
 
 
+
+
+
+
+
+
+
+
+
+
+    // CACHES DES PREFERENCES UTILISATEUR (Theme, displayFridge, lang)
+
+    fun onFridgeDisplaySelected(mode: ViewMode) {
+        viewModelScope.launch {
+            val current = session.preferences.first().frigoLayout
+            val next = when (mode) {
+                ViewMode.List -> FrigoLayout.LIST
+                ViewMode.Fridge -> FrigoLayout.DESIGN
+            }
+            if (current == next) return@launch
+
+            session.setFrigoLayout(next)
+            emitPrefsPatch(frigoLayout = next)
+        }
+    }
+
     fun onThemeToggled(isDark: Boolean) {
         viewModelScope.launch {
             val newTheme = if (isDark) ThemeMode.DARK else ThemeMode.LIGHT
@@ -163,18 +191,29 @@ class AuthViewModel(
         }
     }
 
-    private suspend fun emitPrefsPatch(theme: ThemeMode? = null) {
+    private suspend fun emitPrefsPatch(
+        theme: ThemeMode? = null,
+        frigoLayout: FrigoLayout? = null
+    ) {
         val mode = session.appMode.first()
         val token = session.token.first()
 
         if (mode != AppMode.AUTH || token.isNullOrBlank()) return
 
         val body = mutableMapOf<String, String>()
+
         theme?.let {
             body["theme"] = when (it) {
                 ThemeMode.DARK -> "dark"
                 ThemeMode.LIGHT -> "light"
                 ThemeMode.SYSTEM -> "system"
+            }
+        }
+
+        frigoLayout?.let {
+            body["frigoLayout"] = when (it) {
+                FrigoLayout.LIST -> "list"
+                FrigoLayout.DESIGN -> "design"
             }
         }
 
