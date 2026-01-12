@@ -1,5 +1,6 @@
 package com.example.barcode.ui
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -822,12 +823,17 @@ private fun ItemDetailsBottomSheet(
     onClose: () -> Unit,
     onOpenViewer: (String) -> Unit
 ) {
+    val strokeColor by animateColorAsState(
+        targetValue = expiryStrokeColor(item.expiryDate),
+        label = "sheetStrokeColor"
+    )
+
     Column(Modifier.fillMaxWidth()) {
 
         CornerRadiusEtPoignee(
             radius = 28.dp,
             strokeWidth = 2.dp,
-            strokeColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+            strokeColor = strokeColor, // couleur calculée en fonction exp Item
             handleHeight = 4.dp
         )
 
@@ -848,7 +854,6 @@ private fun ItemDetailsBottomSheet(
                 onOpenViewer = onOpenViewer
             )
 
-            Spacer(Modifier.height(6.dp))
         }
     }
 }
@@ -892,6 +897,8 @@ private fun ItemDetailsHeader(
     val brand = item.brand?.takeIf { it.isNotBlank() } ?: "—"
     val nutriScore = item.nutriScore?.takeIf { it.isNotBlank() } ?: "—"
     val daysText = item.expiryDate?.let { formatRelativeDaysCompact(it) } ?: "—"
+
+    val chip = expiryChipStyle(item.expiryDate)
 
     Box(Modifier.fillMaxWidth()) {
 
@@ -962,13 +969,10 @@ private fun ItemDetailsHeader(
                         enabled = false,
                         label = { Text(daysText, fontWeight = FontWeight.SemiBold) },
                         colors = AssistChipDefaults.assistChipColors(
-                            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
-                            disabledLabelColor = MaterialTheme.colorScheme.primary
+                            disabledContainerColor = chip.container,
+                            disabledLabelColor = chip.label
                         ),
-                        border = BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
-                        )
+                        border = BorderStroke(1.dp, chip.border)
                     )
                 }
             }
@@ -976,6 +980,60 @@ private fun ItemDetailsHeader(
     }
 }
 
+// Couleur du border top BottomSheet
+@Composable
+private fun expiryStrokeColor(expiry: Long?): Color {
+    val base = MaterialTheme.colorScheme.primary
+
+    if (expiry == null) return base.copy(alpha = 0.35f)
+
+    return when {
+        isExpired(expiry) -> MaterialTheme.colorScheme.error.copy(alpha = 0.65f) // expiré
+        isSoon(expiry) -> Color(0xFFFFC107).copy(alpha = 0.45f) // bientôt (jaune)
+        else -> base.copy(alpha = 0.55f) // ok
+    }
+}
+
+
+@Immutable
+private data class ExpiryChipStyle(
+    val container: Color,
+    val label: Color,
+    val border: Color
+)
+
+@Composable
+private fun expiryChipStyle(expiry: Long?): ExpiryChipStyle {
+    val cs = MaterialTheme.colorScheme
+
+    if (expiry == null) {
+        return ExpiryChipStyle(
+            container = cs.surfaceVariant.copy(alpha = 0.55f),
+            label = cs.onSurface.copy(alpha = 0.55f),
+            border = cs.outlineVariant.copy(alpha = 0.55f)
+        )
+    }
+
+    return when {
+        isExpired(expiry) -> ExpiryChipStyle(
+            container = cs.error.copy(alpha = 0.12f),
+            label = cs.error.copy(alpha = 0.95f),
+            border = cs.error.copy(alpha = 0.35f)
+        )
+
+        isSoon(expiry) -> ExpiryChipStyle(
+            container = Color(0xFFFFC107).copy(alpha = 0.16f),  // amber
+            label = Color(0xFFFFC107).copy(alpha = 0.95f),
+            border = Color(0xFFFFC107).copy(alpha = 0.40f)
+        )
+
+        else -> ExpiryChipStyle(
+            container = cs.primary.copy(alpha = 0.10f),
+            label = cs.primary.copy(alpha = 0.95f),
+            border = cs.primary.copy(alpha = 0.30f)
+        )
+    }
+}
 
 
 @Composable
