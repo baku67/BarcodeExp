@@ -943,27 +943,34 @@ private fun ItemDetailsHeader(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Text(
-                    text = nutriScore,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(daysText, fontWeight = FontWeight.SemiBold) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
-                        disabledLabelColor = MaterialTheme.colorScheme.primary
-                    ),
-                    border = BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = nutriScore,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                )
+
+                    Spacer(Modifier.weight(1f))
+
+                    AssistChip(
+                        onClick = {},
+                        enabled = false,
+                        label = { Text(daysText, fontWeight = FontWeight.SemiBold) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                            disabledLabelColor = MaterialTheme.colorScheme.primary
+                        ),
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
+                        )
+                    )
+                }
             }
         }
     }
