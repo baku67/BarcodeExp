@@ -98,8 +98,10 @@ class AuthViewModel(
             repo.login(email, password)
                 .onSuccess { res ->
                     session.saveToken(res.token)
+                    res.refreshToken?.let { session.saveRefreshToken(it) }
                     repo.me(res.token).onSuccess { profile ->
                         session.saveUser(profile)
+                        session.savePreferences(profile.toUserPreferences())
                     }
                     session.setAppMode(AppMode.AUTH)
                     _events.emit(AuthEvent.GoHome)
@@ -131,6 +133,7 @@ class AuthViewModel(
                 .onSuccess { res ->
                     // res.token vient de /auth/register
                     session.saveToken(res.token)
+                    res.refreshToken?.let { session.saveRefreshToken(it) }
                     session.saveUser(UserProfile(id = res.id, email = email, isVerified = false))
                     session.setAppMode(AppMode.AUTH)
 

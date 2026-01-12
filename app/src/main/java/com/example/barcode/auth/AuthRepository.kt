@@ -52,6 +52,19 @@ class AuthRepository(private val api: AuthApi) {
         }
     }
 
+    // Refresh token
+    suspend fun refresh(refreshToken: String): Result<com.example.barcode.user.RefreshResponse> {
+        return try {
+            val res = api.refresh(com.example.barcode.user.RefreshRequest(refresh_token = refreshToken))
+            if (res.isSuccessful && res.body() != null) Result.success(res.body()!!)
+            else Result.failure(Exception("HTTP ${res.code()} - ${res.message()}"))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun deleteMe(token: String): Result<Unit> {
         return try {
             val response = api.deleteMe("Bearer $token")

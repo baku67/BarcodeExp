@@ -16,9 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.barcode.ui.ScanDlcScreen
-import com.example.barcode.ui.ScanBarCodeScreen
-import com.example.barcode.ui.GlobalLoaderScreen
+import com.example.barcode.bootstrap.GlobalLoaderScreen
 import androidx.navigation.compose.navigation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
@@ -39,7 +37,7 @@ import com.example.barcode.addItems.ItemAddMode
 import com.example.barcode.auth.*
 import com.example.barcode.auth.ui.RegisterScreen
 import com.example.barcode.ui.MainTabsScreen
-import com.example.barcode.ui.TimelineIntro.TimelineIntroScreen
+import com.example.barcode.bootstrap.TimelineIntro.TimelineIntroScreen
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import com.example.barcode.ui.components.SnackbarBus

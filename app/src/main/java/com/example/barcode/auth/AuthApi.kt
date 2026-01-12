@@ -23,6 +23,9 @@ interface AuthApi {
     @POST("auth/verify/resend")
     suspend fun resendEmailVerification(@Header("Authorization") token: String): Response<Unit>
 
+    @POST("api/token/refresh")
+    suspend fun refresh(@Body request: com.example.barcode.user.RefreshRequest): Response<com.example.barcode.user.RefreshResponse>
+
 
     // /me
     @GET("api/me")

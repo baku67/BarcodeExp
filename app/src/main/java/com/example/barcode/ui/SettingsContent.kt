@@ -60,7 +60,9 @@ fun SettingsContent(
             .onFailure { SnackbarBus.show("Impossible de charger le profil : ${it.message ?: it}") }
     }
 
-    LaunchedEffect(isActive, mode, token) {
+
+    // On ne refresh plus le UserProfil au premier affichage car déja fait dans le GlobalLoaderScreen
+    /*    LaunchedEffect(isActive, mode, token) {
         val canLoad = isActive && mode == AppMode.AUTH && !token.isNullOrBlank()
         if (!canLoad) return@LaunchedEffect
 
@@ -74,15 +76,15 @@ fun SettingsContent(
             initialLoading = false
             loadedForToken = token // ✅ même si échec => évite spam navigation (refresh manuel pour retenter)
         }
-    }
+    }*/
 
 
 
 
     Box(Modifier.fillMaxSize()) {
 
-        // Barre de chargement top
-        if (initialLoading) {
+        // Barre de chargement top (plus besoin car plus de refresh au premier affichage)
+/*        if (initialLoading) {
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,7 +93,7 @@ fun SettingsContent(
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
             )
-        }
+        }*/
 
         // Contenu + PullToRefreshBox
         PullToRefreshBox(

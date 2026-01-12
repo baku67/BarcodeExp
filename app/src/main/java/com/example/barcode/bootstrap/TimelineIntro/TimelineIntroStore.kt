@@ -1,4 +1,4 @@
-package com.example.barcode.ui.TimelineIntro
+package com.example.barcode.bootstrap.TimelineIntro
 
 
 import android.content.Context

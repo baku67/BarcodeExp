@@ -2,11 +2,23 @@ package com.example.barcode.user
 
 import com.google.gson.annotations.SerializedName
 
-data class LoginRequest(val email: String, val password: String)
-data class LoginResponse(val token: String)
 
+
+
+data class LoginRequest(val email: String, val password: String)
 data class RegisterRequest(val email: String, val password: String, val confirmPassword: String)
-data class RegisterResponse(val id: String, val token: String)
+
+
+data class LoginResponse(
+    val token: String,
+    @SerializedName("refresh_token") val refreshToken: String? = null
+)
+data class RegisterResponse(
+    val id: String,
+    val token: String,
+    @SerializedName("refresh_token") val refreshToken: String? = null
+)
+
 
 data class UserProfile(
     val id: String,

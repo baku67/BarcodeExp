@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore by preferencesDataStore(name = "session")
 
 private val TOKEN_KEY = stringPreferencesKey("token")
+private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
 
 private val APP_MODE_KEY = stringPreferencesKey("app_mode")
 enum class AppMode { LOCAL, AUTH }
@@ -39,6 +40,7 @@ private val PREF_UPDATED_AT = longPreferencesKey("pref_updated_at")       // epo
 class SessionManager(private val context: Context) {
 
     val token: Flow<String?> = context.dataStore.data.map { prefs -> prefs[TOKEN_KEY] }
+    val refreshToken: Flow<String?> = context.dataStore.data.map { prefs -> prefs[REFRESH_TOKEN_KEY] }
 
     val appMode: Flow<AppMode> = context.dataStore.data.map { prefs ->
         when (prefs[APP_MODE_KEY]) {
@@ -59,6 +61,10 @@ class SessionManager(private val context: Context) {
         context.dataStore.edit { prefs -> prefs[TOKEN_KEY] = token }
     }
 
+    suspend fun saveRefreshToken(token: String) { // ✅
+        context.dataStore.edit { prefs -> prefs[REFRESH_TOKEN_KEY] = token }
+    }
+
     suspend fun saveUser(profile: UserProfile) {
         context.dataStore.edit { prefs ->
             prefs[USER_ID_KEY] = profile.id
@@ -68,11 +74,16 @@ class SessionManager(private val context: Context) {
     }
 
     suspend fun clear() {
-        context.dataStore.edit { prefs -> prefs.remove(TOKEN_KEY) }
+        context.dataStore.edit {
+            prefs -> prefs.remove(TOKEN_KEY)
+            prefs.remove(REFRESH_TOKEN_KEY)
+        }
+
     }
     suspend fun logout() {
         context.dataStore.edit { prefs ->
             prefs.remove(TOKEN_KEY)
+            prefs.remove(REFRESH_TOKEN_KEY)
             prefs.remove(USER_ID_KEY)
             prefs.remove(USER_EMAIL_KEY)
             prefs.remove(USER_IS_VERIFIED_KEY)

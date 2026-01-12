@@ -1,4 +1,4 @@
-package com.example.barcode.ui
+package com.example.barcode.bootstrap
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,13 +24,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import kotlinx.coroutines.delay
+import com.example.barcode.ApiClient
 import com.example.barcode.R
-import com.example.barcode.auth.AppMode
+import com.example.barcode.auth.AuthRepository
 import com.example.barcode.auth.SessionManager
-import com.example.barcode.ui.TimelineIntro.IntroStore
-import kotlinx.coroutines.flow.first
+import com.example.barcode.bootstrap.TimelineIntro.IntroStore
+import androidx.compose.runtime.getValue
 
 
 @Composable
@@ -37,6 +39,21 @@ fun GlobalLoaderScreen(nav: NavHostController) {
 
     val appContext = LocalContext.current.applicationContext
     val timelineIntroStore = remember { IntroStore(appContext) }
+
+    val session = remember { SessionManager(appContext) }
+    val repo = remember { AuthRepository(ApiClient.authApi) }
+
+    val dashboardRepo = remember { DashboardRepository() }
+    val timelineRepo = remember { TimelineRepository() }
+
+    val vm: BootstrapViewModel = viewModel(
+        factory = BootstrapViewModelFactory(repo, session, timelineIntroStore, dashboardRepo, timelineRepo)
+    )
+
+    val state by vm.state.collectAsState()
+
+    LaunchedEffect(Unit) { vm.bootstrap() }
+
 
     val gradient = remember {
         Brush.horizontalGradient(
@@ -48,59 +65,26 @@ fun GlobalLoaderScreen(nav: NavHostController) {
     }
 
     // ⏳ Simule le chargement sans bloquer l’UI
-    LaunchedEffect(Unit) {
 
-        val session = SessionManager(appContext)
-
-
-
-        // TODO: remplacer ce delay par check AUTH + RefreshToken voir capture + données Dashboard ET donnée chronologie
-        delay(1900)
-
-
-
-        val mode = session.appMode.first()
-        val token = session.token.first() // String? :contentReference[oaicite:2]{index=2}
-
-        val target = when (mode) {
-            AppMode.LOCAL -> "tabs"
-            AppMode.AUTH -> if (!token.isNullOrBlank()) "tabs" else "auth/login"
-        }
-
-        // --- Données simulées (route spécifique, séparées de celles du dashboard) ?
-        val timelineExpired = intArrayOf(1, 0, 0) // ici pour simuler/tester 0 data util (auj, demain, 2-3j)
-        val timelineSoon = intArrayOf(2, 3, 1) // ici pour simuler/tester 0 data util (auj, demain, 2-3j)
-
-        // 1) Calcul de l'intéret à afficher l'anim (donnéees utiles ?)
-        val hasInteresting = (timelineExpired.sum() + timelineSoon.sum()) > 0
-
-        // 2) Déjà vu aujourd’hui ?
-        val today = java.time.LocalDate.now().toString()
-        val lastSeen = timelineIntroStore.getLastSeenDate()
-        val alreadySeenToday = lastSeen == today // FONCTIONNEL
-        // val alreadySeenToday = false // TODO ICI DEBUG (= always displayed si data utiles)
-
-        val shouldShow = hasInteresting && !alreadySeenToday
-        if (!shouldShow) {
-            nav.navigate(target) {
-                popUpTo("splash") { inclusive = true }
-                launchSingleTop = true
+    LaunchedEffect(state) {
+        when (val s = state) {
+            is BootState.Go -> {
+                nav.navigate(s.route) {
+                    popUpTo("splash") { inclusive = true }
+                    launchSingleTop = true
+                }
             }
-            return@LaunchedEffect
-        }
+            is BootState.ShowTimeline -> {
+                nav.currentBackStackEntry?.savedStateHandle?.set("timeline_target", s.targetRoute)
+                nav.currentBackStackEntry?.savedStateHandle?.set("timeline_expired", s.expired)
+                nav.currentBackStackEntry?.savedStateHandle?.set("timeline_soon", s.soon)
 
-        // Marquer "vu" (important: ici c'est ok, tu vas l'afficher)
-        timelineIntroStore.setLastSeenToday()
-
-        // On injecte dans l'entrée courante (splash) -> l'écran suivant les lit via previousBackStackEntry
-        nav.currentBackStackEntry?.savedStateHandle?.set("timeline_target", target)
-        nav.currentBackStackEntry?.savedStateHandle?.set("timeline_expired", timelineExpired)
-        nav.currentBackStackEntry?.savedStateHandle?.set("timeline_soon", timelineSoon)
-
-        // Puis on passe par l’écran timeline
-        nav.navigate("introTimeline") {
-            popUpTo("splash") { inclusive = false } // on garde splash derrière, l’intro la supprimera ensuite
-            launchSingleTop = true
+                nav.navigate("introTimeline") {
+                    popUpTo("splash") { inclusive = false }
+                    launchSingleTop = true
+                }
+            }
+            else -> Unit
         }
     }
 
