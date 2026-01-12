@@ -211,7 +211,7 @@ class AuthViewModel(
         }
 
         frigoLayout?.let {
-            body["frigoLayout"] = when (it) {
+            body["frigo_layout"] = when (it) {
                 FrigoLayout.LIST -> "list"
                 FrigoLayout.DESIGN -> "design"
             }
