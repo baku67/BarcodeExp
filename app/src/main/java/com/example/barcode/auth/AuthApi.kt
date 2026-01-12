@@ -20,18 +20,20 @@ interface AuthApi {
     @POST("auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<RegisterResponse>
 
-    @GET("me")
+    @POST("auth/verify/resend")
+    suspend fun resendEmailVerification(@Header("Authorization") token: String): Response<Unit>
+
+
+    // /me
+    @GET("api/me")
     suspend fun me(@Header("Authorization") authorization: String): Response<UserProfile>
 
-    @PATCH("me/preferences")
+    @PATCH("api/me/preferences")
     suspend fun patchPreferences(
         @Header("Authorization") token: String,
         @Body body: Map<String, String>
     ): Response<Unit>
 
-    @DELETE("me")
+    @DELETE("api/me")
     suspend fun deleteMe(@Header("Authorization") token: String): Response<Unit>
-
-    @POST("auth/verify/resend")
-    suspend fun resendEmailVerification(@Header("Authorization") token: String): Response<Unit>
 }

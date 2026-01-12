@@ -86,7 +86,10 @@ fun SettingsContent(
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.TopCenter) // ✅ OK car on est dans BoxScope
+                    .height(2.dp)
+                    .align(Alignment.TopCenter),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
             )
         }
 
@@ -319,6 +322,18 @@ fun SettingsContent(
                         }
                     }
 
+                }
+
+                // Gestion du foyer
+                item {
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text("Foyer", style = MaterialTheme.typography.titleLarge)
+                        }
+                    }
                 }
 
                 // 2) Alerte si autorisations manquantes -> redirection vers section /Settings
