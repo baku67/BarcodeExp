@@ -964,11 +964,12 @@ private fun ItemDetailsHeader(
                             modifier = Modifier.height(22.dp)
                         )
                     } else {
-                        Text(
-                            text = "—",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                            maxLines = 1
+                        Image(
+                            painter = painterResource(R.drawable.nutri_score_neutre),
+                            contentDescription = "Nutri-Score indisponible",
+                            modifier = Modifier
+                                .height(22.dp)
+                                .alpha(0.35f)
                         )
                     }
 
