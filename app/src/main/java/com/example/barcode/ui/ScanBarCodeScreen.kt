@@ -9,6 +9,7 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -79,8 +81,11 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import coil.compose.AsyncImagePainter
+import coil.compose.rememberAsyncImagePainter
 
 // Composable pour scanner un code-barres et récupérer le nom du produit
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
@@ -314,14 +319,40 @@ fun ScanBarCodeScreen(
                                 .fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (productInfo!!.imageUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = productInfo!!.imageUrl,
-                                    contentDescription = null,
+                            val imgUrl = productInfo!!.imageUrl
+
+                            if (imgUrl.isNotEmpty()) {
+                                val shape = RoundedCornerShape(12.dp)
+                                val painter = rememberAsyncImagePainter(imgUrl)
+                                val state = painter.state
+
+                                Box(
                                     modifier = Modifier
                                         .size(56.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                )
+                                        .clip(shape)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painter,
+                                        contentDescription = null,
+                                        modifier = Modifier.matchParentSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+
+                                    if (state is AsyncImagePainter.State.Loading) {
+                                        CircularProgressIndicator(
+                                            strokeWidth = 2.dp,
+                                            modifier = Modifier.size(18.dp),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                                        )
+                                    }
+
+                                    if (state is AsyncImagePainter.State.Error) {
+                                        Text("🧴", fontSize = 20.sp)
+                                    }
+                                }
+
                                 Spacer(Modifier.width(12.dp))
                             }
 

@@ -61,6 +61,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImagePainter
 import com.example.barcode.R
 import com.example.barcode.auth.AuthViewModel
 import com.example.barcode.ui.components.SnackbarBus
@@ -635,26 +636,46 @@ private fun ProductThumb(
 ) {
     val shape = RoundedCornerShape(12.dp)
 
-    if (!imageUrl.isNullOrBlank()) {
-        Image(
-            painter = rememberAsyncImagePainter(imageUrl),
-            contentDescription = null,
-            modifier = modifier
-                .size(56.dp)
-                .clip(shape)
-        )
-    } else {
-        Box(
-            modifier = modifier
-                .size(56.dp)
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("🧴", fontSize = 20.sp) // TODO: afficher une image par défaut (minimisée) coorespondant au generic_namef
+    Box(
+        modifier = modifier
+            .size(56.dp)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!imageUrl.isNullOrBlank()) {
+            val painter = rememberAsyncImagePainter(imageUrl)
+            val state = painter.state
+
+            // TODO: image générique corresppondant au type générique si null
+            Image(
+                painter = painter,
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            when (state) {
+                is AsyncImagePainter.State.Loading -> {
+                    // ✅ loader uniquement dans la zone 56dp
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(18.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                    )
+                }
+                is AsyncImagePainter.State.Error -> {
+                    // ✅ fallback si KO
+                    Text("🧴", fontSize = 20.sp) // TODO: type générique si null
+                }
+                else -> Unit
+            }
+        } else {
+            Text("🧴", fontSize = 20.sp) // TODO: type générique si null
         }
     }
 }
+
 
 
 

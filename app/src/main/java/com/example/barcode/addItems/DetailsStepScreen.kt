@@ -34,6 +34,10 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter.State.Empty.painter
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
+import coil.compose.rememberAsyncImagePainter
 import com.example.barcode.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,51 +92,102 @@ fun DetailsStepScreen(
 
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                0f to Color.Transparent,
-                                0.7f to Color.Black.copy(alpha = 0.25f),
-                                1f to Color.Black.copy(alpha = 0.45f)
-                            )
-                        )
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .clip(RoundedCornerShape(16.dp))
                 ) {
                     val url = draft.imageUrl
+                    val painter = rememberAsyncImagePainter(model = url)
+                    val isImageLoading = painter.state is coil.compose.AsyncImagePainter.State.Loading
 
                     if (!url.isNullOrBlank()) {
-                        AsyncImage(
-                            model = url,
+
+                        Image(
+                            painter = painter,
                             contentDescription = "Image produit",
                             modifier = Modifier
-                                .fillMaxSize()
-                                .clickable(enabled = canCycleImage) { onCycleImage() },
+                                .matchParentSize()
+                                .clickable(enabled = canCycleImage && !isImageLoading) { onCycleImage() },
                             contentScale = ContentScale.Crop
                         )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Filled.Image,
-                            contentDescription = null,
-                            modifier = Modifier.align(Alignment.Center)
+
+                        // ✅ Loader overlay
+                        if (isImageLoading) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color.Black.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(28.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                                )
+                            }
+                        }
+
+                        // ✅ Fallback si erreur
+                        if (painter.state is coil.compose.AsyncImagePainter.State.Error) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Filled.Image, contentDescription = null)
+                            }
+                        }
+
+
+
+                        // ✅ LE “BONUS” : gradient AU-DESSUS de l’image
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        0f to Color.Transparent,
+                                        0.70f to Color.Black.copy(alpha = 0.10f),
+                                        1f to Color.Black.copy(alpha = 0.45f)
+                                    )
+                                )
                         )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Filled.Image, contentDescription = null)
+                        }
                     }
 
                     if (canCycleImage) {
-                        FilledIconButton(
-                            onClick = onCycleImage,
+                        Row(
                             modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(10.dp)
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .background(Color.Black.copy(alpha = 0.18f)) // plus léger (car gradient aide déjà)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Filled.Refresh, contentDescription = "Changer l'image")
-                        }
+                            Text(
+                                text = "Image ${draft.imageCandidateIndex + 1}/${draft.imageCandidates.size}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White.copy(alpha = 0.92f)
+                            )
 
-                        Text(
-                            text = "Image ${draft.imageCandidateIndex + 1}/${draft.imageCandidates.size}",
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(10.dp),
-                            style = MaterialTheme.typography.labelMedium
-                        )
+                            Spacer(Modifier.weight(1f))
+
+                            FilledTonalIconButton(
+                                onClick = onCycleImage,
+                                enabled = !isImageLoading
+                            ) {
+                                Icon(Icons.Filled.Refresh, contentDescription = "Changer l'image")
+                            }
+                        }
                     }
                 }
 
