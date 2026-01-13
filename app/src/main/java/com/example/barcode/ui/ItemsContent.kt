@@ -387,7 +387,9 @@ fun ItemsContent(
                     }
 
                     ViewMode.Fridge -> {
-                        val footerHeight = if (!selectionMode && vegDrawerPinned) vegDrawerHeight + 56.dp /* bouton */ + 16.dp else 8.dp
+
+                        val showPinnedVegDrawer = !selectionMode && vegDrawerPinned
+                        val footerHeight = if (showPinnedVegDrawer) vegDrawerHeight + 56.dp + 16.dp else 8.dp
 
                         LazyColumn(
                             modifier = Modifier.weight(1f),
@@ -508,15 +510,16 @@ fun ItemsContent(
 
                 if (!selectionMode) {
 
-                    // ✅ Si ancré : bac FIXE juste au-dessus du bouton
-                    if (vegDrawerPinned) {
+                    val showPinnedVegDrawer = (selectedViewMode == ViewMode.Fridge) && vegDrawerPinned
+
+                    // ✅ Bac à légumes FIXE uniquement en DESIGN
+                    if (showPinnedVegDrawer) {
                         VegetableDrawer(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 6.dp),
                             height = vegDrawerHeight,
                         )
-
                         Spacer(Modifier.height(10.dp))
                     }
 
