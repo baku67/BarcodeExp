@@ -639,8 +639,7 @@ private fun ProductThumb(
     Box(
         modifier = modifier
             .size(56.dp)
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .clip(shape),
         contentAlignment = Alignment.Center
     ) {
         if (!imageUrl.isNullOrBlank()) {
@@ -657,7 +656,11 @@ private fun ProductThumb(
 
             when (state) {
                 is AsyncImagePainter.State.Loading -> {
-                    // ✅ loader uniquement dans la zone 56dp
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.10f))
+                    )
                     CircularProgressIndicator(
                         strokeWidth = 2.dp,
                         modifier = Modifier.size(18.dp),
