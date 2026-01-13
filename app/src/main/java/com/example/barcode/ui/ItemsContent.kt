@@ -1384,22 +1384,57 @@ private fun ImageViewerDialog(
             )
 
             // image interactive
-            Image(
-                painter = rememberAsyncImagePainter(url),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(18.dp)
-                    .transformable(state = state, lockRotationOnZoomPan = false) // ✅ pan/zoom/rotate :contentReference[oaicite:6]{index=6}
-                    .graphicsLayer {
-                        translationX = offset.x
-                        translationY = offset.y
-                        scaleX = scale
-                        scaleY = scale
-                        rotationZ = rotation
-                    }
-            )
+            val painter = rememberAsyncImagePainter(url)
+            val pState = painter.state
+
+            // image interactive (affichée seulement si pas en erreur)
+            if (pState !is AsyncImagePainter.State.Error) {
+                Image(
+                    painter = painter,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(18.dp)
+                        .transformable(state = state, lockRotationOnZoomPan = false)
+                        .graphicsLayer {
+                            translationX = offset.x
+                            translationY = offset.y
+                            scaleX = scale
+                            scaleY = scale
+                            rotationZ = rotation
+                        }
+                )
+            }
+
+            // ✅ Loader overlay (gris/blanc, discret)
+            if (pState is AsyncImagePainter.State.Loading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(36.dp),
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
+                }
+            }
+
+            // ✅ Fallback (si erreur)
+            if (pState is AsyncImagePainter.State.Error) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Image,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.65f),
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
+            }
 
             // bouton fermer
             IconButton(
