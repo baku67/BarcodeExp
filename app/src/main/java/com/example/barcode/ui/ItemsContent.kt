@@ -652,7 +652,7 @@ private fun ProductThumb(
                 painter = painter,
                 contentDescription = null,
                 modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Fit
             )
 
             when (state) {
@@ -942,7 +942,7 @@ private fun ItemDetailsHeader(
                         painter = rememberAsyncImagePainter(item.imageUrl),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Fit
                     )
                 } else {
                     Text("🧺", fontSize = 22.sp)
@@ -1165,9 +1165,6 @@ private fun TopRoundedStroke(
 
 
 
-
-
-
 @DrawableRes
 private fun nutriScoreRes(score: String?): Int? = when (score?.trim()?.uppercase()) {
     "A" -> R.drawable.nutri_score_a
@@ -1190,15 +1187,23 @@ private fun DetailsTabButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
-    else MaterialTheme.colorScheme.surface
+    val bg = when {
+        !enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        selected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+        else -> MaterialTheme.colorScheme.surface
+    }
 
-    val border = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-    else MaterialTheme.colorScheme.outlineVariant
+    val border = when {
+        !enabled -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+        selected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+        else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.80f)
+    }
 
-    val content = if (!enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-    else if (selected) MaterialTheme.colorScheme.primary
-    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+    val content = when {
+        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
+        selected -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f)
+    }
 
     Box(
         modifier = modifier
@@ -1229,118 +1234,12 @@ private fun DetailsTabButton(
 }
 
 
-@Composable
-private fun DetailsImagePanel(
-    title: String,
-    url: String?,
-    onOpenViewer: (String) -> Unit
-) {
-    if (url.isNullOrBlank()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                "Aucune image disponible.",
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-        }
-        return
-    }
-
-    Image(
-        painter = rememberAsyncImagePainter(url),
-        contentDescription = title,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(280.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
-            .combinedClickable(
-                onClick = { onOpenViewer(url) },
-                onLongClick = null
-            ),
-        contentScale = ContentScale.Fit
-    )
-}
 
 
 
 
 
 
-
-
-
-
-
-// BOTTOM SHEET 2/2:
-@Composable
-private fun ExtraImageBlockCollapsible(
-    title: String,
-    url: String?,
-    onOpenViewer: (String) -> Unit
-) {
-    var expanded by rememberSaveable(title) { mutableStateOf(false) }
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = !url.isNullOrBlank()) { expanded = !expanded },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(title, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.weight(1f))
-                if (!url.isNullOrBlank()) {
-                    Text(
-                        if (expanded) "Masquer" else "Afficher",
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-            }
-
-            if (url.isNullOrBlank()) {
-                Text(
-                    "Aucune image disponible.",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-                return@Column
-            }
-
-            // ✅ IMPORTANT: l'Image n'est composée que si expanded == true
-            if (expanded) {
-                Image(
-                    painter = rememberAsyncImagePainter(url),
-                    contentDescription = title,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .combinedClickable(
-                            onClick = { onOpenViewer(url) },
-                            onLongClick = null
-                        ),
-                    contentScale = ContentScale.Fit
-                )
-            }
-        }
-    }
-}
 
 // Viewer d'image du BottomSheet:
 @Composable
@@ -1375,17 +1274,16 @@ private fun ImageViewerDialog(
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
+            val painter = rememberAsyncImagePainter(url)
+            val pState = painter.state
+
             // scrim cliquable pour fermer (optionnel, mais UX top)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(0.92f)
-                    .clickable { onDismiss() }
+                    .clickable(enabled = pState !is AsyncImagePainter.State.Loading) { onDismiss() }
             )
-
-            // image interactive
-            val painter = rememberAsyncImagePainter(url)
-            val pState = painter.state
 
             // image interactive (affichée seulement si pas en erreur)
             if (pState !is AsyncImagePainter.State.Error) {

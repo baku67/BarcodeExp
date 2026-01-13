@@ -337,7 +337,7 @@ fun ScanBarCodeScreen(
                                         painter = painter,
                                         contentDescription = null,
                                         modifier = Modifier.matchParentSize(),
-                                        contentScale = ContentScale.Crop
+                                        contentScale = ContentScale.Fit
                                     )
 
                                     if (state is AsyncImagePainter.State.Loading) {
