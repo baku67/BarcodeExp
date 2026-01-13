@@ -1,5 +1,8 @@
 package com.example.barcode.addItems
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -7,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -20,11 +24,14 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
+import com.example.barcode.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,10 +81,14 @@ fun DetailsStepScreen(
 
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Transparent,
+                                0.7f to Color.Black.copy(alpha = 0.25f),
+                                1f to Color.Black.copy(alpha = 0.45f)
+                            )
+                        )
                 ) {
                     val url = draft.imageUrl
 
@@ -126,21 +137,76 @@ fun DetailsStepScreen(
                     label = { Text("Nom") },
                     modifier = Modifier.fillMaxWidth()
                 )
+
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = brand,
-                    onValueChange = { brand = it },
-                    label = { Text("Marque") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = brand,
+                        onValueChange = { brand = it },
+                        label = { Text("Marque") },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(Modifier.width(12.dp))
+
+                    val nutriRes = nutriScoreRes(draft.nutriScore)
+
+                    if (nutriRes != null) {
+                        Image(
+                            painter = painterResource(nutriRes),
+                            contentDescription = "Nutri-Score ${draft.nutriScore}",
+                            modifier = Modifier.height(22.dp)
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.nutri_score_neutre),
+                            contentDescription = "Nutri-Score indisponible",
+                            modifier = Modifier
+                                .height(22.dp)
+                                .alpha(0.35f)
+                        )
+                    }
+                }
 
                 Spacer(Modifier.height(16.dp))
-                Text("Date d’expiration : $relative${if (absolute != "—") " ($absolute)" else ""}")
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = "Expiration",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                            )
+                            Text(
+                                text = if (expiry != null) "$relative • $absolute" else "Non définie",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        FilledTonalIconButton(onClick = { showPicker = true }) {
+                            Icon(Icons.Filled.EditCalendar, contentDescription = "Modifier la date")
+                        }
+                    }
+                }
 
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { showPicker = true }) {
-                    Text(if (expiry == null) "Choisir une date" else "Modifier la date")
-                }
 
                 if (showPicker) {
                     val initial = expiry ?: System.currentTimeMillis()
@@ -159,22 +225,6 @@ fun DetailsStepScreen(
                         DatePicker(state = state, showModeToggle = false)
                     }
                 }
-
-                Spacer(Modifier.height(24.dp))
-                Text(
-                    "Récapitulatif",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(6.dp))
-
-                Text("Nom : ${name.ifBlank { draft.name ?: "—" }}")
-                Text("Marque : ${brand.ifBlank { draft.brand ?: "—" }}")
-                Text("Code-barres : ${draft.barcode ?: "—"}")
-                Text("Date : ${if (expiry != null) absolute else "—"}")
-
-                // (Plus de Button ici)
-                Spacer(Modifier.height(24.dp))
             }
 
             // Footer fixe : bouton confirmé
@@ -222,4 +272,14 @@ private fun formatRelativeDaysAnyDistance(targetMillis: Long): String {
         days > 1 -> "dans $days j"
         else -> "il y a ${-days} j"
     }
+}
+
+@DrawableRes
+private fun nutriScoreRes(score: String?): Int? = when (score?.trim()?.uppercase()) {
+    "A" -> R.drawable.nutri_score_a
+    "B" -> R.drawable.nutri_score_b
+    "C" -> R.drawable.nutri_score_c
+    "D" -> R.drawable.nutri_score_d
+    "E" -> R.drawable.nutri_score_e
+    else -> null
 }
