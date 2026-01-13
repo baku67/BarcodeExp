@@ -28,8 +28,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -75,6 +77,7 @@ import kotlinx.coroutines.launch
 import com.example.barcode.OpenFoodFacts.OpenFoodFactsStore
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -297,124 +300,113 @@ fun ScanBarCodeScreen(
                             .fillMaxWidth()
                             .wrapContentHeight()
                             .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        elevation = CardDefaults.cardElevation(8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE0E0E0)) // fond gris clair
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f)
+                        ),
+                        elevation = CardDefaults.cardElevation(4.dp)
                     ) {
-
-                        /* --- Bloc haut : image + infos --- */
+                        // --- Bloc haut : image + infos (mêmes spacing que ScanDlc) ---
                         Row(
                             modifier = Modifier
-                                .padding(16.dp)
+                                .padding(12.dp)
                                 .fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-
-                            // Image produit
                             if (productInfo!!.imageUrl.isNotEmpty()) {
                                 AsyncImage(
                                     model = productInfo!!.imageUrl,
                                     contentDescription = null,
                                     modifier = Modifier
-                                        .size(110.dp)
-                                        .clip(RoundedCornerShape(16.dp))      // mêmes coins que la carte
+                                        .size(56.dp)
+                                        .clip(RoundedCornerShape(12.dp))
                                 )
+                                Spacer(Modifier.width(12.dp))
                             }
 
-                            Spacer(Modifier.width(16.dp))
-
-                            /* Texte (colonne) */
-                            Column(
-                                modifier = Modifier.weight(1f)               // prend toute la place dispo
-                            ) {
+                            Column(Modifier.weight(1f)) {
                                 Text(
                                     text = productInfo!!.name,
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                                    fontWeight = FontWeight.SemiBold
                                 )
-                                Text(
-                                    text = productInfo!!.brand,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = scannedCode,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                                if (productInfo!!.brand.isNotEmpty()) {
+                                    Text(
+                                        text = productInfo!!.brand,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
+                                    )
+                                }
 
-                                /* Badge Nutri-Score (optionnel) */
-                                val nutriColor = when (productInfo!!.nutriScore.uppercase()) {
-                                    "A" -> Color(0xFF2E7D32)
-                                    "B" -> Color(0xFF7CB342)
-                                    "C" -> Color(0xFFFDD835)
-                                    "D" -> Color(0xFFF4511E)
-                                    "E" -> Color(0xFFE53935)
-                                    else -> Color.Gray
-                                }
-                                if (productInfo!!.nutriScore.isNotEmpty()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(start = 8.dp)
-                                            .background(nutriColor, RoundedCornerShape(6.dp))
-                                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                                    ) {
-                                        Text(
-                                            text = productInfo!!.nutriScore.uppercase(),
-                                            style = MaterialTheme.typography.labelLarge.copy(
-                                                fontWeight = FontWeight.Bold
-                                            ),
-                                            color = Color.White
-                                        )
-                                    }
-                                }
+                                // nutriscore (Si on le met, adapter avec nutrisocre dans BottomSheet ItemsContent)
+/*                                if (productInfo!!.nutriScore.isNotEmpty()) {
+                                    Text(
+                                        text = "Nutri-Score : ${productInfo!!.nutriScore.uppercase()}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
+                                    )
+                                }*/
                             }
-
-
                         }
 
-                        Divider(thickness = 1.dp, color = Color.Black.copy(alpha = .15f))
+                        // Petite séparation légère (plus soft que ton Divider noir)
+                        Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
 
-                        /* --- Bloc 2 boutons --- */
+                        // --- Bloc boutons : on garde tes actions, mais coins alignés sur 16dp ---
                         Row(
                             modifier = Modifier
-                                .height(56.dp)
+                                .height(52.dp)
                                 .fillMaxWidth()
                         ) {
-                            /* Bouton Re-try */
                             Button(
                                 onClick = {
                                     lastScanned = ""
                                     scannedCode = ""
                                     productInfo = null
-                                    scanLocked = false   // on rouvre la détection
+                                    scanLocked = false
                                 },
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight(),
+                                shape = RoundedCornerShape(bottomStart = 16.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(
-                                        0xFFD32F2F
-                                    )
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
-                                shape = RoundedCornerShape(bottomStart = 24.dp)   // coin bas-gauche arrondi
+                                border = ButtonDefaults.outlinedButtonBorder.copy(
+                                    brush = androidx.compose.ui.graphics.SolidColor(
+                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)
+                                    )
+                                )
                             ) {
-                                Text("Re-try")
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Re-try", fontWeight = FontWeight.SemiBold)
                             }
 
-                            /* Bouton Valider */
+
                             Button(
                                 onClick = { productInfo?.let { p -> onValidated?.invoke(p, scannedCode) } },
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = primary
-                                ),
-                                shape = RoundedCornerShape(bottomEnd = 24.dp)      // coin bas-droit arrondi
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                shape = RoundedCornerShape(bottomEnd = 16.dp)
                             ) {
-                                Text("Valider")
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Valider", fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
+
                 }
             }
         }
