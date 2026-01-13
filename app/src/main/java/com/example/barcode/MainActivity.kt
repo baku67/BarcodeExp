@@ -258,7 +258,8 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onBack = { navController.popBackStack() },
                                         onCancel = { close(addVm) },
-                                        onCycleImage = { addVm.cycleNextImage() }
+                                        onCycleImage = { addVm.cycleNextImage() },
+                                        onNutriScoreChange = { addVm.setNutriScore(it)}
                                     )
                                 }
 

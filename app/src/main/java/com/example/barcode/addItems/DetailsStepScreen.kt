@@ -30,6 +30,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import coil.compose.AsyncImage
 import com.example.barcode.R
 
@@ -41,7 +44,8 @@ fun DetailsStepScreen(
     onBack: () -> Unit,
     onCancel: () -> Unit,
     // Nécessaire pour le choix entres les 4 images candidates
-    onCycleImage: () -> Unit
+    onCycleImage: () -> Unit,
+    onNutriScoreChange: (String?) -> Unit
 ) {
     var name by remember { mutableStateOf(draft.name.orEmpty()) }
     var brand by remember { mutableStateOf(draft.brand.orEmpty()) }
@@ -51,6 +55,9 @@ fun DetailsStepScreen(
     val relative = remember(expiry) { expiry?.let { formatRelativeDaysAnyDistance(it) } ?: "—" }
     val absolute = remember(expiry) { expiry?.let { formatAbsoluteDate(it) } ?: "—" }
     val scrollState = rememberScrollState()
+
+    var showNutriPicker by remember { mutableStateOf(false) }
+
 
     AddItemStepScaffold(
         step = 3,
@@ -151,25 +158,45 @@ fun DetailsStepScreen(
                         modifier = Modifier.weight(1f)
                     )
 
-                    Spacer(Modifier.width(12.dp))
+                    Spacer(Modifier.width(20.dp))
 
-                    val nutriRes = nutriScoreRes(draft.nutriScore)
+                    // --- Nutri-Score (zone dédiée + clic) ---
+                    Box(
+                        modifier = Modifier
+                            .width(84.dp)          // ✅ plus d'espace
+                            .height(56.dp)         // ✅ même "hauteur visuelle" que le champ
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                            .clickable { showNutriPicker = true }, // ✅ ouvre le picker
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val nutriRes = nutriScoreRes(draft.nutriScore)
 
-                    if (nutriRes != null) {
-                        Image(
-                            painter = painterResource(nutriRes),
-                            contentDescription = "Nutri-Score ${draft.nutriScore}",
-                            modifier = Modifier.height(22.dp)
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(R.drawable.nutri_score_neutre),
-                            contentDescription = "Nutri-Score indisponible",
-                            modifier = Modifier
-                                .height(22.dp)
-                                .alpha(0.35f)
-                        )
+                        if (nutriRes != null) {
+                            Image(
+                                painter = painterResource(nutriRes),
+                                contentDescription = "Nutri-Score ${draft.nutriScore ?: "neutre"}",
+                                modifier = Modifier.height(24.dp)
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(R.drawable.nutri_score_neutre),
+                                contentDescription = "Nutri-Score neutre",
+                                modifier = Modifier.height(24.dp).alpha(0.35f)
+                            )
+                        }
                     }
+                }
+
+                if (showNutriPicker) {
+                    NutriScorePickerDialog(
+                        current = draft.nutriScore,
+                        onSelect = {
+                            onNutriScoreChange(it)   // ✅ persiste dans le VM
+                            showNutriPicker = false
+                        },
+                        onDismiss = { showNutriPicker = false }
+                    )
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -194,9 +221,23 @@ fun DetailsStepScreen(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                             )
+
+                            val relColor = expiryRelativeColor(expiry)
+
                             Text(
-                                text = if (expiry != null) "$relative • $absolute" else "Non définie",
-                                fontWeight = FontWeight.SemiBold
+                                text = buildAnnotatedString {
+                                    if (expiry == null) {
+                                        append("Non définie")
+                                    } else {
+                                        withStyle(SpanStyle(color = relColor, fontWeight = FontWeight.SemiBold)) {
+                                            append(relative) // ✅ seulement la partie “aujourd’hui / demain / dans X j”
+                                        }
+                                        append(" • ")
+                                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f))) {
+                                            append(absolute)
+                                        }
+                                    }
+                                }
                             )
                         }
 
@@ -247,7 +288,90 @@ fun DetailsStepScreen(
 
 
 
+
+
+@Composable
+private fun NutriScorePickerDialog(
+    current: String?,
+    onSelect: (String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nutri-Score") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val options: List<String?> = listOf("A","B","C","D","E", null)
+
+                options.forEach { opt ->
+                    val label = opt ?: "Neutre"
+                    val isSelected = (opt?.uppercase() == current?.uppercase()) || (opt == null && current == null)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                                else Color.Transparent
+                            )
+                            .clickable { onSelect(opt) }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val res = nutriScoreRes(opt)
+
+                        if (res != null) {
+                            Image(
+                                painter = painterResource(res),
+                                contentDescription = null,
+                                modifier = Modifier.height(20.dp)
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(R.drawable.nutri_score_neutre),
+                                contentDescription = null,
+                                modifier = Modifier.height(20.dp).alpha(0.35f)
+                            )
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        Text(
+                            text = label,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Fermer") }
+        }
+    )
+}
+
+
+
+
+
+
+
+
 // ——— Utils ——————————————————————————————————————————————————————————————
+
+@Composable
+private fun expiryRelativeColor(expiry: Long?): Color {
+    val cs = MaterialTheme.colorScheme
+    if (expiry == null) return cs.onSurface.copy(alpha = 0.55f)
+
+    return when {
+        expiry < System.currentTimeMillis() -> cs.error                    // expiré
+        expiry <= System.currentTimeMillis() + 24 * 60 * 60 * 1000 -> Color(0xFFFFC107) // aujourd'hui/demain -> warning
+        else -> cs.primary                                                // plus tard
+    }
+}
+
 
 private fun utcMillisToLocalMidnight(utcMillis: Long): Long {
     val localDate = Instant.ofEpochMilli(utcMillis).atZone(ZoneId.systemDefault()).toLocalDate()
