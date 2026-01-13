@@ -13,18 +13,27 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -39,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -272,12 +282,14 @@ private fun ScanDlcContent(
 ) {
     Box(modifier = modifier) {
 
+        // ✅ CAMERA toujours visible
         AndroidView(
             factory = { c -> PreviewView(c).also { onPreviewViewChange(it) } },
             modifier = Modifier.fillMaxSize(),
             onRelease = { onPreviewViewChange(null) }
         )
 
+        // ✅ Erreur caméra au-dessus
         cameraError?.let { msg ->
             Card(
                 modifier = Modifier
@@ -293,93 +305,123 @@ private fun ScanDlcContent(
             }
         }
 
-        // 🧊 Card produit (étape 1) + date détectée
-        if (productName != null || productBrand != null || productImageUrl != null) {
-            Card(
+        // ✅ CARD toujours affichée (en bas)
+        Card(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .navigationBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f)
+            ),
+            elevation = CardDefaults.cardElevation(4.dp)
+        ) {
+
+            // --- Bloc infos produit + date (date placeholder si pas détectée) ---
+            Row(
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(12.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
-                elevation = CardDefaults.cardElevation(4.dp)
+                    .padding(12.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (!productImageUrl.isNullOrBlank()) {
-                        Image(
-                            painter = rememberAsyncImagePainter(productImageUrl),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Crop
+                if (!productImageUrl.isNullOrBlank()) {
+                    Image(
+                        painter = rememberAsyncImagePainter(productImageUrl),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
+
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = productName ?: "(sans nom)",
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    if (!productBrand.isNullOrBlank()) {
+                        Text(
+                            text = productBrand,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
                         )
-                        Spacer(Modifier.width(12.dp))
                     }
-                    Column(Modifier.weight(1f)) {
-                        Text(productName ?: "(sans nom)", fontWeight = FontWeight.SemiBold)
-                        if (!productBrand.isNullOrBlank()) {
-                            Text(productBrand, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
-                        }
-                        if (detectedDate.isNotBlank()) {
-                            Text(
-                                "DLUO/DLC : $detectedDate",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
+
+                    Spacer(Modifier.height(4.dp))
+
+                    val hasDate = detectedDateMs != null && detectedDate.isNotBlank()
+                    Text(
+                        text = if (hasDate) "Date détectée : $detectedDate" else "Date détectée : en attente…",
+                        color = if (hasDate) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                        },
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Divider(
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+            )
+
+            // --- Boutons (gros blocs) ---
+            Row(
+                modifier = Modifier
+                    .height(52.dp)
+                    .fillMaxWidth()
+            ) {
+                Button(
+                    onClick = onRetry,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    shape = RoundedCornerShape(bottomStart = 16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    border = ButtonDefaults.outlinedButtonBorder.copy(
+                        brush = SolidColor(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Re-try", fontWeight = FontWeight.SemiBold)
+                }
+
+                Button(
+                    onClick = onValidate,
+                    enabled = detectedDateMs != null, // ✅ important
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    shape = RoundedCornerShape(bottomEnd = 16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Valider", fontWeight = FontWeight.SemiBold)
                 }
             }
         }
-
-        // Bandeau de la date brute détectée (toujours visible)
-        Text(
-            text = detectedDate,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .background(Color.Black)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            color = Color.White,
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        // Actions bas d’écran (Retry / Valider)
-        if (detectedDateMs == null) {
-            // Bandeau uniquement quand pas encore validable
-            if (detectedDate.isNotBlank()) {
-                Text(
-                    text = detectedDate,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .background(Color.Black.copy(alpha = 0.85f))
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-        } else {
-            BottomAppBar(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-            ) {
-                OutlinedButton(onClick = onRetry, modifier = Modifier.padding(8.dp)) { Text("Réessayer") }
-
-                Spacer(Modifier.width(12.dp))
-
-                Text(
-                    text = "DLC : $detectedDate",
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1
-                )
-
-                Button(onClick = onValidate, modifier = Modifier.padding(8.dp)) { Text("Valider") }
-            }
-        }
     }
+
 }
