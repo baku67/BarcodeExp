@@ -1,5 +1,6 @@
 package com.example.barcode.ui
 
+import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
@@ -647,13 +648,14 @@ private fun ProductThumb(
     ) {
         if (!imageUrl.isNullOrBlank()) {
             val painter = rememberAsyncImagePainter(imageUrl)
-            val state = painter.state
+            val state = painter.state  // ✅ Lecture simple (se met à jour à chaque recompo)
 
-            // TODO: image générique corresppondant au type générique si null
+            Log. d("ProductThumb", "URL: $imageUrl | State: $state")
+
             Image(
                 painter = painter,
                 contentDescription = null,
-                modifier = Modifier.matchParentSize(),
+                modifier = Modifier. matchParentSize(),
                 contentScale = ContentScale.Fit
             )
 
@@ -671,13 +673,17 @@ private fun ProductThumb(
                     )
                 }
                 is AsyncImagePainter.State.Error -> {
-                    // ✅ fallback si KO
-                    Text("🧴", fontSize = 20.sp) // TODO: type générique si null
+                    Log.e("ProductThumb", "❌ Erreur chargement:  $imageUrl",
+                        (state as AsyncImagePainter. State.Error).result.throwable)
+                    Text("🧴", fontSize = 20.sp)
+                }
+                is AsyncImagePainter.State.Success -> {
+                    Log.d("ProductThumb", "✅ Image chargée:  $imageUrl")
                 }
                 else -> Unit
             }
         } else {
-            Text("🧴", fontSize = 20.sp) // TODO: type générique si null
+            Text("🧴", fontSize = 20.sp)
         }
     }
 }

@@ -231,7 +231,7 @@ fun ScanBarCodeScreen(
                 )
 
                 // Btn toggle Flash overlay
-                FloatingActionButton(
+/*                FloatingActionButton(
                     onClick = {
                         boundCamera?.cameraControl?.enableTorch(!torchOn)
                         torchOn = !torchOn
@@ -247,7 +247,7 @@ fun ScanBarCodeScreen(
                         imageVector = if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
                         contentDescription = if (torchOn) "Flash ON" else "Flash OFF"
                     )
-                }
+                }*/
 
 
                 /* ---------- État « pas de données » (todo: composant dédié, props icon ou Lottie) ---------- */

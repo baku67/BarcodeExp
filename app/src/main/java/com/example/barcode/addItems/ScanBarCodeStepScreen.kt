@@ -21,6 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.barcode.OpenFoodFacts.ProductInfo
 import com.example.barcode.R
 import com.example.barcode.ui.ScanBarCodeScreen
@@ -64,6 +67,22 @@ fun ScanBarCodeStepScreen(
 
     // ❌ Permission KO -> page dédiée centrée + branding en haut (sans navigation)
     val permanentlyDenied = activity?.isPermanentlyDenied(Manifest.permission.CAMERA) == true
+
+    // Lorsqu'on revient depuis settings du phone, on actualise l'état permission
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                cameraGranted = context.hasPermission(Manifest.permission.CAMERA)
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
 
