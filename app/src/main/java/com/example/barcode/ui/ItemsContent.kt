@@ -54,6 +54,9 @@ import java.time.*
 import java.time.temporal.ChronoUnit
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -691,6 +694,74 @@ private fun ProductThumb(
 
 
 
+
+
+
+// ---- ÉTAGÈRE selon index row (5 styles fixes)
+enum class ShelfView { TOP, BOTTOM }
+
+enum class ShelfPreset { TOP1, TOP2, MID, BOTTOM1, BOTTOM2 }
+
+data class ShelfSpec(
+    val height: Dp,
+    val insetTop: Dp,
+    val lipHeight: Dp,
+    val view: ShelfView,
+    val lipAlpha: Float = 1f
+)
+
+fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
+
+    ShelfPreset.TOP1 -> ShelfSpec(
+        height = 12.dp,
+        insetTop = 16.dp,
+        lipHeight = 1.dp,
+        view = ShelfView.TOP,
+        lipAlpha = 0.65f
+    )
+
+    ShelfPreset.TOP2 -> ShelfSpec(
+        height = 6.dp,
+        insetTop = 16.dp,
+        lipHeight = 1.dp,
+        view = ShelfView.TOP,
+        lipAlpha = 0.55f
+    )
+
+    ShelfPreset.MID -> ShelfSpec(
+        height = 2.dp,
+        insetTop = 26.dp,
+        lipHeight = 2.dp,
+        view = ShelfView.TOP,
+        lipAlpha = 0.60f
+    )
+
+
+    ShelfPreset.BOTTOM1 -> ShelfSpec(
+        height = 6.dp,
+        insetTop = 16.dp,
+        lipHeight = 1.dp,
+        view = ShelfView.BOTTOM,
+        lipAlpha = 0.80f
+    )
+
+    ShelfPreset.BOTTOM2 -> ShelfSpec(
+        height = 12.dp,
+        insetTop = 16.dp,
+        lipHeight = 1.dp,
+        view = ShelfView.BOTTOM,
+        lipAlpha = 0.90f
+    )
+
+
+
+
+
+
+
+
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ShelfRow(
@@ -743,12 +814,24 @@ fun ShelfRow(
             }
         }
 
-        // ---- SVG D’ÉTAGÈRE selon index row
+        // ---- ÉTAGÈRE (5 styles fixes)
+        val preset = when (index) {
+            0 -> ShelfPreset.TOP1
+            1 -> ShelfPreset.TOP2
+            2 -> ShelfPreset.MID
+            3 -> ShelfPreset.BOTTOM1
+            4 -> ShelfPreset.BOTTOM2
+            else -> ShelfPreset.BOTTOM2
+        }
+        val spec = shelfSpec(preset)
+
         ShelfTrapezoid(
             modifier = Modifier.padding(horizontal = 8.dp),
-            height = 10.dp,
-            insetTop = 22.dp,
-            lipHeight = 2.dp
+            height = spec.height,
+            insetTop = spec.insetTop,
+            lipHeight = spec.lipHeight,
+            view = spec.view,
+            lipAlpha = spec.lipAlpha
         )
     }
 }
@@ -759,8 +842,10 @@ fun ShelfRow(
 fun ShelfTrapezoid(
     modifier: Modifier = Modifier,
     height: Dp = 10.dp,
-    insetTop: Dp = 18.dp,     // combien le bord du haut est “rentré”
-    lipHeight: Dp = 2.dp      // petite lèvre devant
+    insetTop: Dp = 18.dp,
+    lipHeight: Dp = 2.dp,
+    view: ShelfView = ShelfView.TOP,
+    lipAlpha: Float = 1f
 ) {
     val shelfColor = MaterialTheme.colorScheme.surfaceVariant
     val edgeColor = MaterialTheme.colorScheme.primary
@@ -776,34 +861,43 @@ fun ShelfTrapezoid(
         val inset = insetTop.toPx().coerceAtMost(w / 3f)
         val lip = lipHeight.toPx().coerceAtMost(h)
 
-        // Trapèze : haut plus court, bas plein
-        val path = androidx.compose.ui.graphics.Path().apply {
-            moveTo(inset, 0f)          // haut gauche
-            lineTo(w - inset, 0f)      // haut droite
-            lineTo(w, h - lip)         // bas droite
-            lineTo(0f, h - lip)        // bas gauche
+        // Path “TOP” vs “BOTTOM”
+        val path = Path().apply {
+            if (view == ShelfView.BOTTOM) {
+                // haut court / bas long
+                moveTo(inset, 0f)
+                lineTo(w - inset, 0f)
+                lineTo(w, h - lip)
+                lineTo(0f, h - lip)
+            } else {
+                // haut long / bas court
+                moveTo(0f, 0f)
+                lineTo(w, 0f)
+                lineTo(w - inset, h - lip)
+                lineTo(inset, h - lip)
+            }
             close()
         }
 
-        // Remplissage étagère
+        // Remplissage
         drawPath(path, color = shelfColor)
 
-        // Petite lèvre en bas (donne l'effet 3D)
-        drawRect(
-            color = edgeColor,
-            topLeft = androidx.compose.ui.geometry.Offset(0f, h - lip),
-            size = androidx.compose.ui.geometry.Size(w, lip)
-        )
+        // Lèvre : bas en TOP, haut en BOTTOM
+        val lipY = if (view == ShelfView.BOTTOM) (h - lip) else 0f
 
-        // Ligne fine en haut de l'etagere
-/*        drawLine(
-            color = edgeColor,
-            start = androidx.compose.ui.geometry.Offset(inset, 0f),
-            end = androidx.compose.ui.geometry.Offset(w - inset, 0f),
-            strokeWidth = 0.5.dp.toPx()
-        )*/
+        drawRect(
+            color = edgeColor.copy(alpha = lipAlpha),
+            topLeft = Offset(0f, lipY),
+            size = Size(w, lip)
+        )
     }
 }
+
+
+
+
+
+
 
 /* ——— Utils ——— */
 
