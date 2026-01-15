@@ -632,7 +632,8 @@ private fun ItemCard(
 @Composable
 private fun ProductThumb(
     imageUrl: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    alignBottom: Boolean = false
 ) {
     val shape = RoundedCornerShape(12.dp)
 
@@ -640,7 +641,7 @@ private fun ProductThumb(
         modifier = modifier
             .size(56.dp)
             .clip(shape),
-        contentAlignment = Alignment.Center
+        contentAlignment = if (alignBottom) Alignment.BottomCenter else Alignment.Center
     ) {
         if (!imageUrl.isNullOrBlank()) {
             val painter = rememberAsyncImagePainter(imageUrl)
@@ -648,12 +649,26 @@ private fun ProductThumb(
 
             Log. d("ProductThumb", "URL: $imageUrl | State: $state")
 
-            Image(
-                painter = painter,
-                contentDescription = null,
-                modifier = Modifier. matchParentSize(),
-                contentScale = ContentScale.Fit
-            )
+            if (alignBottom) {
+                // ✅ boîte de placement : l'image est alignée en bas
+                Box(Modifier.matchParentSize(), contentAlignment = Alignment.BottomCenter) {
+                    Image(
+                        painter = painter,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()          // ✅ largeur max
+                            .wrapContentHeight(),     // ✅ hauteur = hauteur réelle calculée
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            } else {
+                Image(
+                    painter = painter,
+                    contentDescription = null,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
 
             when (state) {
                 is AsyncImagePainter.State.Loading -> {
@@ -799,24 +814,31 @@ fun ShelfRow(
             items.forEach { item ->
                 val isSelected = selectionMode && selectedIds.contains(item.id)
 
-                ProductThumb(
-                    imageUrl = item.imageUrl,
-                    modifier = Modifier
-                        .combinedClickable(
-                            onClick = { onClickItem(item) },
-                            onLongClick = { onLongPressItem(item) }
-                        )
-                        .border(
-                            width = if (isSelected) 2.dp else 0.dp,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .background(
-                            color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .clip(RoundedCornerShape(12.dp))
-                )
+                Box(
+                    modifier = Modifier.size(productSize),
+                    contentAlignment = Alignment.BottomCenter // ✅ bottom align pour TOUS
+                ) {
+                    ProductThumb(
+                        imageUrl = item.imageUrl,
+                        alignBottom = true,
+                        modifier = Modifier
+                            .fillMaxSize() // ou .size(productSize) si tu préfères
+                            .combinedClickable(
+                                onClick = { onClickItem(item) },
+                                onLongClick = { onLongPressItem(item) }
+                            )
+                            .border(
+                                width = if (isSelected) 2.dp else 0.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .background(
+                                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                }
             }
 
             repeat(5 - items.size) { Spacer(Modifier.size(productSize)) }
