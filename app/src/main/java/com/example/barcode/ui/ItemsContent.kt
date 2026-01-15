@@ -715,40 +715,40 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
     ShelfPreset.TOP1 -> ShelfSpec(
         height = 12.dp,
         insetTop = 16.dp,
-        lipHeight = 1.dp,
+        lipHeight = 2.dp,
         view = ShelfView.TOP,
-        lipAlpha = 0.65f
+        lipAlpha = 0.90f
     )
 
     ShelfPreset.TOP2 -> ShelfSpec(
-        height = 6.dp,
+        height = 7.dp,
         insetTop = 16.dp,
-        lipHeight = 1.dp,
+        lipHeight = 2.dp,
         view = ShelfView.TOP,
-        lipAlpha = 0.55f
+        lipAlpha = 0.90f
     )
 
     ShelfPreset.MID -> ShelfSpec(
         height = 2.dp,
         insetTop = 26.dp,
-        lipHeight = 2.dp,
+        lipHeight = 3.dp,
         view = ShelfView.TOP,
-        lipAlpha = 0.60f
+        lipAlpha = 0.90f
     )
 
 
     ShelfPreset.BOTTOM1 -> ShelfSpec(
         height = 6.dp,
         insetTop = 16.dp,
-        lipHeight = 1.dp,
+        lipHeight = 2.dp,
         view = ShelfView.BOTTOM,
-        lipAlpha = 0.80f
+        lipAlpha = 0.90f
     )
 
     ShelfPreset.BOTTOM2 -> ShelfSpec(
         height = 12.dp,
         insetTop = 16.dp,
-        lipHeight = 1.dp,
+        lipHeight = 2.dp,
         view = ShelfView.BOTTOM,
         lipAlpha = 0.90f
     )
@@ -845,7 +845,9 @@ fun ShelfTrapezoid(
     insetTop: Dp = 18.dp,
     lipHeight: Dp = 2.dp,
     view: ShelfView = ShelfView.TOP,
-    lipAlpha: Float = 1f
+    lipAlpha: Float = 1f,
+    sideStrokeAlpha: Float = 0.28f,   // ✅ alpha des côtés
+    sideStrokeWidth: Dp = 1.dp        // ✅ épaisseur des côtés
 ) {
     val shelfColor = MaterialTheme.colorScheme.surfaceVariant
     val edgeColor = MaterialTheme.colorScheme.primary
@@ -860,31 +862,56 @@ fun ShelfTrapezoid(
 
         val inset = insetTop.toPx().coerceAtMost(w / 3f)
         val lip = lipHeight.toPx().coerceAtMost(h)
+        val sw = sideStrokeWidth.toPx()
 
-        // Path “TOP” vs “BOTTOM”
+        // ✅ Coordonnées des 4 coins du trapèze (hors lèvre)
+        val topLeft: Offset
+        val topRight: Offset
+        val bottomLeft: Offset
+        val bottomRight: Offset
+
+        if (view == ShelfView.BOTTOM) {
+            // BOTTOM : haut court / bas long
+            topLeft = Offset(inset, 0f)
+            topRight = Offset(w - inset, 0f)
+            bottomLeft = Offset(0f, h - lip)
+            bottomRight = Offset(w, h - lip)
+        } else {
+            // TOP : haut long / bas court
+            topLeft = Offset(0f, 0f)
+            topRight = Offset(w, 0f)
+            bottomLeft = Offset(inset, h - lip)
+            bottomRight = Offset(w - inset, h - lip)
+        }
+
         val path = Path().apply {
-            if (view == ShelfView.BOTTOM) {
-                // haut court / bas long
-                moveTo(inset, 0f)
-                lineTo(w - inset, 0f)
-                lineTo(w, h - lip)
-                lineTo(0f, h - lip)
-            } else {
-                // haut long / bas court
-                moveTo(0f, 0f)
-                lineTo(w, 0f)
-                lineTo(w - inset, h - lip)
-                lineTo(inset, h - lip)
-            }
+            moveTo(topLeft.x, topLeft.y)
+            lineTo(topRight.x, topRight.y)
+            lineTo(bottomRight.x, bottomRight.y)
+            lineTo(bottomLeft.x, bottomLeft.y)
             close()
         }
 
         // Remplissage
         drawPath(path, color = shelfColor)
 
-        // Lèvre : bas en TOP, haut en BOTTOM
-        val lipY = if (view == ShelfView.BOTTOM) (h - lip) else 0f
+        // ✅ Bords latéraux (gauche + droite)
+        val sideColor = edgeColor.copy(alpha = sideStrokeAlpha)
+        drawLine(
+            color = sideColor,
+            start = topLeft,
+            end = bottomLeft,
+            strokeWidth = sw
+        )
+        drawLine(
+            color = sideColor,
+            start = topRight,
+            end = bottomRight,
+            strokeWidth = sw
+        )
 
+        // Lèvre : haut en TOP, bas en BOTTOM
+        val lipY = if (view == ShelfView.BOTTOM) (h - lip) else 0f
         drawRect(
             color = edgeColor.copy(alpha = lipAlpha),
             topLeft = Offset(0f, lipY),
@@ -892,6 +919,7 @@ fun ShelfTrapezoid(
         )
     }
 }
+
 
 
 
