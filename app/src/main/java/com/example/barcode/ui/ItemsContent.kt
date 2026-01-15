@@ -762,20 +762,24 @@ private fun ProductThumb(
                 // position icône dans le coin haut-gauche de l'image affichée
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopStart) // ✅ FORCE l’icône en haut-gauche (ignore le BottomCenter)
+                        .align(Alignment.TopStart)
                         .offset(
-                            x = (dx / androidx.compose.ui.platform.LocalDensity.current.density).dp + 2.dp,
-                            y = (dy / androidx.compose.ui.platform.LocalDensity.current.density).dp + 2.dp
+                            x = (dx / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp,
+                            y = (dy / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp
                         )
-                        .size(10.dp)
+                        .size(14.dp) // ✅ un peu plus grand qu’avant pour une bulle lisible
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(cornerIconTint),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = cornerIcon,
                         contentDescription = null,
-                        tint = cornerIconTint,
-                        modifier = Modifier.fillMaxSize()
+                        tint = Color.White,
+                        modifier = Modifier.size(9.dp) // ✅ icône plus petite dans la bulle
                     )
                 }
+
 
             }
 
