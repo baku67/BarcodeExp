@@ -80,8 +80,8 @@ fun AppContentWithBars(
                 HeaderBar(
                     title = topBarState.title,
                     subtitle = topBarState.subtitle,
-                    icon = topBarState.icon, // ✅
-                    onIconClick = { onTabClick("home") },
+                    icon = topBarState.icon,
+                    titleTrailing = topBarState.titleTrailing,                 // ✅ NEW
                     actions = { topBarState.actions?.invoke(this) ?: Unit }
                 )
             },

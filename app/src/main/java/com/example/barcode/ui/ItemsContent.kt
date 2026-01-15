@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.FactCheck
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material3.*
@@ -283,28 +284,24 @@ fun ItemsContent(
     val owner = "items"
 
     DisposableEffect(owner, selectedViewMode) {
-        topBarState.setActions(owner) {
-            // ✅ pas de collectAsState ici, on utilise la valeur déjà calculée dans la page
+        topBarState.setTitleTrailing(owner) {
             IconButton(
                 onClick = { showHelp = true },
                 modifier = Modifier.size(28.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        .clip(CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "?",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+
+                    Icon(
+                        imageVector = Icons.Outlined.HelpOutline,
+                        contentDescription = "Help",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                     )
-                }
+
             }
 
+        }
+
+        topBarState.setActions(owner) {
             FridgeDisplayIconToggle(
                 selected = selectedViewMode, // ✅ maintenant ça bouge car l’effet se relance sur change
                 onSelect = { authVm.onFridgeDisplaySelected(it) }

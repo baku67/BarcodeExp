@@ -17,6 +17,18 @@ class HeaderBarState {
     var ownerKey by mutableStateOf<String?>(null)
     var actions by mutableStateOf<(@Composable RowScope.() -> Unit)?>(null)
 
+    // slot près du titre (ex: Help)
+    var titleTrailing by mutableStateOf<(@Composable () -> Unit)?>(null)
+
+    fun setTitleTrailing(owner: String, block: @Composable () -> Unit) {
+        ownerKey = owner
+        titleTrailing = block
+    }
+
+    fun clearTitleTrailing(owner: String) {
+        if (ownerKey == owner) titleTrailing = null
+    }
+
     fun setActions(owner: String, block: @Composable RowScope.() -> Unit) {
         ownerKey = owner
         actions = block
@@ -26,12 +38,14 @@ class HeaderBarState {
         if (ownerKey == owner) {
             ownerKey = null
             actions = null
+            titleTrailing = null // ✅
         }
     }
 
     fun clearAll() {
         ownerKey = null
         actions = null
+        titleTrailing = null // ✅
     }
 }
 
