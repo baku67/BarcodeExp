@@ -777,7 +777,7 @@ private fun ProductThumb(
                             colorStops = arrayOf(
                                 0f to Color.Transparent,
                                 0.3f to Color.Transparent,
-                                1f to cornerIconTint.copy(alpha = 0.8f) // ajuste alpha ici
+                                1f to cornerIconTint.copy(alpha = 1f) // ajuste alpha ici
                             ),
                             startY = top,
                             endY = bottom
