@@ -34,10 +34,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barcode.addItems.AddItemChooseScreen
 import com.example.barcode.addItems.ItemAddMode
-import com.example.barcode.addItems.ManualType
 import com.example.barcode.addItems.manual.ManualDetailsStepScreen
 import com.example.barcode.addItems.manual.ManualExpiryStepScreen
 import com.example.barcode.addItems.manual.ManualSubtypeStepScreen
+import com.example.barcode.addItems.manual.ManualType
 import com.example.barcode.addItems.manual.ManualTypeStepScreen
 import com.example.barcode.auth.*
 import com.example.barcode.auth.ui.RegisterScreen

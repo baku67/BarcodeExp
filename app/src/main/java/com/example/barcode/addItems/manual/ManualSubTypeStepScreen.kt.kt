@@ -10,8 +10,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barcode.addItems.AddItemDraft
 import com.example.barcode.addItems.AddItemStepScaffold
-import com.example.barcode.addItems.ManualSubType
-import com.example.barcode.addItems.ManualType
 import com.example.barcode.addItems.subtypes
 
 @Composable

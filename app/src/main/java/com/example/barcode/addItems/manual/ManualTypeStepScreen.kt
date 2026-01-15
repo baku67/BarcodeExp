@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barcode.addItems.AddItemStepScaffold
-import com.example.barcode.addItems.ManualType
 
 
 

@@ -3,6 +3,8 @@ package com.example.barcode.addItems
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.barcode.addItems.manual.ManualSubType
+import com.example.barcode.addItems.manual.ManualType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
