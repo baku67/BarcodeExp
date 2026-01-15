@@ -677,7 +677,7 @@ private fun ProductThumb(
     cornerIconTint: Color? = null,
     cornerIcon: ImageVector? = null,
 ) {
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(3.dp)
 
     var boxW by remember { mutableStateOf(0f) }
     var boxH by remember { mutableStateOf(0f) }
@@ -687,7 +687,6 @@ private fun ProductThumb(
     Box(
         modifier = modifier
             .size(56.dp)
-            .clip(shape)
             .onSizeChanged {
                 boxW = it.width.toFloat()
                 boxH = it.height.toFloat()
@@ -708,7 +707,8 @@ private fun ProductThumb(
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxWidth()          // ✅ largeur max
-                            .wrapContentHeight(),     // ✅ hauteur = hauteur réelle calculée
+                            .wrapContentHeight()     // ✅ hauteur = hauteur réelle calculée
+                            .clip(shape),
                         contentScale = ContentScale.Fit
                     )
                 }
@@ -716,7 +716,9 @@ private fun ProductThumb(
                 Image(
                     painter = painter,
                     contentDescription = null,
-                    modifier = Modifier.matchParentSize(),
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(shape),
                     contentScale = ContentScale.Fit
                 )
             }
@@ -979,7 +981,6 @@ fun ShelfRow(
                                 color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
                                 shape = RoundedCornerShape(12.dp)
                             )
-                            .clip(RoundedCornerShape(12.dp))
                     )
                 }
             }
