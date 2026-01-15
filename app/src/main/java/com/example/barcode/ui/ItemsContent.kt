@@ -425,11 +425,12 @@ fun ItemsContent(
                             // ✅ Si désancré : bac DANS le scroll (à la fin)
                             if (!selectionMode && !vegDrawerPinned) {
                                 item {
-                                    VegetableDrawer(
+                                    VegetableDrawerCube3D(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 6.dp),
                                         height = vegDrawerHeight,
+                                        depth = 16.dp
                                     )
                                 }
                             }
@@ -525,11 +526,12 @@ fun ItemsContent(
 
                     // ✅ Bac à légumes FIXE uniquement en DESIGN
                     if (showPinnedVegDrawer) {
-                        VegetableDrawer(
+                        VegetableDrawerCube3D(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 6.dp),
                             height = vegDrawerHeight,
+                            depth = 16.dp
                         )
                         Spacer(Modifier.height(10.dp))
                     }
@@ -1531,62 +1533,157 @@ private fun ImageViewerDialog(
 
 
 
-
 @Composable
-fun VegetableDrawer(
+fun VegetableDrawerCube3D(
     modifier: Modifier = Modifier,
     height: Dp = 92.dp,
-    lipHeight: Dp = 10.dp,
-    corner: Dp = 16.dp,
+    depth: Dp = 16.dp,                 // profondeur du "toit"
+    corner: Dp = 14.dp,                // arrondi bas uniquement (face avant)
     contentPadding: PaddingValues = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
     content: @Composable BoxScope.() -> Unit = {}
 ) {
-    val binColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.90f)
-    val lipColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-    val outline = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+    val cs = MaterialTheme.colorScheme
+
+    val faceColor = androidx.compose.ui.graphics.lerp(
+        cs.primary,
+        cs.surface,
+        0.76f // plus proche de surface => plus neutre
+    )
+    val stroke = cs.primary.copy(alpha = 0.75f)
+
+    // ✅ dessus plus clair que la face avant
+    val top = androidx.compose.ui.graphics.lerp(faceColor, cs.surface, 0.25f).copy(alpha = 0.85f)
+    val front = Color.Transparent // garde comme toi (seulement border). Mets faceColor.copy(alpha=...) si tu veux un fill.
 
     Box(
-        modifier = modifier
-            .height(height)
-            .clip(RoundedCornerShape(corner))
+        modifier = modifier.height(height)
     ) {
-        // Fond + lèvre (dessin)
         Canvas(Modifier.matchParentSize()) {
             val w = size.width
             val h = size.height
 
-            val lipH = lipHeight.toPx()
-            val cornerPx = corner.toPx()
+            val d = depth.toPx().coerceIn(8f, h * 0.35f)
+            val sw = 1.2.dp.toPx()
 
-            // ✅ Fond principal
-            drawRoundRect(
-                color = binColor,
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerPx, cornerPx)
+            // --- Face avant : commence sous le toit
+            val frontTop = d
+            val frontRectTopLeft = Offset(0f, frontTop)
+            val frontRectSize = Size(w, h - frontTop)
+
+            // --- Arrondi UNIQUEMENT en bas
+            val rWanted = corner.toPx()
+            val rb = rWanted
+                .coerceAtMost(frontRectSize.height / 2f)
+                .coerceAtMost(frontRectSize.width / 2f)
+
+            // --- Toit (parallélogramme)
+            val a = Offset(0f, frontTop)     // avant-gauche
+            val b = Offset(w, frontTop)      // avant-droit
+            val c = Offset(w - d, 0f)        // arrière-droit
+            val dPt = Offset(d, 0f)          // arrière-gauche
+
+            val topPath = Path().apply {
+                moveTo(a.x, a.y)
+                lineTo(b.x, b.y)
+                lineTo(c.x, c.y)
+                lineTo(dPt.x, dPt.y)
+                close()
+            }
+
+            // --- Path face avant : haut carré, bas arrondi
+            val x0 = frontRectTopLeft.x
+            val y0 = frontRectTopLeft.y
+            val x1 = x0 + frontRectSize.width
+            val y1 = y0 + frontRectSize.height
+
+            val frontPath = Path().apply {
+                // haut (carré)
+                moveTo(x0, y0)
+                lineTo(x1, y0)
+
+                // côté droit jusqu'au début de l'arrondi bas droit
+                lineTo(x1, y1 - rb)
+
+                // arc bas droit (du côté droit vers le bas)
+                arcTo(
+                    rect = androidx.compose.ui.geometry.Rect(
+                        left = x1 - 2 * rb,
+                        top = y1 - 2 * rb,
+                        right = x1,
+                        bottom = y1
+                    ),
+                    startAngleDegrees = 0f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false
+                )
+
+                // bas jusqu'à bas gauche (avant arc)
+                lineTo(x0 + rb, y1)
+
+                // arc bas gauche (du bas vers le côté gauche)
+                arcTo(
+                    rect = androidx.compose.ui.geometry.Rect(
+                        left = x0,
+                        top = y1 - 2 * rb,
+                        right = x0 + 2 * rb,
+                        bottom = y1
+                    ),
+                    startAngleDegrees = 90f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false
+                )
+
+                // remonte côté gauche (carré en haut)
+                lineTo(x0, y0)
+                close()
+            }
+
+            // ====== FILL ======
+            drawPath(topPath, color = top)
+
+            // Face avant (fill optionnel)
+            if (front.alpha > 0f) {
+                drawPath(frontPath, color = front)
+            }
+
+            // ====== STROKES ======
+            // contour toit
+            drawPath(
+                topPath,
+                color = stroke,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = sw)
             )
 
-            // ✅ Lèvre en haut (bande)
-            drawRect(
-                color = lipColor,
-                topLeft = androidx.compose.ui.geometry.Offset(0f, 0f),
-                size = androidx.compose.ui.geometry.Size(w, lipH)
+            // arêtes principales (sans côtés)
+            drawLine(stroke, start = dPt, end = c, strokeWidth = sw) // arrière top
+            drawLine(stroke, start = dPt, end = a, strokeWidth = sw) // diagonale gauche
+            drawLine(stroke, start = c, end = b, strokeWidth = sw)   // diagonale droite
+
+            // contour face avant (haut carré, bas arrondi)
+            drawPath(
+                path = frontPath,
+                color = stroke,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = sw)
             )
 
-            // ✅ Ligne fine sous la lèvre (donne du relief)
+            // petite ligne de relief sous le toit (optionnel)
             drawLine(
-                color = outline,
-                start = androidx.compose.ui.geometry.Offset(10f, lipH + 1f),
-                end = androidx.compose.ui.geometry.Offset(w - 10f, lipH + 1f),
-                strokeWidth = 1.2f
+                color = stroke.copy(alpha = 0.35f),
+                start = Offset(10f, frontTop + 1f),
+                end = Offset(w - 10f, frontTop + 1f),
+                strokeWidth = 1f
             )
         }
 
-        // Contenu au-dessus (tes produits “légumes”)
+        // Contenu au-dessus (on évite le toit)
         Box(
             modifier = Modifier
                 .matchParentSize()
+                .padding(top = depth)
                 .padding(contentPadding)
         ) {
             content()
         }
     }
 }
+
