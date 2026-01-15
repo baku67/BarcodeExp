@@ -65,6 +65,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import coil.compose.AsyncImagePainter
 import com.example.barcode.R
 import com.example.barcode.auth.AuthViewModel
@@ -715,7 +716,7 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
     ShelfPreset.TOP1 -> ShelfSpec(
         height = 16.dp,
         insetTop = 16.dp,
-        lipHeight = 2.dp,
+        lipHeight = 1.dp,
         view = ShelfView.TOP,
         lipAlpha = 0.90f
     )
@@ -723,7 +724,7 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
     ShelfPreset.TOP2 -> ShelfSpec(
         height = 11.dp,
         insetTop = 16.dp,
-        lipHeight = 2.dp,
+        lipHeight = 1.dp,
         view = ShelfView.TOP,
         lipAlpha = 0.90f
     )
@@ -731,7 +732,7 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
     ShelfPreset.MID -> ShelfSpec(
         height = 2.dp,
         insetTop = 26.dp,
-        lipHeight = 3.dp,
+        lipHeight = 2.dp,
         view = ShelfView.TOP,
         lipAlpha = 0.90f
     )
@@ -740,7 +741,7 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
     ShelfPreset.BOTTOM1 -> ShelfSpec(
         height = 10.dp,
         insetTop = 16.dp,
-        lipHeight = 2.dp,
+        lipHeight = 1.dp,
         view = ShelfView.BOTTOM,
         lipAlpha = 0.90f
     )
@@ -748,19 +749,12 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
     ShelfPreset.BOTTOM2 -> ShelfSpec(
         height = 16.dp,
         insetTop = 16.dp,
-        lipHeight = 2.dp,
+        lipHeight = 1.dp,
         view = ShelfView.BOTTOM,
         lipAlpha = 0.90f
     )
-
-
-
-
-
-
-
-
 }
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -772,16 +766,39 @@ fun ShelfRow(
     onClickItem: (com.example.barcode.data.Item) -> Unit,
     onLongPressItem: (com.example.barcode.data.Item) -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
+    val preset = when (index) {
+        0 -> ShelfPreset.TOP1
+        1 -> ShelfPreset.TOP2
+        2 -> ShelfPreset.MID
+        3 -> ShelfPreset.BOTTOM1
+        else -> ShelfPreset.BOTTOM2
+    }
+    val spec = shelfSpec(preset)
 
-        // ---- PRODUITS POSÉS SUR L’ÉTAGÈRE
+    val productDrop = when (preset) {
+        ShelfPreset.TOP1 -> 9.dp
+        ShelfPreset.TOP2 -> 5.dp
+        ShelfPreset.MID -> 2.dp
+        ShelfPreset.BOTTOM1 -> 5.dp
+        ShelfPreset.BOTTOM2 -> 9.dp
+    }
+
+    // Hauteur de la rangée = produits + étagère (le drop ne change pas la hauteur)
+    val productSize = 56.dp
+    val rowHeight = productSize + spec.height
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(rowHeight)
+    ) {
+        // 1) Produits (EN DESSOUS)
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp),
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 12.dp)
+                .offset(y = productDrop)
+                .zIndex(0f),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom
         ) {
@@ -808,25 +825,16 @@ fun ShelfRow(
                 )
             }
 
-            // placeholders pour garder l’alignement
-            repeat(5 - items.size) {
-                Spacer(Modifier.size(56.dp))
-            }
+            repeat(5 - items.size) { Spacer(Modifier.size(productSize)) }
         }
 
-        // ---- ÉTAGÈRE (5 styles fixes)
-        val preset = when (index) {
-            0 -> ShelfPreset.TOP1
-            1 -> ShelfPreset.TOP2
-            2 -> ShelfPreset.MID
-            3 -> ShelfPreset.BOTTOM1
-            4 -> ShelfPreset.BOTTOM2
-            else -> ShelfPreset.BOTTOM2
-        }
-        val spec = shelfSpec(preset)
-
+        // 2) Étagère (AU-DESSUS)
         ShelfTrapezoid(
-            modifier = Modifier.padding(horizontal = 8.dp),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .zIndex(1f), // ✅ au-dessus
             height = spec.height,
             insetTop = spec.insetTop,
             lipHeight = spec.lipHeight,
@@ -834,11 +842,13 @@ fun ShelfRow(
             lipAlpha = spec.lipAlpha
         )
     }
+
 }
 
 
 
-@Composable
+
+        @Composable
 fun ShelfTrapezoid(
     modifier: Modifier = Modifier,
     height: Dp = 10.dp,
