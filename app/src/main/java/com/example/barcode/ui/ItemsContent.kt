@@ -862,13 +862,29 @@ fun ShelfRow(
                         .size(productSize)
                         .drawBehind {
                             if (glowColor != null) {
-                                val radius = size.minDimension * 0.75f
+                                val radius = size.minDimension * 0.85f
 
+                                // --- couche 1 : glow fort (noyau)
                                 drawCircle(
                                     brush = Brush.radialGradient(
                                         colors = listOf(
-                                            glowColor.copy(alpha = 0.45f),
-                                            glowColor.copy(alpha = 0.25f),
+                                            glowColor.copy(alpha = 0.65f),
+                                            glowColor.copy(alpha = 0.35f),
+                                            Color.Transparent
+                                        ),
+                                        center = center,
+                                        radius = radius * 0.65f
+                                    ),
+                                    radius = radius * 0.65f,
+                                    center = center
+                                )
+
+                                // --- couche 2 : diffusion large
+                                drawCircle(
+                                    brush = Brush.radialGradient(
+                                        colors = listOf(
+                                            glowColor.copy(alpha = 0.35f),
+                                            glowColor.copy(alpha = 0.18f),
                                             Color.Transparent
                                         ),
                                         center = center,
