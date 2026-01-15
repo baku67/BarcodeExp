@@ -761,6 +761,30 @@ private fun ProductThumb(
                 val dx = (boxW - dw) / 2f
                 val dy = if (alignBottom) (boxH - dh) else (boxH - dh) / 2f
 
+
+
+                // ✅ overlay dégradé : color (bas) -> transparent (haut), limité à la zone FIT
+                Canvas(Modifier.matchParentSize()) {
+                    val left = dx
+                    val top = dy
+                    val right = dx + dw
+                    val bottom = dy + dh
+
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0f to Color.Transparent,
+                                0.3f to Color.Transparent,
+                                1f to cornerIconTint.copy(alpha = 75f) // ajuste alpha ici
+                            ),
+                            startY = top,
+                            endY = bottom
+                        ),
+                        topLeft = Offset(left, top),
+                        size = Size(dw, dh)
+                    )
+                }
+
                 // position icône dans le coin haut-gauche de l'image affichée
                 Box(
                     modifier = Modifier
@@ -781,6 +805,7 @@ private fun ProductThumb(
                         modifier = Modifier.size(9.dp) // ✅ icône plus petite dans la bulle
                     )
                 }
+
 
 
             }
