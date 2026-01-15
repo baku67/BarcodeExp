@@ -792,13 +792,15 @@ fun ShelfRow(
             .fillMaxWidth()
             .height(rowHeight)
     ) {
-        // 1) Produits (EN DESSOUS)
+        val productsOnTop = (spec.view == ShelfView.BOTTOM)
+
+        // --- Produits
         Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(horizontal = 12.dp)
                 .offset(y = productDrop)
-                .zIndex(0f),
+                .zIndex(if (productsOnTop) 1f else 0f),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom
         ) {
@@ -828,13 +830,13 @@ fun ShelfRow(
             repeat(5 - items.size) { Spacer(Modifier.size(productSize)) }
         }
 
-        // 2) Étagère (AU-DESSUS)
+        // --- Étagère
         ShelfTrapezoid(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
-                .zIndex(1f), // ✅ au-dessus
+                .zIndex(if (productsOnTop) 0f else 1f),
             height = spec.height,
             insetTop = spec.insetTop,
             lipHeight = spec.lipHeight,
