@@ -713,7 +713,7 @@ data class ShelfSpec(
 fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
 
     ShelfPreset.TOP1 -> ShelfSpec(
-        height = 12.dp,
+        height = 16.dp,
         insetTop = 16.dp,
         lipHeight = 2.dp,
         view = ShelfView.TOP,
@@ -721,7 +721,7 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
     )
 
     ShelfPreset.TOP2 -> ShelfSpec(
-        height = 7.dp,
+        height = 11.dp,
         insetTop = 16.dp,
         lipHeight = 2.dp,
         view = ShelfView.TOP,
@@ -738,7 +738,7 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
 
 
     ShelfPreset.BOTTOM1 -> ShelfSpec(
-        height = 6.dp,
+        height = 10.dp,
         insetTop = 16.dp,
         lipHeight = 2.dp,
         view = ShelfView.BOTTOM,
@@ -746,7 +746,7 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
     )
 
     ShelfPreset.BOTTOM2 -> ShelfSpec(
-        height = 12.dp,
+        height = 16.dp,
         insetTop = 16.dp,
         lipHeight = 2.dp,
         view = ShelfView.BOTTOM,
