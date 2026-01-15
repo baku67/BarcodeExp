@@ -395,6 +395,19 @@ fun ItemsContent(
                             contentPadding = PaddingValues(bottom = footerHeight)
                         ) {
                             itemsIndexed(shelves) { index, shelfItems ->
+
+                                // ✅ espace supplémentaire AVANT certaines rangées
+                                val extraTop = when (index) {
+                                    1 -> 5.dp  // avant TOP2
+                                    2 -> 10.dp  // avant MID
+                                    3 -> 10.dp  // avant BOTTOM1
+                                    4 -> 10.dp  // avant BOTTOM2
+                                    else -> 0.dp
+                                }
+                                if (extraTop > 0.dp) {
+                                    Spacer(Modifier.height(extraTop))
+                                }
+
                                 ShelfRow(
                                     index = index,
                                     items = shelfItems,

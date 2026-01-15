@@ -49,7 +49,7 @@ fun HeaderBar(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 22.sp,
+                        fontSize = 24.sp,
                         color = MaterialTheme.colorScheme.primary
                     ),
                     maxLines = 1
