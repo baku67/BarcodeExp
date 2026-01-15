@@ -849,7 +849,14 @@ fun ShelfTrapezoid(
     sideStrokeAlpha: Float = 0.28f,   // ✅ alpha des côtés
     sideStrokeWidth: Dp = 1.dp        // ✅ épaisseur des côtés
 ) {
-    val shelfColor = MaterialTheme.colorScheme.surfaceVariant
+    val cs = MaterialTheme.colorScheme
+
+    // ✅ Primary très sombre (mélange avec surface pour rester cohérent thème clair/sombre)
+    val shelfColor = androidx.compose.ui.graphics.lerp(
+        cs.primary,
+        cs.surface,
+        0.76f // ↑ plus proche de surface => plus sombre / plus neutre
+    )
     val edgeColor = MaterialTheme.colorScheme.primary
 
     Canvas(
