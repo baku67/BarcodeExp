@@ -919,29 +919,31 @@ fun ShelfRow(
                         .size(productSize)
                         .drawBehind {
                             if (glowColor != null) {
-                                val radius = size.minDimension * 0.85f
+                                val radius = size.minDimension * 0.7f
 
                                 // --- couche 1 : glow fort (noyau)
                                 drawCircle(
                                     brush = Brush.radialGradient(
                                         colors = listOf(
-                                            glowColor.copy(alpha = 0.65f),
-                                            glowColor.copy(alpha = 0.35f),
+                                            glowColor.copy(alpha = 0.88f),   // ↑
+                                            glowColor.copy(alpha = 0.52f),   // ↑
+                                            glowColor.copy(alpha = 0.12f),   // léger résiduel (évite un cut trop net)
                                             Color.Transparent
                                         ),
                                         center = center,
-                                        radius = radius * 0.65f
+                                        radius = radius * 0.7f
                                     ),
-                                    radius = radius * 0.65f,
+                                    radius = radius * 0.7f,
                                     center = center
                                 )
 
-                                // --- couche 2 : diffusion large
+// --- couche 2 : diffusion large
                                 drawCircle(
                                     brush = Brush.radialGradient(
                                         colors = listOf(
-                                            glowColor.copy(alpha = 0.35f),
-                                            glowColor.copy(alpha = 0.18f),
+                                            glowColor.copy(alpha = 0.55f),   // ↑
+                                            glowColor.copy(alpha = 0.30f),   // ↑
+                                            glowColor.copy(alpha = 0.10f),   // léger résiduel
                                             Color.Transparent
                                         ),
                                         center = center,
