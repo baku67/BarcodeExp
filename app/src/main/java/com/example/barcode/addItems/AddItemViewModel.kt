@@ -21,6 +21,7 @@ class AddItemViewModel(
         }
     }
 
+    // *** Propriétés ajout manuel
     fun setBarcode(code: String) = _draft.update { it.copy(barcode = code) }
     fun setDetails(name: String?, brand: String?) = _draft.update { it.copy(name = name, brand = brand) }
     fun setExpiryDate(ts: Long?) = _draft.update { it.copy(expiryDate = ts) }
@@ -29,6 +30,22 @@ class AddItemViewModel(
     fun setNutritionImage(url: String?) = _draft.update { it.copy(imageNutritionUrl = url) }
     fun setNutriScore(v: String?) = _draft.update { it.copy(nutriScore = v) }
     fun setAddMode(mode: ItemAddMode) = _draft.update { it.copy(addMode = mode) }
+
+    // *** Propriétés ajout manuel
+    fun setManualType(type: ManualType) {
+        _draft.update {
+            // Important: si on change le type, on reset le subtype (sinon incohérent)
+            it.copy(manualType = type, manualSubtype = null)
+        }
+    }
+    fun setManualSubtype(subtype: ManualSubType) {
+        _draft.update { d ->
+            // Garde-fou : subtype doit correspondre au type
+            val type = d.manualType
+            if (type != null && subtype.parentType != type) d
+            else d.copy(manualSubtype = subtype)
+        }
+    }
 
     fun reset() { _draft.value = AddItemDraft() }
 

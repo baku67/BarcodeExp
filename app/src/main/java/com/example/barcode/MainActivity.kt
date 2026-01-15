@@ -34,6 +34,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barcode.addItems.AddItemChooseScreen
 import com.example.barcode.addItems.ItemAddMode
+import com.example.barcode.addItems.ManualType
+import com.example.barcode.addItems.manual.ManualDetailsStepScreen
+import com.example.barcode.addItems.manual.ManualExpiryStepScreen
+import com.example.barcode.addItems.manual.ManualSubtypeStepScreen
+import com.example.barcode.addItems.manual.ManualTypeStepScreen
 import com.example.barcode.auth.*
 import com.example.barcode.auth.ui.RegisterScreen
 import com.example.barcode.ui.MainTabsScreen
@@ -175,13 +180,15 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onPickManual = {
                                             addVm.setAddMode(ItemAddMode.MANUAL)
-                                            navController.navigate("addItem/manual")
+                                            navController.navigate("addItem/manual/type")
                                         },
                                         onCancel = { close(addVm) }
                                     )
                                 }
 
-                                // ✅ 1) Scan barcode
+
+
+                                // ✅ 1) Scan - barcode
                                 composable("addItem/scan/barcode") { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
                                         navController.getBackStackEntry("addItem")
@@ -203,7 +210,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-                                // ✅ 2) Scan DLC
+                                // ✅ 2) Scan - DLC
                                 composable("addItem/scan/expiry") { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
                                         navController.getBackStackEntry("addItem")
@@ -224,7 +231,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-                                // ✅ 3) Confirm (ex-details)
+                                // ✅ 3) Scan - Confirm (ex-details)
                                 composable("addItem/scan/confirm") { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
                                         navController.getBackStackEntry("addItem")
@@ -263,24 +270,142 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-                                // ✅ placeholder manuel (le temps de faire le vrai flow)
-                                composable("addItem/manual") { backStackEntry ->
+
+
+                                // ✅ Manuel - Étape 1 : type
+                                composable("addItem/manual/type") { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
                                         navController.getBackStackEntry("addItem")
                                     }
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
 
-                                    Column(
-                                        modifier = Modifier.fillMaxSize().padding(18.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Text("Ajout manuel", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                                        Text("À venir : sélection type (légume/viande/restes), détails, date optionnelle…")
-                                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                            OutlinedButton(onClick = { navController.popBackStack() }) { Text("Retour") }
-                                            Button(onClick = { close(addVm) }) { Text("Annuler") }
-                                        }
+                                    ManualTypeStepScreen(
+                                        onPick = { type ->
+                                            addVm.setManualType(type)
+
+                                            when (type) {
+
+                                                ManualType.LEFTOVERS -> navController.navigate("addItem/manual/leftovers/details") // TODO
+
+                                                ManualType.VEGETABLES,
+                                                ManualType.MEAT,
+                                                ManualType.DAIRY
+                                                    -> navController.navigate("addItem/manual/subtype")
+
+                                                else -> navController.navigate("addItem/manual/details")
+                                            }
+                                        },
+                                        onCancel = { close(addVm) },
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+
+                                // ✅ Manuel - Étape 1.1 : subtype (vegetables, viande, laitiers)
+                                composable("addItem/manual/subtype") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addItem")
                                     }
+                                    val addVm: AddItemViewModel = viewModel(parentEntry)
+                                    val draft by addVm.draft.collectAsState()
+
+                                    ManualSubtypeStepScreen(
+                                        draft = draft,
+                                        onPick = { sub ->
+                                            addVm.setManualSubtype(sub)
+                                            navController.navigate("addItem/manual/details")
+                                        },
+                                        onBack = { navController.popBackStack() },
+                                        onCancel = { close(addVm) }
+                                    )
+                                }
+
+/*                              TODO: Branch “Restes / Tupperware” : parcours différent
+                                Tu as demandé un parcours différent : c’est une bonne idée (sinon ça va devenir bancal avec “marque”, “nutri-score”, etc.).
+                                Option recommandée (simple & clean)
+                                Dès ManualTypeStepScreen, si type == LEFTOVERS, navigate vers un autre flow :
+                                addItem/manual/leftovers/details (nom = “Restes …”, notes, portion, date de cuisson)
+                                addItem/manual/leftovers/expiry (proposition auto J+2 / J+3)
+                                confirm*/
+
+                                // ✅ Manuel - Étape 2 : détails
+                                composable("addItem/manual/details") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addItem")
+                                    }
+                                    val addVm: AddItemViewModel = viewModel(parentEntry)
+                                    val draft by addVm.draft.collectAsState()
+
+                                    ManualDetailsStepScreen(
+                                        draft = draft,
+                                        onNext = { name, brandOrNull ->
+                                            addVm.setDetails(name, brandOrNull)
+                                            navController.navigate("addItem/manual/expiry")
+                                        },
+                                        onBack = { navController.popBackStack() },
+                                        onCancel = { close(addVm) }
+                                    )
+                                }
+
+                                // ✅ Manuel - Étape 3 : DLC optionnelle
+                                composable("addItem/manual/expiry") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addItem")
+                                    }
+                                    val addVm: AddItemViewModel = viewModel(parentEntry)
+                                    val draft by addVm.draft.collectAsState()
+
+                                    ManualExpiryStepScreen(
+                                        title = draft.name ?: "Produit",
+                                        onPickExpiry = { expiryMs ->
+                                            addVm.setExpiryDate(expiryMs)
+                                            navController.navigate("addItem/manual/confirm")
+                                        },
+                                        onSkip = {
+                                            addVm.setExpiryDate(null)
+                                            navController.navigate("addItem/manual/confirm")
+                                        },
+                                        onBack = { navController.popBackStack() },
+                                        onCancel = { close(addVm) }
+                                    )
+                                }
+
+                                // ✅ Manuel - Étape 4 : confirm (réutilise ton écran)
+                                composable("addItem/manual/confirm") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addItem")
+                                    }
+                                    val addVm: AddItemViewModel = viewModel(parentEntry)
+                                    val draft by addVm.draft.collectAsState()
+
+                                    val homeEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("tabs")
+                                    }
+                                    val itemsVm: ItemsViewModel = viewModel(homeEntry)
+
+                                    DetailsStepScreen(
+                                        draft = draft,
+                                        onConfirm = { name, brand, expiry ->
+                                            addVm.setDetails(name, brand)
+                                            addVm.setExpiryDate(expiry)
+
+                                            itemsVm.addItem(
+                                                name = (name ?: draft.name ?: "(sans nom)"),
+                                                brand = (brand ?: draft.brand ?: "(sans brand)"),
+                                                expiry = (expiry ?: draft.expiryDate),
+                                                imageUrl = draft.imageUrl, // souvent null en manuel
+                                                imageIngredientsUrl = draft.imageIngredientsUrl,
+                                                imageNutritionUrl = draft.imageNutritionUrl,
+                                                nutriScore = draft.nutriScore,
+                                                addMode = draft.addMode.value
+                                            )
+
+                                            close(addVm)
+                                        },
+                                        onBack = { navController.popBackStack() },
+                                        onCancel = { close(addVm) },
+                                        onCycleImage = { addVm.cycleNextImage() },
+                                        onNutriScoreChange = { addVm.setNutriScore(it) }
+                                    )
                                 }
                             }
                         }
