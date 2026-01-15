@@ -1532,7 +1532,6 @@ private fun ImageViewerDialog(
 
 
 
-
 @Composable
 fun VegetableDrawerCube3D(
     modifier: Modifier = Modifier,
@@ -1547,23 +1546,24 @@ fun VegetableDrawerCube3D(
     val faceColor = androidx.compose.ui.graphics.lerp(
         cs.primary,
         cs.surface,
-        0.76f // plus proche de surface => plus neutre
+        0.76f
     )
     val stroke = cs.primary.copy(alpha = 0.75f)
 
     // ✅ dessus plus clair que la face avant
-    val top = androidx.compose.ui.graphics.lerp(faceColor, cs.surface, 0.25f).copy(alpha = 0.85f)
-    val front = Color.Transparent // garde comme toi (seulement border). Mets faceColor.copy(alpha=...) si tu veux un fill.
+    val front = faceColor.copy(alpha = 0.3f)
+    val top = faceColor.copy(alpha = 0.15f)
 
-    Box(
-        modifier = modifier.height(height)
-    ) {
+    Box(modifier = modifier.height(height)) {
         Canvas(Modifier.matchParentSize()) {
             val w = size.width
             val h = size.height
 
             val d = depth.toPx().coerceIn(8f, h * 0.35f)
-            val sw = 1.2.dp.toPx()
+
+            // ✅ épaisseurs séparées
+            val frontSw = 1.4.dp.toPx()   // epaisseur rectangle face front
+            val topSw = 0.3.dp.toPx()     // épaisseur trait stroke trapeze profondeur
 
             // --- Face avant : commence sous le toit
             val frontTop = d
@@ -1597,14 +1597,11 @@ fun VegetableDrawerCube3D(
             val y1 = y0 + frontRectSize.height
 
             val frontPath = Path().apply {
-                // haut (carré)
-                moveTo(x0, y0)
+                moveTo(x0, y0)        // haut carré
                 lineTo(x1, y0)
 
-                // côté droit jusqu'au début de l'arrondi bas droit
-                lineTo(x1, y1 - rb)
+                lineTo(x1, y1 - rb)   // descente droite
 
-                // arc bas droit (du côté droit vers le bas)
                 arcTo(
                     rect = androidx.compose.ui.geometry.Rect(
                         left = x1 - 2 * rb,
@@ -1617,10 +1614,8 @@ fun VegetableDrawerCube3D(
                     forceMoveTo = false
                 )
 
-                // bas jusqu'à bas gauche (avant arc)
                 lineTo(x0 + rb, y1)
 
-                // arc bas gauche (du bas vers le côté gauche)
                 arcTo(
                     rect = androidx.compose.ui.geometry.Rect(
                         left = x0,
@@ -1633,37 +1628,33 @@ fun VegetableDrawerCube3D(
                     forceMoveTo = false
                 )
 
-                // remonte côté gauche (carré en haut)
                 lineTo(x0, y0)
                 close()
             }
 
             // ====== FILL ======
             drawPath(topPath, color = top)
-
-            // Face avant (fill optionnel)
-            if (front.alpha > 0f) {
-                drawPath(frontPath, color = front)
-            }
+            if (front.alpha > 0f) drawPath(frontPath, color = front)
 
             // ====== STROKES ======
-            // contour toit
+
+            // ✅ contour toit (plus fin)
             drawPath(
-                topPath,
+                path = topPath,
                 color = stroke,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = sw)
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = topSw)
             )
 
-            // arêtes principales (sans côtés)
-            drawLine(stroke, start = dPt, end = c, strokeWidth = sw) // arrière top
-            drawLine(stroke, start = dPt, end = a, strokeWidth = sw) // diagonale gauche
-            drawLine(stroke, start = c, end = b, strokeWidth = sw)   // diagonale droite
+            // ✅ arêtes du toit (plus fines)
+            // drawLine(stroke, start = dPt, end = c, strokeWidth = topSw) // arrière top
+            drawLine(stroke, start = dPt, end = a, strokeWidth = topSw) // diagonale gauche
+            drawLine(stroke, start = c, end = b, strokeWidth = topSw)   // diagonale droite
 
-            // contour face avant (haut carré, bas arrondi)
+            // ✅ contour face avant (plus épais)
             drawPath(
                 path = frontPath,
                 color = stroke,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = sw)
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = frontSw)
             )
 
             // petite ligne de relief sous le toit (optionnel)
@@ -1686,4 +1677,5 @@ fun VegetableDrawerCube3D(
         }
     }
 }
+
 
