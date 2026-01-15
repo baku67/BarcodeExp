@@ -23,12 +23,11 @@ fun HeaderBar(
     subtitle: String? = null,
     icon: ImageVector? = Icons.Filled.Home,
     onIconClick: () -> Unit = {},
-    actions: @Composable RowScope.() -> Unit = {} // ✅ NOUVEAU
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     TopAppBar(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp), // ✅ au lieu de 86.dp
+        modifier = Modifier.fillMaxWidth(),
+        windowInsets = TopAppBarDefaults.windowInsets, // ✅ gère status bar correctement
         navigationIcon = {
             if (icon != null) {
                 IconButton(onClick = onIconClick) {
@@ -37,24 +36,18 @@ fun HeaderBar(
             }
         },
         title = {
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .padding(start = 6.dp, bottom = 6.dp)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 22.sp, // ✅ plus compact
-                        color = MaterialTheme.colorScheme.primary
-                    )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 22.sp,
+                    color = MaterialTheme.colorScheme.primary
                 )
-            }
+            )
         },
-        actions = actions, // ✅ NOUVEAU
+        actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     )
 }
+

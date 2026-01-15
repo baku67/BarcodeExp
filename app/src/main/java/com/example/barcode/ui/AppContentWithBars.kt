@@ -40,7 +40,7 @@ fun AppContentWithBars(
     )
 
     val (title, subtitle) = when {
-        selectedRoute.startsWith("home") -> "Accueil" to "Accueil"
+        selectedRoute.startsWith("home") -> "Tableau de bord" to "Tableau de bord"
         selectedRoute.startsWith("listeCourses") -> "Courses" to "Courses"
         selectedRoute.startsWith("items") -> "Frigo" to "Produits"
         selectedRoute.startsWith("recipes") -> "Recettes" to "Recettes"
