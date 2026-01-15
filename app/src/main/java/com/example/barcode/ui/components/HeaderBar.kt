@@ -60,10 +60,15 @@ fun HeaderBar(
                     Spacer(Modifier.width(8.dp))
                     titleTrailing()
                 }
+
+                Spacer(Modifier.weight(1f)) // ✅ pousse le reste, évite l’effet collé
             }
         },
 
-        actions = actions,
+        actions = {
+            actions()
+            Spacer(Modifier.width(10.dp)) // ✅ marge droite
+        },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
