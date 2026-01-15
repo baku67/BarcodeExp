@@ -10,6 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import com.example.barcode.ui.components.HeaderBar
@@ -19,6 +20,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
 import com.example.barcode.R
 import com.example.barcode.interfaces.AppIcon
+import com.example.barcode.ui.components.HeaderBarState
+import com.example.barcode.ui.components.LocalAppTopBarState
 import com.example.barcode.ui.components.SnackbarBus
 
 @Composable
@@ -37,11 +40,11 @@ fun AppContentWithBars(
     )
 
     val (title, subtitle) = when {
-        selectedRoute.startsWith("home") -> "FrigoZen" to "Accueil"
-        selectedRoute.startsWith("listeCourses") -> "FrigoZen" to "Courses"
-        selectedRoute.startsWith("items") -> "FrigoZen" to "Produits"
-        selectedRoute.startsWith("recipes") -> "FrigoZen" to "Recettes"
-        selectedRoute.startsWith("settings") -> "FrigoZen" to "Réglages"
+        selectedRoute.startsWith("home") -> "Accueil" to "Accueil"
+        selectedRoute.startsWith("listeCourses") -> "Courses" to "Courses"
+        selectedRoute.startsWith("items") -> "Frigo" to "Produits"
+        selectedRoute.startsWith("recipes") -> "Recettes" to "Recettes"
+        selectedRoute.startsWith("settings") -> "Réglages" to "Réglages"
         else -> "FrigoZen" to null
     }
 
@@ -52,28 +55,33 @@ fun AppContentWithBars(
         }
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            HeaderBar(
-                title = title,
-                onIconClick = {
-                    // logo cliqué => retour Home
-                    onTabClick("home")
-                }
-            )
-        },
-        bottomBar = {
-            // ✅ ici, on ne navigate PAS: on laisse le pager gérer
-            NavBar(
-                navController = navController,
-                items = items,
-                activeRoute = selectedRoute,
-                onItemClick = { item -> onTabClick(item.route) }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
-        content(innerPadding, snackbarHostState)
+    val topBarState = remember { HeaderBarState() }
+
+    topBarState.title = title
+    topBarState.subtitle = subtitle
+
+    CompositionLocalProvider(LocalAppTopBarState provides topBarState) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                HeaderBar(
+                    title = topBarState.title,
+                    subtitle = topBarState.subtitle,
+                    onIconClick = { onTabClick("home") },
+                    actions = { topBarState.actions?.invoke(this) ?: Unit }
+                )
+            },
+            bottomBar = {
+                NavBar(
+                    navController = navController,
+                    items = items,
+                    activeRoute = selectedRoute,
+                    onItemClick = { item -> onTabClick(item.route) }
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) }
+        ) { innerPadding ->
+            content(innerPadding, snackbarHostState)
+        }
     }
 }

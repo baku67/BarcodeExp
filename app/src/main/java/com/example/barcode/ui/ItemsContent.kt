@@ -69,6 +69,7 @@ import androidx.compose.ui.zIndex
 import coil.compose.AsyncImagePainter
 import com.example.barcode.R
 import com.example.barcode.auth.AuthViewModel
+import com.example.barcode.ui.components.LocalAppTopBarState
 import com.example.barcode.ui.components.SnackbarBus
 import com.example.barcode.user.FrigoLayout
 import com.example.barcode.user.UserPreferences
@@ -89,7 +90,6 @@ fun ItemsContent(
     isActive: Boolean,
 ) {
     val list by vm.items.collectAsState(initial = emptyList())
-    var viewMode by rememberSaveable { mutableStateOf(ViewMode.List) }
 
     // --- Session (comme RecipesContent)
     val appContext = LocalContext.current.applicationContext
@@ -239,6 +239,8 @@ fun ItemsContent(
         selectedIds = emptySet()
     }
 
+    val topBarState = LocalAppTopBarState.current
+
 
     var showHelp by rememberSaveable { mutableStateOf(false) }
     // Modal d'aide onClick sur "?" à coté du titre page
@@ -275,6 +277,42 @@ fun ItemsContent(
                 }
             }
         }
+    }
+
+    DisposableEffect(Unit) {
+        topBarState.actions = {
+            val prefs by authVm.preferences.collectAsState(initial = UserPreferences())
+            val selected =
+                if (prefs.frigoLayout == FrigoLayout.DESIGN) ViewMode.Fridge else ViewMode.List
+
+            // bouton help (ouvre TON Dialog existant via showHelp)
+            IconButton(
+                onClick = { showHelp = true },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        .clip(CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "?",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            FridgeDisplayIconToggle(
+                selected = selected,
+                onSelect = { mode -> authVm.onFridgeDisplaySelected(mode) }
+            )
+        }
+
+        onDispose { topBarState.clearActions() }
     }
 
 
@@ -321,48 +359,6 @@ fun ItemsContent(
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Frigo",
-                        fontSize = 22.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Spacer(Modifier.width(6.dp))
-
-                    IconButton(
-                        onClick = { showHelp = true },
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(22.dp)
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                                .clip(CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "?",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.weight(1f))
-
-                    FridgeDisplayIconToggle(
-                        selected = selectedViewMode,
-                        onSelect = { vm -> authVm.onFridgeDisplaySelected(vm) }
-                    )
-                }
-
-                Spacer(Modifier.height(12.dp))
 
                 when (selectedViewMode) {
                     ViewMode.List -> {
