@@ -31,6 +31,7 @@ fun AppContentWithBars(
     onTabClick: (String) -> Unit,
     content: @Composable (PaddingValues, snackbarHostState: SnackbarHostState) -> Unit
 ) {
+    // Icones du NavBar
     val items = listOf(
         NavBarItem(label = "Accueil", route = "home", icon = AppIcon.Vector(Icons.Filled.Home)),
         NavBarItem(label = "Courses", route = "listeCourses", icon = AppIcon.Vector(Icons.Filled.ReceiptLong)),
@@ -39,6 +40,7 @@ fun AppContentWithBars(
         NavBarItem(label = "Paramètres", route = "settings", icon = AppIcon.Vector(Icons.Filled.Settings))
     )
 
+    // Titre et subtitle du HeaderBar
     val (title, subtitle) = when {
         selectedRoute.startsWith("home") -> "Tableau de bord" to "Tableau de bord"
         selectedRoute.startsWith("listeCourses") -> "Courses" to "Courses"
@@ -46,6 +48,16 @@ fun AppContentWithBars(
         selectedRoute.startsWith("recipes") -> "Recettes" to "Recettes"
         selectedRoute.startsWith("settings") -> "Réglages" to "Réglages"
         else -> "FrigoZen" to null
+    }
+
+    // Icones du HeaderBar (commentées)
+    val iconForRoute: AppIcon? = when {
+        selectedRoute.startsWith("home") -> AppIcon.Vector(Icons.Filled.Home)
+        selectedRoute.startsWith("listeCourses") -> AppIcon.Vector(Icons.Filled.ReceiptLong)
+        selectedRoute.startsWith("items") -> AppIcon.Drawable(R.drawable.ic_nav_fridge_icon_thicc)
+        selectedRoute.startsWith("recipes") -> AppIcon.Vector(Icons.Filled.RestaurantMenu)
+        selectedRoute.startsWith("settings") -> AppIcon.Vector(Icons.Filled.Settings)
+        else -> null
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -56,6 +68,7 @@ fun AppContentWithBars(
     }
 
     val topBarState = remember { HeaderBarState() }
+    topBarState.icon = iconForRoute
 
     topBarState.title = title
     topBarState.subtitle = subtitle
@@ -67,6 +80,7 @@ fun AppContentWithBars(
                 HeaderBar(
                     title = topBarState.title,
                     subtitle = topBarState.subtitle,
+                    icon = topBarState.icon, // ✅
                     onIconClick = { onTabClick("home") },
                     actions = { topBarState.actions?.invoke(this) ?: Unit }
                 )

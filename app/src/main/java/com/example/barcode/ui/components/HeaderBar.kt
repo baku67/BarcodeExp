@@ -1,40 +1,44 @@
 package com.example.barcode.ui.components
 
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.Alignment
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.barcode.interfaces.AppIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeaderBar(
     title: String,
     subtitle: String? = null,
-    icon: ImageVector? = Icons.Filled.Home,
+    icon: AppIcon? = AppIcon.Vector(Icons.Filled.Home),
     onIconClick: () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     TopAppBar(
         modifier = Modifier.fillMaxWidth(),
-        windowInsets = TopAppBarDefaults.windowInsets, // ✅ gère status bar correctement
-        navigationIcon = {
+        windowInsets = TopAppBarDefaults.windowInsets,
+/*        navigationIcon = {
             if (icon != null) {
                 IconButton(onClick = onIconClick) {
-                    Icon(imageVector = icon, contentDescription = null)
+                    when (icon) {
+                        is AppIcon.Vector -> Icon(
+                            imageVector = icon.image,
+                            contentDescription = null
+                        )
+                        is AppIcon.Drawable -> Icon(
+                            painter = painterResource(icon.resId),
+                            contentDescription = null
+                        )
+                    }
                 }
             }
-        },
+        },*/
         title = {
             Text(
                 text = title,

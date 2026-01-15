@@ -1,12 +1,17 @@
 package com.example.barcode.ui.components
 
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.runtime.*
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.example.barcode.interfaces.AppIcon
 
 class HeaderBarState {
     var title by mutableStateOf("")
     var subtitle by mutableStateOf<String?>(null)
+
+    var icon by mutableStateOf<AppIcon?>(AppIcon.Vector(Icons.Filled.Home))
 
     // slot d’actions
     var ownerKey by mutableStateOf<String?>(null)

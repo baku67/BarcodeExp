@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import coil.compose.rememberAsyncImagePainter
+import com.example.barcode.interfaces.AppIcon
 import com.example.barcode.ui.components.HeaderBar
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -118,7 +119,7 @@ fun ScanDlcScreen(
     } catch (_: Exception) { null }
 
     if (showHeader) {
-        Scaffold(topBar = { HeaderBar(title = "FrigoZen", "Scan d'une date", Icons.Filled.AddCircle) }) { inner ->
+        Scaffold(topBar = { HeaderBar(title = "FrigoZen", "Scan d'une date", AppIcon.Vector(Icons.Filled.AddCircle)) }) { inner ->
             ScanDlcContent(
                 modifier = modifier.fillMaxSize().padding(inner),
                 productName = productName,
