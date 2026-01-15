@@ -403,10 +403,6 @@ fun ItemsContent(
 
                     ViewMode.Fridge -> {
 
-                        val showPinnedVegDrawer =
-                                    !selectionMode &&
-                                    !canScroll
-
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.weight(1f),
@@ -799,7 +795,7 @@ private fun ProductThumb(
                             x = (dx / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp,
                             y = (dy / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp
                         )
-                        .size(14.dp) // ✅ un peu plus grand qu’avant pour une bulle lisible
+                        .size(15.dp) // ✅ un peu plus grand qu’avant pour une bulle lisible
                         .clip(androidx.compose.foundation.shape.CircleShape)
                         .background(cornerIconTint),
                     contentAlignment = Alignment.Center
@@ -808,7 +804,7 @@ private fun ProductThumb(
                         imageVector = cornerIcon,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(9.dp) // ✅ icône plus petite dans la bulle
+                        modifier = Modifier.size(11.dp) // ✅ icône plus petite dans la bulle
                     )
                 }
 
