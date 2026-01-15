@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -114,7 +115,6 @@ fun ItemsContent(
     var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Bac à legumes
-    var vegDrawerPinned by rememberSaveable { mutableStateOf(true) }
     val vegDrawerHeight = 88.dp // ajuste
 
     // bottom sheet au clic sur ItemCard
@@ -357,6 +357,22 @@ fun ItemsContent(
                     .padding(16.dp)
             ) {
 
+                // Pour calculer pinnage ou non du bac a legume
+                val listState = rememberLazyListState()
+                val canScroll by remember {
+                    derivedStateOf {
+                        val layout = listState.layoutInfo
+                        if (layout.visibleItemsInfo.isEmpty()) return@derivedStateOf false
+
+                        val lastVisible = layout.visibleItemsInfo.last()
+                        val viewportEnd = layout.viewportEndOffset
+
+                        // Si le dernier item dépasse le viewport → scroll possible
+                        lastVisible.offset + lastVisible.size > viewportEnd
+                    }
+                }
+
+
                 when (selectedViewMode) {
                     ViewMode.List -> {
                         LazyColumn(
@@ -386,13 +402,19 @@ fun ItemsContent(
 
                     ViewMode.Fridge -> {
 
-                        val showPinnedVegDrawer = !selectionMode && vegDrawerPinned
+                        val showPinnedVegDrawer =
+                            selectedViewMode == ViewMode.Fridge &&
+                                    !selectionMode &&
+                                    !canScroll
                         val footerHeight = if (showPinnedVegDrawer) vegDrawerHeight + 56.dp + 16.dp else 8.dp
 
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(14.dp),
-                            contentPadding = PaddingValues(bottom = footerHeight)
+                            contentPadding = PaddingValues(
+                                bottom = if (!canScroll) 8.dp else 0.dp
+                            )
                         ) {
                             itemsIndexed(shelves) { index, shelfItems ->
 
@@ -422,8 +444,8 @@ fun ItemsContent(
                                 )
                             }
 
-                            // ✅ Si désancré : bac DANS le scroll (à la fin)
-                            if (!selectionMode && !vegDrawerPinned) {
+                            // ✅ Bac DANS le scroll si la liste est longue
+                            if (canScroll && !selectionMode) {
                                 item {
                                     VegetableDrawerCube3D(
                                         modifier = Modifier
@@ -522,7 +544,10 @@ fun ItemsContent(
 
                 if (!selectionMode) {
 
-                    val showPinnedVegDrawer = (selectedViewMode == ViewMode.Fridge) && vegDrawerPinned
+                    val showPinnedVegDrawer =
+                        selectedViewMode == ViewMode.Fridge &&
+                                !selectionMode &&
+                                !canScroll   // ✅ LE POINT CLÉ
 
                     // ✅ Bac à légumes FIXE uniquement en DESIGN
                     if (showPinnedVegDrawer) {
