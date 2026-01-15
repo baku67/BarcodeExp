@@ -52,8 +52,10 @@ import java.time.*
 import java.time.temporal.ChronoUnit
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -848,9 +850,36 @@ fun ShelfRow(
             items.forEach { item ->
                 val isSelected = selectionMode && selectedIds.contains(item.id)
 
+                val glowColor = when {
+                    item.expiryDate == null -> null
+                    isExpired(item.expiryDate) -> MaterialTheme.colorScheme.tertiary
+                    isSoon(item.expiryDate) -> Color(0xFFF9A825)
+                    else -> null
+                }
+
                 Box(
-                    modifier = Modifier.size(productSize),
-                    contentAlignment = Alignment.BottomCenter // ✅ bottom align pour TOUS
+                    modifier = Modifier
+                        .size(productSize)
+                        .drawBehind {
+                            if (glowColor != null) {
+                                val radius = size.minDimension * 0.75f
+
+                                drawCircle(
+                                    brush = Brush.radialGradient(
+                                        colors = listOf(
+                                            glowColor.copy(alpha = 0.45f),
+                                            glowColor.copy(alpha = 0.25f),
+                                            Color.Transparent
+                                        ),
+                                        center = center,
+                                        radius = radius
+                                    ),
+                                    radius = radius,
+                                    center = center
+                                )
+                            }
+                        },
+                    contentAlignment = Alignment.BottomCenter
                 ) {
                     ProductThumb(
                         imageUrl = item.imageUrl,
