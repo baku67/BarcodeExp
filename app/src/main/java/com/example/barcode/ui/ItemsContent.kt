@@ -283,32 +283,33 @@ fun ItemsContent(
 
     val owner = "items"
 
-    DisposableEffect(owner, selectedViewMode) {
-        topBarState.setTitleTrailing(owner) {
-            IconButton(
-                onClick = { showHelp = true },
-                modifier = Modifier.size(28.dp)
-            ) {
-
+    LaunchedEffect(isActive, selectedViewMode) {
+        if (isActive) {
+            topBarState.setTitleTrailing(owner) {
+                IconButton(
+                    onClick = { showHelp = true },
+                    modifier = Modifier.size(28.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.HelpOutline,
                         contentDescription = "Help",
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                     )
-
+                }
             }
 
+            topBarState.setActions(owner) {
+                FridgeDisplayIconToggle(
+                    selected = selectedViewMode,
+                    onSelect = { authVm.onFridgeDisplaySelected(it) }
+                )
+            }
+        } else {
+            // ✅ important : page inactive => elle ne possède plus le header
+            topBarState.clearActions(owner)
+            topBarState.clearTitleTrailing(owner)
         }
-
-        topBarState.setActions(owner) {
-            FridgeDisplayIconToggle(
-                selected = selectedViewMode, // ✅ maintenant ça bouge car l’effet se relance sur change
-                onSelect = { authVm.onFridgeDisplaySelected(it) }
-            )
-        }
-
-        onDispose { topBarState.clearActions(owner) }
     }
 
 
