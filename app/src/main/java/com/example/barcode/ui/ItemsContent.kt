@@ -279,13 +279,12 @@ fun ItemsContent(
         }
     }
 
-    DisposableEffect(Unit) {
-        topBarState.actions = {
-            val prefs by authVm.preferences.collectAsState(initial = UserPreferences())
-            val selected =
-                if (prefs.frigoLayout == FrigoLayout.DESIGN) ViewMode.Fridge else ViewMode.List
 
-            // bouton help (ouvre TON Dialog existant via showHelp)
+    val owner = "items"
+
+    DisposableEffect(owner, selectedViewMode) {
+        topBarState.setActions(owner) {
+            // ✅ pas de collectAsState ici, on utilise la valeur déjà calculée dans la page
             IconButton(
                 onClick = { showHelp = true },
                 modifier = Modifier.size(28.dp)
@@ -307,12 +306,12 @@ fun ItemsContent(
             }
 
             FridgeDisplayIconToggle(
-                selected = selected,
-                onSelect = { mode -> authVm.onFridgeDisplaySelected(mode) }
+                selected = selectedViewMode, // ✅ maintenant ça bouge car l’effet se relance sur change
+                onSelect = { authVm.onFridgeDisplaySelected(it) }
             )
         }
 
-        onDispose { topBarState.clearActions() }
+        onDispose { topBarState.clearActions(owner) }
     }
 
 

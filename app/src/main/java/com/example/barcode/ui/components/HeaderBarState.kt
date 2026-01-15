@@ -9,9 +9,23 @@ class HeaderBarState {
     var subtitle by mutableStateOf<String?>(null)
 
     // slot d’actions
+    var ownerKey by mutableStateOf<String?>(null)
     var actions by mutableStateOf<(@Composable RowScope.() -> Unit)?>(null)
 
-    fun clearActions() {
+    fun setActions(owner: String, block: @Composable RowScope.() -> Unit) {
+        ownerKey = owner
+        actions = block
+    }
+
+    fun clearActions(owner: String) {
+        if (ownerKey == owner) {
+            ownerKey = null
+            actions = null
+        }
+    }
+
+    fun clearAll() {
+        ownerKey = null
         actions = null
     }
 }
