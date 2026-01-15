@@ -26,10 +26,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Science
+import androidx.compose.material.icons.outlined.TimerOff
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -60,6 +63,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
@@ -669,14 +673,25 @@ private fun ItemCard(
 private fun ProductThumb(
     imageUrl: String?,
     modifier: Modifier = Modifier,
-    alignBottom: Boolean = false
+    alignBottom: Boolean = false,
+    cornerIconTint: Color? = null,
+    cornerIcon: ImageVector? = null,
 ) {
     val shape = RoundedCornerShape(12.dp)
+
+    var boxW by remember { mutableStateOf(0f) }
+    var boxH by remember { mutableStateOf(0f) }
+    var imgW by remember(imageUrl) { mutableStateOf<Float?>(null) }
+    var imgH by remember(imageUrl) { mutableStateOf<Float?>(null) }
 
     Box(
         modifier = modifier
             .size(56.dp)
-            .clip(shape),
+            .clip(shape)
+            .onSizeChanged {
+                boxW = it.width.toFloat()
+                boxH = it.height.toFloat()
+            },
         contentAlignment = if (alignBottom) Alignment.BottomCenter else Alignment.Center
     ) {
         if (!imageUrl.isNullOrBlank()) {
@@ -726,9 +741,45 @@ private fun ProductThumb(
                 }
                 is AsyncImagePainter.State.Success -> {
                     Log.d("ProductThumb", "✅ Image chargée:  $imageUrl")
+                    val d = (state as AsyncImagePainter.State.Success).result.drawable
+                    val iw = d.intrinsicWidth
+                    val ih = d.intrinsicHeight
+                    imgW = iw.takeIf { it > 0 }?.toFloat()
+                    imgH = ih.takeIf { it > 0 }?.toFloat()
                 }
                 else -> Unit
             }
+
+            if (cornerIconTint != null && cornerIcon != null && imgW != null && imgH != null && boxW > 0f && boxH > 0f) {
+                // Fit: l'image affichée est centrée dans le conteneur (ou collée en bas si alignBottom)
+                val scale = minOf(boxW / imgW!!, boxH / imgH!!)
+                val dw = imgW!! * scale
+                val dh = imgH!! * scale
+
+                val dx = (boxW - dw) / 2f
+                val dy = if (alignBottom) (boxH - dh) else (boxH - dh) / 2f
+
+                // position icône dans le coin haut-gauche de l'image affichée
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart) // ✅ FORCE l’icône en haut-gauche (ignore le BottomCenter)
+                        .offset(
+                            x = (dx / androidx.compose.ui.platform.LocalDensity.current.density).dp + 2.dp,
+                            y = (dy / androidx.compose.ui.platform.LocalDensity.current.density).dp + 2.dp
+                        )
+                        .size(10.dp)
+                ) {
+                    Icon(
+                        imageVector = cornerIcon,
+                        contentDescription = null,
+                        tint = cornerIconTint,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+            }
+
+
         } else {
             Text("🧴", fontSize = 20.sp)
         }
@@ -897,9 +948,18 @@ fun ShelfRow(
                         },
                     contentAlignment = Alignment.BottomCenter
                 ) {
+                    val cornerIcon = when {
+                        item.expiryDate == null -> null
+                        isExpired(item.expiryDate) -> Icons.Filled.WarningAmber
+                        isSoon(item.expiryDate) -> Icons.Outlined.TimerOff
+                        else -> null
+                    }
+
                     ProductThumb(
                         imageUrl = item.imageUrl,
                         alignBottom = true,
+                        cornerIcon = cornerIcon,
+                        cornerIconTint = glowColor,
                         modifier = Modifier
                             .fillMaxSize() // ou .size(productSize) si tu préfères
                             .combinedClickable(
