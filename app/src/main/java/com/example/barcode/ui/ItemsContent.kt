@@ -676,6 +676,7 @@ private fun ProductThumb(
     alignBottom: Boolean = false,
     cornerIconTint: Color? = null,
     cornerIcon: ImageVector? = null,
+    onImageLoaded: (Boolean) -> Unit = {}
 ) {
     val shape = RoundedCornerShape(3.dp)
 
@@ -725,6 +726,7 @@ private fun ProductThumb(
 
             when (state) {
                 is AsyncImagePainter.State.Loading -> {
+                    onImageLoaded(false)
                     Box(
                         modifier = Modifier
                             .matchParentSize()
@@ -737,11 +739,13 @@ private fun ProductThumb(
                     )
                 }
                 is AsyncImagePainter.State.Error -> {
+                    onImageLoaded(true)
                     Log.e("ProductThumb", "❌ Erreur chargement:  $imageUrl",
                         (state as AsyncImagePainter. State.Error).result.throwable)
                     Text("🧴", fontSize = 20.sp)
                 }
                 is AsyncImagePainter.State.Success -> {
+                    onImageLoaded(true)
                     Log.d("ProductThumb", "✅ Image chargée:  $imageUrl")
                     val d = (state as AsyncImagePainter.State.Success).result.drawable
                     val iw = d.intrinsicWidth
@@ -752,7 +756,9 @@ private fun ProductThumb(
                 else -> Unit
             }
 
-            if (cornerIconTint != null && cornerIcon != null && imgW != null && imgH != null && boxW > 0f && boxH > 0f) {
+            val isImageReady = state is AsyncImagePainter.State.Success
+
+            if (isImageReady && cornerIconTint != null && cornerIcon != null && imgW != null && imgH != null && boxW > 0f && boxH > 0f) {
                 // Fit: l'image affichée est centrée dans le conteneur (ou collée en bas si alignBottom)
                 val scale = minOf(boxW / imgW!!, boxH / imgH!!)
                 val dw = imgW!! * scale
@@ -775,7 +781,7 @@ private fun ProductThumb(
                             colorStops = arrayOf(
                                 0f to Color.Transparent,
                                 0.3f to Color.Transparent,
-                                1f to cornerIconTint.copy(alpha = 75f) // ajuste alpha ici
+                                1f to cornerIconTint.copy(alpha = 0.8f) // ajuste alpha ici
                             ),
                             startY = top,
                             endY = bottom
@@ -939,11 +945,13 @@ fun ShelfRow(
                     else -> null
                 }
 
+                var imageLoaded by remember(item.imageUrl) { mutableStateOf(false) }
+
                 Box(
                     modifier = Modifier
                         .size(productSize)
                         .drawBehind {
-                            if (glowColor != null) {
+                            if (imageLoaded && glowColor != null) {
                                 val radius = size.minDimension * 0.7f
 
                                 // --- couche 1 : glow fort (noyau)
@@ -993,6 +1001,7 @@ fun ShelfRow(
                         alignBottom = true,
                         cornerIcon = cornerIcon,
                         cornerIconTint = glowColor,
+                        onImageLoaded = { imageLoaded = it },
                         modifier = Modifier
                             .fillMaxSize() // ou .size(productSize) si tu préfères
                             .combinedClickable(
