@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.AppBackground
 import com.example.barcode.common.ui.theme.Theme
+import com.example.barcode.sync.SyncScheduler
 
 
 object DeepLinkBus {
@@ -98,6 +99,20 @@ class MainActivity : ComponentActivity() {
 
                                     // ✅ 3) (optionnel) rafraîchir /me pour récupérer isVerified=true
                                     // scope.launch { repo.me(token)... }
+                                }
+                            }
+                        }
+
+                        // ✅ déclenche une sync WorkManager après login/register pour pousser les items ajoutés en mode LOCAL (PENDING_CREATE) vers le backend
+                        LaunchedEffect(Unit) {
+                            authVm.events.collect { event ->
+                                when (event) {
+                                    AuthViewModel.AuthEvent.GoHome -> {
+                                        SyncScheduler.enqueueSync(appContext) // ✅ Sync Items
+                                        navController.navigate("tabs") {
+                                            launchSingleTop = true
+                                        }
+                                    }
                                 }
                             }
                         }

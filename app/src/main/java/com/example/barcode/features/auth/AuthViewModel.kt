@@ -11,6 +11,7 @@ import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
 import com.example.barcode.domain.models.UserProfile
 import com.example.barcode.domain.models.toUserPreferences
+import com.example.barcode.sync.SyncScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

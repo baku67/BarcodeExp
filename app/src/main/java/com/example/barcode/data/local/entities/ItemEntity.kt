@@ -9,6 +9,12 @@ import java.util.UUID
 @Entity(tableName = "items")
 data class ItemEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
+
+    // 🔹 Sync
+    val syncStatus: SyncStatus = SyncStatus.PENDING_CREATE,
+    val updatedAt: Long = System.currentTimeMillis(),
+
+    // 🔹 Métier
     val barcode: String? = null,
     val name: String? = null,
     val brand: String? = null,
@@ -16,11 +22,16 @@ data class ItemEntity(
     val imageUrl: String? = null, // image principale (thumbnail)
     val imageIngredientsUrl: String? = null,
     val imageNutritionUrl: String? = null,
-
     val nutriScore: String? = null,
 
     val addedAt: Long? = System.currentTimeMillis(),
     val expiryDate: Long? = null, // en epoch millis
-
     val addMode: String = "barcode_scan",
 )
+
+
+enum class SyncStatus {
+    PENDING_CREATE,
+    SYNCED,
+    FAILED
+}

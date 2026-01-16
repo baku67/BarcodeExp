@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.dao.ItemDao
 
-@Database(entities = [ItemEntity::class], version = 3, exportSchema = true)
+@Database(entities = [ItemEntity::class], version = 4, exportSchema = true)
 abstract class AppDb : RoomDatabase() {
 
     abstract fun itemDao(): ItemDao
@@ -32,6 +32,13 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE items ADD COLUMN syncStatus TEXT NOT NULL DEFAULT 'PENDING_CREATE';")
+                db.execSQL("ALTER TABLE items ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun get(context: Context): AppDb =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -48,6 +55,7 @@ abstract class AppDb : RoomDatabase() {
                     // Choix Migration en Dev (plus propre):
                     .addMigrations(MIGRATION_1_2)
                     .addMigrations(MIGRATION_2_3)
+                    .addMigrations(MIGRATION_3_4)
 
 
                     // Toujours à la fin

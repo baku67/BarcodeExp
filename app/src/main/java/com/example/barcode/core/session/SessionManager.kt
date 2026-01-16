@@ -6,6 +6,7 @@ import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
 import com.example.barcode.domain.models.UserProfile
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.first
 
 internal const val SESSION_STORE_NAME = "session_store"
 internal val Context.sessionDataStore by preferencesDataStore(name = SESSION_STORE_NAME)
@@ -38,4 +39,9 @@ class SessionManager(context: Context) {
     suspend fun setTheme(theme: ThemeMode) = prefs.setTheme(theme)
     suspend fun setLang(lang: String) = prefs.setLang(lang)
     suspend fun setFrigoLayout(layout: FrigoLayout) = prefs.setFrigoLayout(layout)
+    suspend fun isAuthenticated(): Boolean {
+        val modeOk = appMode.first() == AppMode.AUTH
+        val tokenOk = !token.first().isNullOrBlank()
+        return modeOk && tokenOk
+    }
 }
