@@ -13,7 +13,7 @@ import kotlinx.coroutines.CancellationException
 
 class AuthRepository {
 
-    val api = ApiClient.createApi(AuthApi::class.java)
+    private val api = ApiClient.createApi(AuthApi::class.java)
 
     suspend fun login(email: String, password: String): Result<LoginResponse> {
         return try {
