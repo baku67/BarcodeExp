@@ -2,6 +2,7 @@ package com.example.barcode.features.auth
 
 import com.example.barcode.RefreshRequest
 import com.example.barcode.RefreshResponse
+import com.example.barcode.core.network.ApiClient
 import com.example.barcode.domain.models.LoginRequest
 import com.example.barcode.domain.models.LoginResponse
 import com.example.barcode.domain.models.RegisterRequest
@@ -10,7 +11,9 @@ import com.example.barcode.domain.models.UserProfile
 import retrofit2.Response
 import kotlinx.coroutines.CancellationException
 
-class AuthRepository(private val api: AuthApi) {
+class AuthRepository {
+
+    val api = ApiClient.createApi(AuthApi::class.java)
 
     suspend fun login(email: String, password: String): Result<LoginResponse> {
         return try {

@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.AppBackground
 import com.example.barcode.common.ui.theme.Theme
+import com.example.barcode.core.network.ApiClient
 
 
 object DeepLinkBus {
@@ -72,7 +73,7 @@ class MainActivity : ComponentActivity() {
                 SessionManager(appContext)
             }
 
-            val repo = remember { AuthRepository(ApiClient.authApi) }
+            val repo = remember { AuthRepository() }
             val authVm: AuthViewModel = viewModel(
                 factory = AuthViewModelFactory(repo, session)
             )

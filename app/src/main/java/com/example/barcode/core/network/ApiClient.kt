@@ -1,6 +1,5 @@
-package com.example.barcode
+package com.example.barcode.core.network
 
-import com.example.barcode.features.auth.AuthApi
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -20,7 +19,6 @@ object ApiClient {
             .build()
     }
 
-    val authApi: AuthApi by lazy {
-        retrofit.create(AuthApi::class.java)
-    }
+    fun <T> createApi(service: Class<T>): T =
+        retrofit.create(service)
 }

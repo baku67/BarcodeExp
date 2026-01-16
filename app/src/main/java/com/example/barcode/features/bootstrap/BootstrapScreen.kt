@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.barcode.ApiClient
+import com.example.barcode.core.network.ApiClient
 import com.example.barcode.R
 import com.example.barcode.features.auth.AuthRepository
 import com.example.barcode.core.session.SessionManager
@@ -41,7 +41,7 @@ fun GlobalLoaderScreen(nav: NavHostController) {
     val timelineIntroStore = remember { IntroStore(appContext) }
 
     val session = remember { SessionManager(appContext) }
-    val repo = remember { AuthRepository(ApiClient.authApi) }
+    val repo = remember { AuthRepository() }
 
     val dashboardRepo = remember { DashboardRepository() }
     val timelineRepo = remember { TimelineRepository() }
