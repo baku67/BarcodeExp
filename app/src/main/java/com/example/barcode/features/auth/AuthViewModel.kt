@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 // Etat réseau uniquement
 data class AuthUiState(
     val loading: Boolean = false,
-    val authenticated: Boolean = false,
     val error: String? = null
 ) {}
 
@@ -154,7 +153,6 @@ class AuthViewModel(
         viewModelScope.launch {
             session.setAppMode(AppMode.LOCAL)
             session.clear() // au cas où un ancien token traîne
-            uiState.value = uiState.value.copy(authenticated = true, loading = false, error = null)
         }
     }
 
