@@ -15,7 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import com.example.barcode.features.auth.SessionManager
+import com.example.barcode.core.SessionManager
 import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
 

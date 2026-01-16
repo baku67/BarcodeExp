@@ -1,6 +1,7 @@
-package com.example.barcode.OpenFoodFacts
+package com.example.barcode.data.remote
 
 import android.util.Log
+import com.example.barcode.domain.models.ProductInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject

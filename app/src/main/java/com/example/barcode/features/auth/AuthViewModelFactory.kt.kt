@@ -2,6 +2,7 @@ package com.example.barcode.features.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.example.barcode.core.SessionManager
 
 class AuthViewModelFactory(
     private val repo: AuthRepository,

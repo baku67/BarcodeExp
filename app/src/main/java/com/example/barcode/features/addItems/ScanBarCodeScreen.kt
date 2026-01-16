@@ -62,12 +62,12 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.barcode.R
-import com.example.barcode.OpenFoodFacts.ProductInfo
-import com.example.barcode.OpenFoodFacts.fetchProductInfo
+import com.example.barcode.domain.models.ProductInfo
+import com.example.barcode.data.remote.fetchProductInfo
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.launch
-import com.example.barcode.OpenFoodFacts.OpenFoodFactsStore
+import com.example.barcode.core.OpenFoodFactsStore
 import androidx.compose.material3.Icon
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -140,7 +140,7 @@ fun ScanBarCodeScreen(
                                             lastApiCallAt = now
 
                                             scope.launch {
-                                                OpenFoodFactsStore.counterIncrement(ctx)
+                                                OpenFoodFactsStore.increment(ctx)
                                                 val res = fetchProductInfo(first)
                                                 rateLimitMsg = if (res.rateLimited) (res.message ?: "Rate limit atteint") else null
                                                 productInfo = res.product

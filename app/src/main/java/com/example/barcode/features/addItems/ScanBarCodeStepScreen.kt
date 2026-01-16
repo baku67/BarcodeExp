@@ -24,7 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.example.barcode.OpenFoodFacts.ProductInfo
+import com.example.barcode.domain.models.ProductInfo
 import com.example.barcode.R
 
 // Demande d'autorisation Caméra puis -> ScanBarCodeScreen

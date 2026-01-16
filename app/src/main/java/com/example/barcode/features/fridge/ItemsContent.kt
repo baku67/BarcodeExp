@@ -47,8 +47,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.barcode.features.addItems.ItemsViewModel
-import com.example.barcode.features.auth.AppMode
-import com.example.barcode.features.auth.SessionManager
+import com.example.barcode.core.AppMode
+import com.example.barcode.core.SessionManager
 import java.time.*
 import java.time.temporal.ChronoUnit
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox

@@ -1,4 +1,4 @@
-package com.example.barcode.features.auth
+package com.example.barcode.core
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -17,7 +17,9 @@ import kotlinx.coroutines.flow.map
 // APP_MODE, TOKEN, User(id, mail, isVerified, preferences)
 
 // ✅ TOP-LEVEL: un seul DataStore par process
-private val Context.dataStore by preferencesDataStore(name = "session")
+private const val STORE_NAME = "session_store"
+private val Context.sessionDataStore by preferencesDataStore(name = STORE_NAME)
+
 
 private val TOKEN_KEY = stringPreferencesKey("token")
 private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
@@ -39,34 +41,34 @@ private val PREF_UPDATED_AT = longPreferencesKey("pref_updated_at")       // epo
 
 class SessionManager(private val context: Context) {
 
-    val token: Flow<String?> = context.dataStore.data.map { prefs -> prefs[TOKEN_KEY] }
-    val refreshToken: Flow<String?> = context.dataStore.data.map { prefs -> prefs[REFRESH_TOKEN_KEY] }
+    val token: Flow<String?> = context.sessionDataStore.data.map { prefs -> prefs[TOKEN_KEY] }
+    val refreshToken: Flow<String?> = context.sessionDataStore.data.map { prefs -> prefs[REFRESH_TOKEN_KEY] }
 
-    val appMode: Flow<AppMode> = context.dataStore.data.map { prefs ->
+    val appMode: Flow<AppMode> = context.sessionDataStore.data.map { prefs ->
         when (prefs[APP_MODE_KEY]) {
             AppMode.LOCAL.name -> AppMode.LOCAL
             else -> AppMode.AUTH // default
         }
     }
 
-    val userId: Flow<String?> = context.dataStore.data.map { it[USER_ID_KEY] }
-    val userEmail: Flow<String?> = context.dataStore.data.map { it[USER_EMAIL_KEY] }
-    val userIsVerified: Flow<Boolean?> = context.dataStore.data.map { it[USER_IS_VERIFIED_KEY] }
+    val userId: Flow<String?> = context.sessionDataStore.data.map { it[USER_ID_KEY] }
+    val userEmail: Flow<String?> = context.sessionDataStore.data.map { it[USER_EMAIL_KEY] }
+    val userIsVerified: Flow<Boolean?> = context.sessionDataStore.data.map { it[USER_IS_VERIFIED_KEY] }
 
     suspend fun setAppMode(mode: AppMode) {
-        context.dataStore.edit { prefs -> prefs[APP_MODE_KEY] = mode.name }
+        context.sessionDataStore.edit { prefs -> prefs[APP_MODE_KEY] = mode.name }
     }
 
     suspend fun saveToken(token: String) {
-        context.dataStore.edit { prefs -> prefs[TOKEN_KEY] = token }
+        context.sessionDataStore.edit { prefs -> prefs[TOKEN_KEY] = token }
     }
 
     suspend fun saveRefreshToken(token: String) { // ✅
-        context.dataStore.edit { prefs -> prefs[REFRESH_TOKEN_KEY] = token }
+        context.sessionDataStore.edit { prefs -> prefs[REFRESH_TOKEN_KEY] = token }
     }
 
     suspend fun saveUser(profile: UserProfile) {
-        context.dataStore.edit { prefs ->
+        context.sessionDataStore.edit { prefs ->
             prefs[USER_ID_KEY] = profile.id
             prefs[USER_EMAIL_KEY] = profile.email
             prefs[USER_IS_VERIFIED_KEY] = profile.isVerified
@@ -74,14 +76,14 @@ class SessionManager(private val context: Context) {
     }
 
     suspend fun clear() {
-        context.dataStore.edit {
+        context.sessionDataStore.edit {
             prefs -> prefs.remove(TOKEN_KEY)
             prefs.remove(REFRESH_TOKEN_KEY)
         }
 
     }
     suspend fun logout() {
-        context.dataStore.edit { prefs ->
+        context.sessionDataStore.edit { prefs ->
             prefs.remove(TOKEN_KEY)
             prefs.remove(REFRESH_TOKEN_KEY)
             prefs.remove(USER_ID_KEY)
@@ -92,7 +94,7 @@ class SessionManager(private val context: Context) {
         }
     }
 
-    val preferences: Flow<UserPreferences> = context.dataStore.data.map { p ->
+    val preferences: Flow<UserPreferences> = context.sessionDataStore.data.map { p ->
         val theme = when (p[PREF_THEME]) {
             "light" -> ThemeMode.LIGHT
             "dark" -> ThemeMode.DARK
@@ -113,7 +115,7 @@ class SessionManager(private val context: Context) {
 
     // Pour sync backend
     suspend fun savePreferences(prefs: UserPreferences) {
-        context.dataStore.edit { p ->
+        context.sessionDataStore.edit { p ->
             p[PREF_THEME] = when (prefs.theme) {
                 ThemeMode.LIGHT -> "light"
                 ThemeMode.DARK -> "dark"
@@ -133,7 +135,7 @@ class SessionManager(private val context: Context) {
     }
 
     suspend fun clearPreferences() {
-        context.dataStore.edit { p ->
+        context.sessionDataStore.edit { p ->
             p.remove(PREF_THEME)
             p.remove(PREF_LANG)
             p.remove(PREF_FRIGO_LAYOUT)
@@ -143,7 +145,7 @@ class SessionManager(private val context: Context) {
 
     // Au niveau UI
     suspend fun setTheme(theme: ThemeMode) {
-        context.dataStore.edit {
+        context.sessionDataStore.edit {
             it[PREF_THEME] = when (theme) {
                 ThemeMode.LIGHT -> "light"
                 ThemeMode.DARK -> "dark"
@@ -153,13 +155,13 @@ class SessionManager(private val context: Context) {
         }
     }
     suspend fun setLang(lang: String) {
-        context.dataStore.edit {
+        context.sessionDataStore.edit {
             it[PREF_LANG] = lang
             it[PREF_UPDATED_AT] = System.currentTimeMillis() / 1000
         }
     }
     suspend fun setFrigoLayout(layout: FrigoLayout) {
-        context.dataStore.edit {
+        context.sessionDataStore.edit {
             it[PREF_FRIGO_LAYOUT] = when (layout) {
                 FrigoLayout.LIST -> "list"
                 FrigoLayout.DESIGN -> "design"

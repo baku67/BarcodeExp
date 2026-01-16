@@ -1,4 +1,4 @@
-package com.example.barcode.OpenFoodFacts
+package com.example.barcode.domain.models
 
 data class ProductInfo(
     val name: String,
