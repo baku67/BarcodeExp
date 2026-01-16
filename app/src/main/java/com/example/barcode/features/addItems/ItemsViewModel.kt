@@ -24,6 +24,7 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
     private val session by lazy { com.example.barcode.core.session.SessionManager(app) }
 
     fun addItem(
+        barcode: String?,
         name: String,
         brand: String,
         expiry: Long?,
@@ -36,6 +37,7 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
 
         // 1) Toujours écrire en local
         val entity = ItemEntity(
+            barcode = barcode,
             name = name,
             brand = brand,
             expiryDate = expiry,

@@ -53,11 +53,11 @@ class SyncWorker(
                     body = dto
                 )
 
-                // DEBUG
-                //if (!res.isSuccessful) {
-                //    val err = res.errorBody()?.string()
-                //    android.util.Log.e("SyncWorker", "422 body=$err")
-                //}
+                // DEBUG (TODO remove)
+                if (!res.isSuccessful) {
+                    val err = res.errorBody()?.string()
+                    android.util.Log.e("SyncWorker", "422 body=$err")
+                }
 
                 if (res.isSuccessful) dao.updateSyncStatus(item.id, SyncStatus.SYNCED)
                 else dao.updateSyncStatus(item.id, SyncStatus.FAILED)

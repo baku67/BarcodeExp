@@ -263,6 +263,7 @@ class MainActivity : ComponentActivity() {
                                             addVm.setExpiryDate(expiry)
 
                                             itemsVm.addItem(
+                                                barcode = (draft.barcode ?: "(sans barcode)"),
                                                 name = (name ?: draft.name ?: "(sans nom)"),
                                                 brand = (brand ?: draft.brand ?: "(sans brand)"),
                                                 expiry = (expiry ?: draft.expiryDate),
@@ -401,6 +402,7 @@ class MainActivity : ComponentActivity() {
                                             addVm.setExpiryDate(expiry)
 
                                             itemsVm.addItem(
+                                                barcode = (draft.barcode ?: "(sans barcode)"),
                                                 name = (name ?: draft.name ?: "(sans nom)"),
                                                 brand = (brand ?: draft.brand ?: "(sans brand)"),
                                                 expiry = (expiry ?: draft.expiryDate),
