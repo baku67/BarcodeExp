@@ -105,6 +105,7 @@ class AuthViewModel(
                         session.savePreferences(profile.toUserPreferences())
                     }
                     session.setAppMode(AppMode.AUTH)
+                    uiState.value = uiState.value.copy(loading = false, error = null)
                     _events.emit(AuthEvent.GoHome)
                 }
                 .onFailure { err ->
