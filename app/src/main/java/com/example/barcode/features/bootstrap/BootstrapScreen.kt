@@ -29,7 +29,7 @@ import androidx.navigation.NavHostController
 import com.example.barcode.ApiClient
 import com.example.barcode.R
 import com.example.barcode.features.auth.AuthRepository
-import com.example.barcode.core.SessionManager
+import com.example.barcode.core.session.SessionManager
 import androidx.compose.runtime.getValue
 import com.example.barcode.features.dashboard.DashboardRepository
 

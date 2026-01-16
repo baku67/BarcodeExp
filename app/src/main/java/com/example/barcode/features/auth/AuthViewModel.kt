@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.barcode.features.fridge.ViewMode
 import com.example.barcode.common.bus.SnackbarBus
-import com.example.barcode.core.AppMode
-import com.example.barcode.core.SessionManager
+import com.example.barcode.core.session.AppMode
+import com.example.barcode.core.session.SessionManager
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences

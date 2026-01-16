@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.barcode.features.dashboard.DashboardRepository
-import com.example.barcode.core.AppMode
+import com.example.barcode.core.session.AppMode
 import com.example.barcode.features.auth.AuthRepository
-import com.example.barcode.core.SessionManager
+import com.example.barcode.core.session.SessionManager
 import com.example.barcode.domain.models.toUserPreferences
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow

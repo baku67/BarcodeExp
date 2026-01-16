@@ -40,7 +40,7 @@ import com.example.barcode.features.bootstrap.TimelineIntroScreen
 import com.example.barcode.features.auth.AuthRepository
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.features.auth.AuthViewModelFactory
-import com.example.barcode.core.SessionManager
+import com.example.barcode.core.session.SessionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import com.example.barcode.common.bus.SnackbarBus
@@ -67,7 +67,11 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             val appContext = LocalContext.current.applicationContext
-            val session = remember { SessionManager(appContext) }
+
+            val session = remember(appContext) {
+                SessionManager(appContext)
+            }
+
             val repo = remember { AuthRepository(ApiClient.authApi) }
             val authVm: AuthViewModel = viewModel(
                 factory = AuthViewModelFactory(repo, session)
