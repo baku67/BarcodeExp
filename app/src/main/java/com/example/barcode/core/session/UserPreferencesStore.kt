@@ -4,21 +4,18 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.example.barcode.core.session.sessionDataStore
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-private const val STORE_NAME = "session_store"
-private val Context.sessionDataStore by preferencesDataStore(name = STORE_NAME)
 
 private val PREF_THEME = stringPreferencesKey("pref_theme")
 private val PREF_LANG = stringPreferencesKey("pref_lang")
 private val PREF_FRIGO_LAYOUT = stringPreferencesKey("pref_frigo_layout")
 private val PREF_UPDATED_AT = longPreferencesKey("pref_updated_at")
-
 
 
 class UserPreferencesStore(private val context: Context) {

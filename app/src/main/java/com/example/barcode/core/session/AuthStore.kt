@@ -4,13 +4,11 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.example.barcode.domain.models.UserProfile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import com.example.barcode.core.session.sessionDataStore
 
-private const val STORE_NAME = "session_store"
-private val Context.sessionDataStore by preferencesDataStore(name = STORE_NAME)
 
 private val TOKEN_KEY = stringPreferencesKey("token")
 private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")

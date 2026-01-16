@@ -1,7 +1,7 @@
 package com.example.barcode.features.auth
 
-import com.example.barcode.RefreshRequest
-import com.example.barcode.RefreshResponse
+import com.example.barcode.features.auth.data.remote.dto.RefreshRequestDto
+import com.example.barcode.features.auth.data.remote.dto.RefreshResponseDto
 import com.example.barcode.core.network.ApiClient
 import com.example.barcode.domain.models.LoginRequest
 import com.example.barcode.domain.models.LoginResponse
@@ -58,9 +58,9 @@ class AuthRepository {
     }
 
     // Refresh token
-    suspend fun refresh(refreshToken: String): Result<RefreshResponse> {
+    suspend fun refresh(refreshToken: String): Result<RefreshResponseDto> {
         return try {
-            val res = api.refresh(RefreshRequest(refresh_token = refreshToken))
+            val res = api.refresh(RefreshRequestDto(refresh_token = refreshToken))
             if (res.isSuccessful && res.body() != null) Result.success(res.body()!!)
             else Result.failure(Exception("HTTP ${res.code()} - ${res.message()}"))
         } catch (e: CancellationException) {

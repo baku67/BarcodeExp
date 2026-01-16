@@ -5,6 +5,10 @@ import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
 import com.example.barcode.domain.models.UserProfile
+import androidx.datastore.preferences.preferencesDataStore
+
+internal const val SESSION_STORE_NAME = "session_store"
+internal val Context.sessionDataStore by preferencesDataStore(name = SESSION_STORE_NAME)
 
 class SessionManager(context: Context) {
 

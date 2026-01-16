@@ -1,7 +1,7 @@
 package com.example.barcode.features.auth
 
-import com.example.barcode.RefreshRequest
-import com.example.barcode.RefreshResponse
+import com.example.barcode.features.auth.data.remote.dto.RefreshRequestDto
+import com.example.barcode.features.auth.data.remote.dto.RefreshResponseDto
 import com.example.barcode.domain.models.LoginRequest
 import com.example.barcode.domain.models.LoginResponse
 import com.example.barcode.domain.models.RegisterRequest
@@ -26,7 +26,7 @@ interface AuthApi {
     suspend fun resendEmailVerification(@Header("Authorization") token: String): Response<Unit>
 
     @POST("api/token/refresh")
-    suspend fun refresh(@Body request: RefreshRequest): Response<RefreshResponse>
+    suspend fun refresh(@Body request: RefreshRequestDto): Response<RefreshResponseDto>
 
 
     // /me
