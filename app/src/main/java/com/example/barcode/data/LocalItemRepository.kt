@@ -1,13 +1,15 @@
 package com.example.barcode.data
 
+import com.example.barcode.data.local.dao.ItemDao
+import com.example.barcode.data.local.entities.ItemEntity
 import kotlinx.coroutines.flow.Flow
 
 class LocalItemRepository(private val dao: ItemDao) {
 
-    fun observeItems(): Flow<List<Item>> = dao.observeAll()
+    fun observeItems(): Flow<List<ItemEntity>> = dao.observeAll()
 
-    suspend fun addOrUpdate(item: Item) {
-        dao.upsert(item)
+    suspend fun addOrUpdate(itemEntity: ItemEntity) {
+        dao.upsert(itemEntity)
     }
 
     // Surcharge
@@ -18,12 +20,12 @@ class LocalItemRepository(private val dao: ItemDao) {
         imageUrl: String? = null,
         id: String? = null
     ) {
-        val item = if (id == null) {
-            Item(name = name, brand = brand, expiryDate = expiry, imageUrl = imageUrl)
+        val itemEntity = if (id == null) {
+            ItemEntity(name = name, brand = brand, expiryDate = expiry, imageUrl = imageUrl)
         } else {
-            Item(id = id, name = name, brand = brand, expiryDate = expiry, imageUrl = imageUrl)
+            ItemEntity(id = id, name = name, brand = brand, expiryDate = expiry, imageUrl = imageUrl)
         }
-        dao.upsert(item)
+        dao.upsert(itemEntity)
     }
 
     suspend fun delete(id: String) = dao.deleteById(id)
