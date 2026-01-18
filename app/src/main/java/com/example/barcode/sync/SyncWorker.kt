@@ -37,6 +37,7 @@ class SyncWorker(
         pending.forEach { item ->
             try {
                 val dto = ItemCreateDto(
+                    clientId = item.id,
                     barcode = item.barcode,
                     name = item.name,
                     brand = item.brand,

@@ -1,6 +1,7 @@
 package com.example.barcode.features.addItems.data.remote.dto
 
 data class ItemCreateDto(
+    val clientId: String,      // ✅ UUID local (ItemEntity.id)
     val barcode: String?,
     val name: String?,
     val brand: String?,
