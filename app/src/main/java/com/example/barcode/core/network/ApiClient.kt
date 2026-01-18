@@ -50,7 +50,7 @@ object ApiClient {
 
             Log.e("HTTP", "<= ${res.code} ${req.url}")
             Log.e("HTTP", "<= Content-Type=${res.header("Content-Type")}")
-            Log.e("HTTP", "<= Body=$raw")
+            Log.e("HTTP", "<= Body=$raw") // Page HTML d'erreur par exemple
 
             // 🔥 IMPORTANT : reconstruire le body pour que Retrofit puisse encore le parser
             val contentType = responseBody?.contentType()

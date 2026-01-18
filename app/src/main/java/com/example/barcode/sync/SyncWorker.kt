@@ -6,6 +6,7 @@ import androidx.work.WorkerParameters
 import com.example.barcode.core.network.ApiClient
 import com.example.barcode.core.session.SessionManager
 import com.example.barcode.data.local.AppDb
+import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.entities.SyncStatus
 import com.example.barcode.features.addItems.data.remote.api.ItemsApi
 import com.example.barcode.features.addItems.data.remote.dto.ItemCreateDto
@@ -31,8 +32,9 @@ class SyncWorker(
         val dao = AppDb.get(applicationContext).itemDao()
         val api = ApiClient.createApi(ItemsApi::class.java)
 
+
+        // 1) PUSH : envoyer les items en attente (PENDING_CREATE)
         val pending = dao.getBySyncStatus(SyncStatus.PENDING_CREATE)
-        if (pending.isEmpty()) return Result.success()
 
         pending.forEach { item ->
             try {
@@ -54,7 +56,7 @@ class SyncWorker(
                     body = dto
                 )
 
-                // DEBUG (TODO remove)
+                // DEBUG si error (TODO remove)
                 if (!res.isSuccessful) {
                     val err = res.errorBody()?.string()
                     android.util.Log.e("SyncWorker", "422 body=$err")
@@ -69,6 +71,43 @@ class SyncWorker(
             }
         }
 
+
+        // 2) PULL : récupérer l'état serveur et upsert local (Room) par clientId
+        try {
+            val pull = api.getItems("Bearer $token")
+            if (!pull.isSuccessful) {
+                val err = pull.errorBody()?.string()
+                android.util.Log.e("SyncWorker", "pull failed code=${pull.code()} body=$err")
+                return Result.success()
+            }
+
+            val remoteItems = pull.body().orEmpty()
+
+            remoteItems.forEach { dto ->
+                val entity = ItemEntity(
+                    id = dto.clientId, // ✅ upsert direct sur UUID
+                    barcode = dto.barcode,
+                    name = dto.name,
+                    brand = dto.brand,
+                    imageUrl = dto.imageUrl,
+                    imageIngredientsUrl = dto.imageIngredientsUrl,
+                    imageNutritionUrl = dto.imageNutritionUrl,
+                    nutriScore = dto.nutriScore,
+                    addedAt = dto.addedAt?.let { parseAtomToEpochMs(it) },
+                    expiryDate = dto.expiryDate?.let { parseYyyyMmDdToEpochMs(it) },
+                    addMode = dto.addMode ?: "barcode_scan",
+                    syncStatus = SyncStatus.SYNCED,
+                    updatedAt = System.currentTimeMillis()
+                )
+
+                dao.upsert(entity)
+            }
+        } catch (e: Exception) {
+            // Pull qui échoue : on ne casse pas tout, on garde juste le local
+            android.util.Log.e("SyncWorker", "pull exception=${e.message}")
+        }
+
+
         return Result.success()
     }
 
@@ -76,4 +115,13 @@ class SyncWorker(
     private val yyyyMMdd = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private fun epochMsToYyyyMmDd(ms: Long): String =
         Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalDate().format(yyyyMMdd)
+
+    private fun parseAtomToEpochMs(s: String): Long =
+        java.time.OffsetDateTime.parse(s).toInstant().toEpochMilli()
+
+
+    private fun parseYyyyMmDdToEpochMs(s: String): Long {
+        val d = java.time.LocalDate.parse(s) // yyyy-MM-dd
+        return d.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
 }
