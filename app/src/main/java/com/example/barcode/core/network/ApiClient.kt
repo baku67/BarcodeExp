@@ -2,7 +2,9 @@ package com.example.barcode.core.network
 
 import android.util.Log
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Buffer
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -20,7 +22,7 @@ object ApiClient {
             Log.e("HTTP", "=> ${req.method} ${req.url}")
             Log.e("HTTP", "=> Authorization=${req.header("Authorization")?.take(30)}...")
 
-            // ✅ Lire le body (si présent)
+            // ✅ Lire le body de la requête (si présent)
             val bodyStr = req.body?.let { body ->
                 try {
                     val buffer = Buffer()
@@ -35,9 +37,28 @@ object ApiClient {
 
             Log.e("HTTP", "=> Body=$bodyStr")
 
+            // ✅ Exécuter la requête
             val res = chain.proceed(req)
-            Log.e("HTTP", "<= ${res.code}")
-            res
+
+            // ✅ Lire le body de la réponse (ATTENTION: .string() consomme le flux)
+            val responseBody = res.body
+            val raw = try {
+                responseBody?.string() ?: "<empty>"
+            } catch (e: Exception) {
+                "<unable to read response body: ${e.message}>"
+            }
+
+            Log.e("HTTP", "<= ${res.code} ${req.url}")
+            Log.e("HTTP", "<= Content-Type=${res.header("Content-Type")}")
+            Log.e("HTTP", "<= Body=$raw")
+
+            // 🔥 IMPORTANT : reconstruire le body pour que Retrofit puisse encore le parser
+            val contentType = responseBody?.contentType()
+                ?: res.header("Content-Type")?.toMediaTypeOrNull()
+
+            res.newBuilder()
+                .body(raw.toResponseBody(contentType))
+                .build()
         })
         .build()
 
