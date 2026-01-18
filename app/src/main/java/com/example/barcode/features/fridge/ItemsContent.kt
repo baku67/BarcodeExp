@@ -140,6 +140,8 @@ fun ItemsContent(
         sorted.chunked(itemsPerShelf)
     }
 
+    val listState = rememberLazyListState()
+
     // Viewer d'Image plein écran (click sur images BottomSheet)
     if (viewerUrl != null) {
         ImageViewerDialog(
@@ -360,7 +362,6 @@ fun ItemsContent(
             ) {
 
                 // Pour calculer pinnage ou non du bac a legume
-                val listState = rememberLazyListState()
                 val canScroll by remember {
                     derivedStateOf {
                         val layout = listState.layoutInfo
@@ -377,7 +378,7 @@ fun ItemsContent(
 
                 if (sorted.isEmpty()) {
                     LazyColumn(
-                        state = listState, // ✅ réutilise le même state
+                        state = listState,
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
@@ -396,6 +397,7 @@ fun ItemsContent(
                     when (selectedViewMode) {
                         ViewMode.List -> {
                             LazyColumn(
+                                state = listState,
                                 modifier = Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
