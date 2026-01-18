@@ -75,6 +75,7 @@ import com.example.barcode.common.ui.components.LocalAppTopBarState
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.UserPreferences
+import com.example.barcode.sync.SyncScheduler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -152,10 +153,11 @@ fun ItemsContent(
     // TODO: remplacer le delay par vrai refresh VM/API
     suspend fun refreshItems() {
         if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
-            delay(3_000)
-            // ex: vm.refreshItems(token!!)
+            // ✅ lance un sync push+pull en background
+            SyncScheduler.enqueueSync(appContext)
+            SnackbarBus.show("Synchronisation lancée…")
         } else {
-            // ex: vm.reloadLocal()
+            SnackbarBus.show("Mode local : rien à synchroniser.")
         }
     }
 
@@ -373,81 +375,106 @@ fun ItemsContent(
                 }
 
 
-                when (selectedViewMode) {
-                    ViewMode.List -> {
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            items(sorted, key = { it.id }) { it ->
-                                ItemCard(
-                                    name = it.name ?: "(sans nom)",
-                                    brand = it.brand,
-                                    expiry = it.expiryDate,
-                                    imageUrl = it.imageUrl,
-                                    selected = selectionMode && selectedIds.contains(it.id),
-                                    selectionMode = selectionMode,
-                                    onClick = {
-                                        if (selectionMode) toggleSelect(it.id) else sheetItemEntity = it
-                                    },
-                                    onLongPress = {
-                                        if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
-                                    },
-                                    onDelete = { vm.deleteItem(it.id) }
-                                )
+                if (sorted.isEmpty()) {
+                    LazyColumn(
+                        state = listState, // ✅ réutilise le même state
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp)
+                    ) {
+                        item {
+                            Box(
+                                modifier = Modifier.fillParentMaxHeight(),
+                                contentAlignment = Alignment.TopCenter
+                            ) {
+                                Text("Aucun produit. Tire vers le bas pour synchroniser.")
                             }
-                            item { Spacer(Modifier.height(4.dp)) }
                         }
                     }
-
-                    ViewMode.Fridge -> {
-
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
-                            contentPadding = PaddingValues(
-                                bottom = if (!canScroll) 8.dp else 0.dp
-                            )
-                        ) {
-                            itemsIndexed(shelves) { index, shelfItems ->
-
-                                // ✅ espace supplémentaire AVANT certaines rangées
-                                val extraTop = when (index) {
-                                    1 -> 5.dp  // avant TOP2
-                                    2 -> 10.dp  // avant MID
-                                    3 -> 10.dp  // avant BOTTOM1
-                                    4 -> 10.dp  // avant BOTTOM2
-                                    else -> 0.dp
-                                }
-                                if (extraTop > 0.dp) {
-                                    Spacer(Modifier.height(extraTop))
-                                }
-
-                                ShelfRow(
-                                    index = index,
-                                    itemEntities = shelfItems,
-                                    selectionMode = selectionMode,
-                                    selectedIds = selectedIds,
-                                    onClickItem = { item ->
-                                        if (selectionMode) toggleSelect(item.id) else sheetItemEntity = item
-                                    },
-                                    onLongPressItem = { item ->
-                                        if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id)
-                                    }
-                                )
-                            }
-
-                            // ✅ Bac DANS le scroll si la liste est longue
-                            if (canScroll && !selectionMode) {
-                                item {
-                                    VegetableDrawerCube3D(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 6.dp),
-                                        height = vegDrawerHeight,
-                                        depth = 16.dp
+                } else {
+                    when (selectedViewMode) {
+                        ViewMode.List -> {
+                            LazyColumn(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                items(sorted, key = { it.id }) { it ->
+                                    ItemCard(
+                                        name = it.name ?: "(sans nom)",
+                                        brand = it.brand,
+                                        expiry = it.expiryDate,
+                                        imageUrl = it.imageUrl,
+                                        selected = selectionMode && selectedIds.contains(it.id),
+                                        selectionMode = selectionMode,
+                                        onClick = {
+                                            if (selectionMode) toggleSelect(it.id) else sheetItemEntity =
+                                                it
+                                        },
+                                        onLongPress = {
+                                            if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(
+                                                it.id
+                                            )
+                                        },
+                                        onDelete = { vm.deleteItem(it.id) }
                                     )
+                                }
+                                item { Spacer(Modifier.height(4.dp)) }
+                            }
+                        }
+
+                        ViewMode.Fridge -> {
+
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(14.dp),
+                                contentPadding = PaddingValues(
+                                    bottom = if (!canScroll) 8.dp else 0.dp
+                                )
+                            ) {
+                                itemsIndexed(shelves) { index, shelfItems ->
+
+                                    // ✅ espace supplémentaire AVANT certaines rangées
+                                    val extraTop = when (index) {
+                                        1 -> 5.dp  // avant TOP2
+                                        2 -> 10.dp  // avant MID
+                                        3 -> 10.dp  // avant BOTTOM1
+                                        4 -> 10.dp  // avant BOTTOM2
+                                        else -> 0.dp
+                                    }
+                                    if (extraTop > 0.dp) {
+                                        Spacer(Modifier.height(extraTop))
+                                    }
+
+                                    ShelfRow(
+                                        index = index,
+                                        itemEntities = shelfItems,
+                                        selectionMode = selectionMode,
+                                        selectedIds = selectedIds,
+                                        onClickItem = { item ->
+                                            if (selectionMode) toggleSelect(item.id) else sheetItemEntity =
+                                                item
+                                        },
+                                        onLongPressItem = { item ->
+                                            if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(
+                                                item.id
+                                            )
+                                        }
+                                    )
+                                }
+
+                                // ✅ Bac DANS le scroll si la liste est longue
+                                if (canScroll && !selectionMode) {
+                                    item {
+                                        VegetableDrawerCube3D(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 6.dp),
+                                            height = vegDrawerHeight,
+                                            depth = 16.dp
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1718,7 +1745,7 @@ fun VegetableDrawerCube3D(
             val w = size.width
             val h = size.height
 
-            val d = depth.toPx().coerceIn(8f, h * 0.35f)
+            val d = minOf(depth.toPx(), h * 0.35f).coerceAtLeast(8f)
 
             // ✅ épaisseurs séparées
             val frontSw = 1.4.dp.toPx()   // epaisseur rectangle face front
