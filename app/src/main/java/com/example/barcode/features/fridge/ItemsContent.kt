@@ -79,6 +79,10 @@ import com.example.barcode.sync.SyncScheduler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import kotlinx.coroutines.coroutineScope
+import kotlin.random.Random
 
 enum class ViewMode { List, Fridge }
 
@@ -722,8 +726,6 @@ private fun ProductThumb(
             val painter = rememberAsyncImagePainter(imageUrl)
             val state = painter.state  // ✅ Lecture simple (se met à jour à chaque recompo)
 
-            Log. d("ProductThumb", "URL: $imageUrl | State: $state")
-
             if (alignBottom) {
                 // ✅ boîte de placement : l'image est alignée en bas
                 Box(Modifier.matchParentSize(), contentAlignment = Alignment.BottomCenter) {
@@ -764,13 +766,10 @@ private fun ProductThumb(
                 }
                 is AsyncImagePainter.State.Error -> {
                     onImageLoaded(true)
-                    Log.e("ProductThumb", "❌ Erreur chargement:  $imageUrl",
-                        (state as AsyncImagePainter. State.Error).result.throwable)
                     Text("🧴", fontSize = 20.sp)
                 }
                 is AsyncImagePainter.State.Success -> {
                     onImageLoaded(true)
-                    Log.d("ProductThumb", "✅ Image chargée:  $imageUrl")
                     val d = (state as AsyncImagePainter.State.Success).result.drawable
                     val iw = d.intrinsicWidth
                     val ih = d.intrinsicHeight
@@ -959,7 +958,7 @@ fun ShelfRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom
         ) {
-            itemEntities.forEach { item ->
+            itemEntities.forEachIndexed { itemIndex, item ->
                 val isSelected = selectionMode && selectedIds.contains(item.id)
 
                 val glowColor = when {
@@ -969,7 +968,7 @@ fun ShelfRow(
                     else -> null
                 }
 
-                var imageLoaded by remember(item.imageUrl) { mutableStateOf(false) }
+                var imageLoaded by remember(item.id) { mutableStateOf(false) }
 
                 Box(
                     modifier = Modifier
@@ -1020,6 +1019,13 @@ fun ShelfRow(
                         else -> null
                     }
 
+                    val shouldGiggle =
+                        !selectionMode && // évite que ça bouge pendant la sélection et anim que quand image chargée
+                                imageLoaded &&
+                                item.expiryDate != null &&
+                                (isExpired(item.expiryDate) || isSoon(item.expiryDate))
+
+
                     ProductThumb(
                         imageUrl = item.imageUrl,
                         alignBottom = true,
@@ -1028,6 +1034,11 @@ fun ShelfRow(
                         onImageLoaded = { imageLoaded = it },
                         modifier = Modifier
                             .fillMaxSize() // ou .size(productSize) si tu préfères
+                            .giggleEvery(
+                                enabled = shouldGiggle,
+                                intervalMs = 4_200L,
+                                initialDelayMs = 220L + itemIndex * 90L
+                            )
                             .combinedClickable(
                                 onClick = { onClickItem(item) },
                                 onLongClick = { onLongPressItem(item) }
@@ -1865,5 +1876,78 @@ fun VegetableDrawerCube3D(
         }
     }
 }
+
+
+
+@Composable
+private fun Modifier.giggleEvery(
+    enabled: Boolean,
+    intervalMs: Long = 5_000L,
+    initialDelayMs: Long = 320L, // micro délai pour laisser l’onglet “se poser”
+): Modifier {
+    if (!enabled) return this
+
+    val rotation = remember { Animatable(0f) }
+    val tx = remember { Animatable(0f) }
+    val ty = remember { Animatable(0f) }
+    val scale = remember { Animatable(1f) }
+
+    suspend fun burst() = coroutineScope {
+        val d = 110 // ✅ plus long (au lieu de 70)
+
+        // ✅ rotation plus intense
+        launch {
+            rotation.animateTo(3.4f, tween(d))
+            rotation.animateTo(-3.0f, tween(d))
+            rotation.animateTo(2.1f, tween(d))
+            rotation.animateTo(-1.6f, tween(d))
+            rotation.animateTo(0f, tween(d + 40))
+        }
+
+        // ✅ micro shake un peu plus visible (toujours discret)
+        launch {
+            tx.animateTo(2.4f, tween(d))
+            tx.animateTo(-2.0f, tween(d))
+            tx.animateTo(1.2f, tween(d))
+            tx.animateTo(0f, tween(d + 20))
+        }
+
+        launch {
+            ty.animateTo(-1.6f, tween(d))
+            ty.animateTo(1.1f, tween(d))
+            ty.animateTo(-0.7f, tween(d))
+            ty.animateTo(0f, tween(d + 20))
+        }
+
+        // ✅ scale plus intense + plus long, en même temps
+        launch {
+            scale.animateTo(1.055f, tween(d + 10))
+            scale.animateTo(1f, tween(d + 110))
+        }
+    }
+
+    LaunchedEffect(enabled) {
+        if (!enabled) return@LaunchedEffect
+
+        // ✅ burst au spawn (après micro délai)
+        delay(initialDelayMs)
+        burst()
+
+        // ✅ ensuite cadence fixe
+        while (true) {
+            delay(intervalMs)
+            burst()
+        }
+    }
+
+    return this.graphicsLayer {
+        rotationZ = rotation.value
+        translationX = tx.value
+        translationY = ty.value
+        scaleX = scale.value
+        scaleY = scale.value
+    }
+}
+
 
 
