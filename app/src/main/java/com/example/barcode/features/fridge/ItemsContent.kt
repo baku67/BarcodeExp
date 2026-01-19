@@ -82,7 +82,8 @@ import kotlin.math.abs
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import kotlinx.coroutines.coroutineScope
 import kotlin.random.Random
 
@@ -732,6 +733,22 @@ private fun ProductThumb(
 ) {
     val shape = RoundedCornerShape(3.dp)
 
+    val dimFactor = (dimAlpha / 0.55f).coerceIn(0f, 1f) // 0..1
+    val brightness = 1f - (0.55f * dimFactor)           // 1 -> ~0.45
+    val dimFilter = remember(brightness) {
+        // Multiplie R,G,B par "brightness" sans toucher A (alpha)
+        ColorFilter.colorMatrix(
+            ColorMatrix(
+                floatArrayOf(
+                    brightness, 0f,        0f,        0f, 0f,
+                    0f,         brightness,0f,        0f, 0f,
+                    0f,         0f,        brightness,0f, 0f,
+                    0f,         0f,        0f,        1f, 0f
+                )
+            )
+        )
+    }
+
     var boxW by remember { mutableStateOf(0f) }
     var boxH by remember { mutableStateOf(0f) }
     var imgW by remember(imageUrl) { mutableStateOf<Float?>(null) }
@@ -759,12 +776,9 @@ private fun ProductThumb(
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight()
-                            .clip(shape)
-                            .drawWithContent {
-                                drawContent()
-                                if (dimAlpha > 0f) drawRect(Color.Black.copy(alpha = dimAlpha))
-                            },
-                        contentScale = ContentScale.Fit
+                            .clip(shape),
+                        contentScale = ContentScale.Fit,
+                        colorFilter = if (dimAlpha > 0f) dimFilter else null
                     )
                 }
             } else {
@@ -773,12 +787,9 @@ private fun ProductThumb(
                     contentDescription = null,
                     modifier = Modifier
                         .matchParentSize()
-                        .clip(shape)
-                        .drawWithContent {
-                            drawContent()
-                            if (dimAlpha > 0f) drawRect(Color.Black.copy(alpha = dimAlpha))
-                        },
-                    contentScale = ContentScale.Fit
+                        .clip(shape),
+                    contentScale = ContentScale.Fit,
+                    colorFilter = if (dimAlpha > 0f) dimFilter else null
                 )
             }
 
