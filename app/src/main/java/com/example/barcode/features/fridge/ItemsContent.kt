@@ -80,7 +80,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.drawWithContent
 import kotlinx.coroutines.coroutineScope
 import kotlin.random.Random
 
@@ -145,6 +147,26 @@ fun ItemsContent(
     }
 
     val listState = rememberLazyListState()
+
+    // --- Fridge "turn on" effect (dimming uniquement sur les rangées)
+    var fridgeOn by remember { mutableStateOf(false) }
+    val dimAlpha by animateFloatAsState(
+        targetValue = if (fridgeOn) 0f else 0.55f, // 0.45f soft -> 0.65f fort
+        animationSpec = tween(durationMillis = 420),
+        label = "fridgeDimAlpha"
+    )
+    LaunchedEffect(isActive, selectedViewMode) {
+        val shouldPlay = isActive && selectedViewMode == ViewMode.Fridge
+        if (!shouldPlay) {
+            fridgeOn = false
+            return@LaunchedEffect
+        }
+
+        fridgeOn = false
+        delay(200)
+        fridgeOn = true
+    }
+
 
     // Viewer d'Image plein écran (click sur images BottomSheet)
     if (viewerUrl != null) {
@@ -466,7 +488,8 @@ fun ItemsContent(
                                             if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(
                                                 item.id
                                             )
-                                        }
+                                        },
+                                        dimAlpha = dimAlpha // pour anim allumage frigo
                                     )
                                 }
 
@@ -704,7 +727,8 @@ private fun ProductThumb(
     alignBottom: Boolean = false,
     cornerIconTint: Color? = null,
     cornerIcon: ImageVector? = null,
-    onImageLoaded: (Boolean) -> Unit = {}
+    onImageLoaded: (Boolean) -> Unit = {},
+    dimAlpha: Float = 0f // ✅ NEW : assombrissement uniquement sur l'image
 ) {
     val shape = RoundedCornerShape(3.dp)
 
@@ -733,9 +757,13 @@ private fun ProductThumb(
                         painter = painter,
                         contentDescription = null,
                         modifier = Modifier
-                            .fillMaxWidth()          // ✅ largeur max
-                            .wrapContentHeight()     // ✅ hauteur = hauteur réelle calculée
-                            .clip(shape),
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .clip(shape)
+                            .drawWithContent {
+                                drawContent()
+                                if (dimAlpha > 0f) drawRect(Color.Black.copy(alpha = dimAlpha))
+                            },
                         contentScale = ContentScale.Fit
                     )
                 }
@@ -745,7 +773,11 @@ private fun ProductThumb(
                     contentDescription = null,
                     modifier = Modifier
                         .matchParentSize()
-                        .clip(shape),
+                        .clip(shape)
+                        .drawWithContent {
+                            drawContent()
+                            if (dimAlpha > 0f) drawRect(Color.Black.copy(alpha = dimAlpha))
+                        },
                     contentScale = ContentScale.Fit
                 )
             }
@@ -919,6 +951,7 @@ fun ShelfRow(
     selectedIds: Set<String>,
     onClickItem: (ItemEntity) -> Unit,
     onLongPressItem: (ItemEntity) -> Unit,
+    dimAlpha: Float = 0f, // pour anim allumage frigo
 ) {
     val preset = when (index) {
         0 -> ShelfPreset.TOP1
@@ -1033,6 +1066,7 @@ fun ShelfRow(
                         cornerIcon = cornerIcon,
                         cornerIconTint = glowColor,
                         onImageLoaded = { imageLoaded = it },
+                        dimAlpha = dimAlpha,
                         modifier = Modifier
                             .fillMaxSize() // ou .size(productSize) si tu préfères
                             .giggleEvery(
@@ -1071,8 +1105,11 @@ fun ShelfRow(
             insetTop = spec.insetTop,
             lipHeight = spec.lipHeight,
             view = spec.view,
-            lipAlpha = spec.lipAlpha
+            lipAlpha = spec.lipAlpha,
+            dimAlpha = dimAlpha // ✅ NEW
         )
+
+
     }
 
 }
@@ -1089,17 +1126,19 @@ fun ShelfTrapezoid(
             view: ShelfView = ShelfView.TOP,
             lipAlpha: Float = 1f,
             sideStrokeAlpha: Float = 0.28f,   // ✅ alpha des côtés
-            sideStrokeWidth: Dp = 1.dp        // ✅ épaisseur des côtés
+            sideStrokeWidth: Dp = 1.dp,        // ✅ épaisseur des côtés
+            dimAlpha: Float = 0f
 ) {
     val cs = MaterialTheme.colorScheme
 
-    // ✅ Primary très sombre (mélange avec surface pour rester cohérent thème clair/sombre)
-    val shelfColor = androidx.compose.ui.graphics.lerp(
-        cs.primary,
-        cs.surface,
-        0.76f // ↑ plus proche de surface => plus sombre / plus neutre
-    )
-    val edgeColor = MaterialTheme.colorScheme.primary
+    val dimFactor = (dimAlpha / 0.55f).coerceIn(0f, 1f) // 0..1
+
+    val baseShelf = androidx.compose.ui.graphics.lerp(cs.primary, cs.surface, 0.76f)
+    val baseEdge = cs.primary
+    // ✅ on assombrit uniquement les pixels dessinés (pas de rectangle overlay)
+    val shelfColor = androidx.compose.ui.graphics.lerp(baseShelf, Color.Black, dimFactor * 0.65f)
+    val edgeColor = androidx.compose.ui.graphics.lerp(baseEdge, Color.Black, dimFactor * 0.55f)
+
 
     Canvas(
         modifier = modifier
