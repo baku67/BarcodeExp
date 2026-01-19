@@ -124,7 +124,7 @@ fun ItemsContent(
 
     // Bac à legumes
     val vegDrawerHeight = 88.dp
-    val ghostOpacity = 0.28f
+    val ghostOpacity = 0.34f
 
     // TODO plus tard : calculer via une vraie source (enum zone, tags, etc.)
     val vegDrawerEmpty = true
