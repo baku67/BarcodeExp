@@ -144,7 +144,12 @@ fun ItemsContent(
     // Etageres grid
     val itemsPerShelf = 5
     val shelves = remember(sorted) {
-        sorted.chunked(itemsPerShelf)
+        val base = sorted.chunked(itemsPerShelf).toMutableList()
+
+        // ✅ Toujours 5 étagères visibles (TOP1..BOTTOM2)
+        while (base.size < 5) base.add(emptyList())
+
+        base
     }
 
     val listState = rememberLazyListState()
@@ -491,7 +496,8 @@ fun ItemsContent(
                                             )
                                         },
                                         dimAlpha = dimAlpha, // pour anim allumage frigo
-                                        selectedSheetId = sheetItemEntity?.id
+                                        selectedSheetId = sheetItemEntity?.id,
+                                        emptyOpacity = if (shelfItems.isEmpty()) 0.28f else 1f
                                     )
                                 }
 
@@ -965,7 +971,8 @@ fun ShelfRow(
     onClickItem: (ItemEntity) -> Unit,
     onLongPressItem: (ItemEntity) -> Unit,
     dimAlpha: Float = 0f, // pour anim allumage frigo
-    selectedSheetId: String? = null
+    selectedSheetId: String? = null,
+    emptyOpacity: Float = 1f
 ) {
     val preset = when (index) {
         0 -> ShelfPreset.TOP1
@@ -1173,7 +1180,8 @@ fun ShelfRow(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
-                .zIndex(if (productsOnTop) 0f else 1f),
+                .zIndex(if (productsOnTop) 0f else 1f)
+                .alpha(emptyOpacity),
             height = spec.height,
             insetTop = spec.insetTop,
             lipHeight = spec.lipHeight,
