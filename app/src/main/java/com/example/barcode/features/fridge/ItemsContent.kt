@@ -141,13 +141,44 @@ fun ItemsContent(
         )
     }
 
+    // --- Sélection multiple (IDs = String)
+    var selectionMode by rememberSaveable { mutableStateOf(false) }
+    var selectedIds by rememberSaveable { mutableStateOf<Set<String>>(emptySet()) }
+    fun toggleSelect(id: String) {
+        selectedIds = if (selectedIds.contains(id)) selectedIds - id else selectedIds + id
+        if (selectedIds.isEmpty()) selectionMode = false
+    }
+    fun enterSelectionWith(id: String) {
+        selectionMode = true
+        selectedIds = setOf(id)
+    }
+    fun exitSelection() {
+        selectionMode = false
+        selectedIds = emptySet()
+    }
+
     // Etageres grid
     val itemsPerShelf = 5
-    val shelves = remember(sorted) {
+    val shelves = remember(sorted, selectedViewMode, selectionMode) {
         val base = sorted.chunked(itemsPerShelf).toMutableList()
 
-        // ✅ Toujours 5 étagères visibles (TOP1..BOTTOM2)
-        while (base.size < 5) base.add(emptyList())
+        val isFridge = selectedViewMode == ViewMode.Fridge
+
+        // Cas 0 item : on affiche quand même 1 étagère vide (en mode Fridge)
+        if (isFridge && base.isEmpty()) {
+            base.add(emptyList())
+            return@remember base
+        }
+
+        // ✅ Ajoute TOUJOURS UNE étagère vide "inoccupée" si on a au moins 1 étagère occupée
+        val shouldAddOneEmptyShelf =
+            isFridge &&
+                    !selectionMode &&
+                    base.isNotEmpty()
+
+        if (shouldAddOneEmptyShelf) {
+            base.add(emptyList())
+        }
 
         base
     }
@@ -259,22 +290,6 @@ fun ItemsContent(
         }
     }
 
-
-    // --- Sélection multiple (IDs = String)
-    var selectionMode by rememberSaveable { mutableStateOf(false) }
-    var selectedIds by rememberSaveable { mutableStateOf<Set<String>>(emptySet()) }
-    fun toggleSelect(id: String) {
-        selectedIds = if (selectedIds.contains(id)) selectedIds - id else selectedIds + id
-        if (selectedIds.isEmpty()) selectionMode = false
-    }
-    fun enterSelectionWith(id: String) {
-        selectionMode = true
-        selectedIds = setOf(id)
-    }
-    fun exitSelection() {
-        selectionMode = false
-        selectedIds = emptySet()
-    }
 
     val topBarState = LocalAppTopBarState.current
 
