@@ -490,7 +490,8 @@ fun ItemsContent(
                                                 item.id
                                             )
                                         },
-                                        dimAlpha = dimAlpha // pour anim allumage frigo
+                                        dimAlpha = dimAlpha, // pour anim allumage frigo
+                                        selectedSheetId = sheetItemEntity?.id
                                     )
                                 }
 
@@ -964,6 +965,7 @@ fun ShelfRow(
     onClickItem: (ItemEntity) -> Unit,
     onLongPressItem: (ItemEntity) -> Unit,
     dimAlpha: Float = 0f, // pour anim allumage frigo
+    selectedSheetId: String? = null
 ) {
     val preset = when (index) {
         0 -> ShelfPreset.TOP1
@@ -1005,6 +1007,9 @@ fun ShelfRow(
             verticalAlignment = Alignment.Bottom
         ) {
             itemEntities.forEachIndexed { itemIndex, item ->
+
+                val isSheetSelected = selectedSheetId != null && item.id == selectedSheetId // pour mettre l'item en surbrillance pendant le BottomSheetDetails
+
                 val isSelected = selectionMode && selectedIds.contains(item.id)
 
                 val glowColor = when {
@@ -1016,10 +1021,56 @@ fun ShelfRow(
 
                 var imageLoaded by remember(item.id) { mutableStateOf(false) }
 
+                val mt = MaterialTheme.colorScheme
+
                 Box(
                     modifier = Modifier
                         .size(productSize)
                         .drawBehind {
+
+                            if (imageLoaded && isSheetSelected) {
+                                val radius = size.minDimension * 0.95f
+
+                                // Halo large (diffus)
+                                drawCircle(
+                                    brush = Brush.radialGradient(
+                                        colors = listOf(
+                                            mt.primary.copy(alpha = 0.85f),
+                                            mt.primary.copy(alpha = 0.30f),
+                                            Color.Transparent
+                                        ),
+                                        center = center,
+                                        radius = radius
+                                    ),
+                                    radius = radius,
+                                    center = center
+                                )
+
+                                // Halo "noyau" (plus concentré)
+                                drawCircle(
+                                    brush = Brush.radialGradient(
+                                        colors = listOf(
+                                            mt.primary.copy(alpha = 0.75f),
+                                            mt.primary.copy(alpha = 0.25f),
+                                            Color.Transparent
+                                        ),
+                                        center = center,
+                                        radius = radius * 0.65f
+                                    ),
+                                    radius = radius * 0.65f,
+                                    center = center
+                                )
+
+                                // Ring lumineux (net)
+                                drawCircle(
+                                    color = mt.primary.copy(alpha = 0.75f),
+                                    radius = radius * 0.52f,
+                                    center = center,
+                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx())
+                                )
+                            }
+
+
                             if (imageLoaded && glowColor != null) {
                                 val radius = size.minDimension * 0.7f
 
@@ -1071,6 +1122,11 @@ fun ShelfRow(
                                 item.expiryDate != null &&
                                 (isExpired(item.expiryDate) || isSoon(item.expiryDate))
 
+                    val selectedScale by animateFloatAsState(
+                        targetValue = if (isSheetSelected) 1.07f else 1f,
+                        animationSpec = tween(durationMillis = 260),
+                        label = "selectedScale"
+                    )
 
                     ProductThumb(
                         imageUrl = item.imageUrl,
@@ -1078,11 +1134,16 @@ fun ShelfRow(
                         cornerIcon = cornerIcon,
                         cornerIconTint = glowColor,
                         onImageLoaded = { imageLoaded = it },
-                        dimAlpha = dimAlpha,
+                        dimAlpha = if (isSheetSelected) 0f else dimAlpha,
                         modifier = Modifier
-                            .fillMaxSize() // ou .size(productSize) si tu préfères
+                            .fillMaxSize()
+                            .zIndex(if (isSheetSelected) 2f else 0f)
+                            .graphicsLayer {
+                                scaleX = selectedScale
+                                scaleY = selectedScale
+                            }
                             .giggleEvery(
-                                enabled = shouldGiggle,
+                                enabled = shouldGiggle && !isSheetSelected, // évite 2 anims en même temps
                                 intervalMs = 4_200L,
                                 initialDelayMs = 500L + itemIndex * 90L
                             )
