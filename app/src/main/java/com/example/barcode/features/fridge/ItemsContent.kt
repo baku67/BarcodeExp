@@ -443,11 +443,11 @@ fun ItemsContent(
 
                                     // ✅ espace supplémentaire AVANT certaines rangées
                                     val extraTop = when (index) {
-                                        1 -> 5.dp  // avant TOP2
-                                        2 -> 10.dp  // avant MID
-                                        3 -> 10.dp  // avant BOTTOM1
-                                        4 -> 10.dp  // avant BOTTOM2
-                                        else -> 0.dp
+                                        1 -> 5.dp
+                                        2 -> 10.dp
+                                        3 -> 10.dp
+                                        4 -> 10.dp
+                                        else -> 6.dp // léger espacement constant pour les MID supplémentaires
                                     }
                                     if (extraTop > 0.dp) {
                                         Spacer(Modifier.height(extraTop))
@@ -925,7 +925,8 @@ fun ShelfRow(
         1 -> ShelfPreset.TOP2
         2 -> ShelfPreset.MID
         3 -> ShelfPreset.BOTTOM1
-        else -> ShelfPreset.BOTTOM2
+        4 -> ShelfPreset.BOTTOM2
+        else -> ShelfPreset.MID
     }
     val spec = shelfSpec(preset)
 
