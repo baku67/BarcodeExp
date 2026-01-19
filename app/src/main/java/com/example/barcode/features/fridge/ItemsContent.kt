@@ -527,10 +527,11 @@ fun ItemsContent(
                                         VegetableDrawerCube3D(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 6.dp)
-                                                .alpha(vegDrawerOpacity),
+                                                .padding(horizontal = 6.dp),
                                             height = vegDrawerHeight,
-                                            depth = 16.dp
+                                            depth = 16.dp,
+                                            dimAlpha = dimAlpha,
+                                            isGhost = vegDrawerEmpty
                                         ) {
                                             if (vegDrawerEmpty) {
                                                 Text(
@@ -642,10 +643,11 @@ fun ItemsContent(
                         VegetableDrawerCube3D(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 6.dp)
-                                .alpha(vegDrawerOpacity),
+                                .padding(horizontal = 6.dp),
                             height = vegDrawerHeight,
-                            depth = 16.dp
+                            depth = 16.dp,
+                            dimAlpha = dimAlpha,
+                            isGhost = vegDrawerEmpty
                         ) {
                             if (vegDrawerEmpty) {
                                 Text(
@@ -1899,18 +1901,28 @@ fun VegetableDrawerCube3D(
     depth: Dp = 16.dp,                 // profondeur du "toit"
     corner: Dp = 14.dp,                // arrondi bas uniquement (face avant)
     contentPadding: PaddingValues = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+    dimAlpha: Float = 0f, // ✅ NEW : dim de l’allumage frigo
+    isGhost: Boolean = false,
     content: @Composable BoxScope.() -> Unit = {}
 ) {
     val cs = MaterialTheme.colorScheme
 
-    val faceColor = androidx.compose.ui.graphics.lerp(
-        cs.primary,
-        cs.surface,
-        0.76f
-    )
-    val stroke = cs.primary.copy(alpha = 0.75f)
+    val ghostFactor = if (isGhost) 0.55f else 0f
 
-    // ✅ dessus plus clair que la face avant
+    val dimFactor = (dimAlpha / 0.55f).coerceIn(0f, 1f) // 0..1 (même échelle que les étagères)
+
+    val baseFace = androidx.compose.ui.graphics.lerp(cs.primary, cs.surface, 0.76f)
+    val baseStroke = cs.primary.copy(alpha = 0.75f)
+
+    // ✅ 1) GHOST : on rapproche de la surface (matière moins présente), sans transparence
+    val ghostFace = androidx.compose.ui.graphics.lerp(baseFace, cs.surface, ghostFactor)
+    val ghostStroke = androidx.compose.ui.graphics.lerp(baseStroke, cs.surface, ghostFactor * 0.65f)
+
+    // ✅ 2) DIM : frigo éteint -> on assombrit (comme les étagères)
+    val faceColor = androidx.compose.ui.graphics.lerp(ghostFace, Color.Black, dimFactor * 0.65f)
+    val stroke = androidx.compose.ui.graphics.lerp(ghostStroke, Color.Black, dimFactor * 0.55f)
+
+    // dessus plus clair que la face avant
     val front = faceColor.copy(alpha = 0.3f)
     val top = faceColor.copy(alpha = 0.15f)
 
