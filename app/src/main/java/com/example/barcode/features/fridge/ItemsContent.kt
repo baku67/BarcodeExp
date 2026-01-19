@@ -123,7 +123,12 @@ fun ItemsContent(
     var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Bac à legumes
-    val vegDrawerHeight = 88.dp // ajuste
+    val vegDrawerHeight = 88.dp
+    val ghostOpacity = 0.28f
+
+    // TODO plus tard : calculer via une vraie source (enum zone, tags, etc.)
+    val vegDrawerEmpty = true
+    val vegDrawerOpacity = if (vegDrawerEmpty) ghostOpacity else 1f
 
     // bottom sheet au clic sur ItemCard
     var sheetItemEntity by remember { mutableStateOf<ItemEntity?>(null) }
@@ -512,7 +517,7 @@ fun ItemsContent(
                                         },
                                         dimAlpha = dimAlpha, // pour anim allumage frigo
                                         selectedSheetId = sheetItemEntity?.id,
-                                        emptyOpacity = if (shelfItems.isEmpty()) 0.28f else 1f
+                                        emptyOpacity = if (shelfItems.isEmpty()) ghostOpacity else 1f
                                     )
                                 }
 
@@ -522,10 +527,20 @@ fun ItemsContent(
                                         VegetableDrawerCube3D(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = 6.dp),
+                                                .padding(horizontal = 6.dp)
+                                                .alpha(vegDrawerOpacity),
                                             height = vegDrawerHeight,
                                             depth = 16.dp
-                                        )
+                                        ) {
+                                            if (vegDrawerEmpty) {
+                                                Text(
+                                                    text = "Bac à légumes vide",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                                )
+                                            }
+                                        }
+
                                     }
                                 }
                             }
@@ -627,10 +642,20 @@ fun ItemsContent(
                         VegetableDrawerCube3D(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 6.dp),
+                                .padding(horizontal = 6.dp)
+                                .alpha(vegDrawerOpacity),
                             height = vegDrawerHeight,
                             depth = 16.dp
-                        )
+                        ) {
+                            if (vegDrawerEmpty) {
+                                Text(
+                                    text = "Bac à légumes vide",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                )
+                            }
+                        }
+
                         Spacer(Modifier.height(10.dp))
                     }
 
