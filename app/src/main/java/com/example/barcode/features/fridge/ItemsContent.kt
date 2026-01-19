@@ -164,7 +164,7 @@ fun ItemsContent(
         }
 
         fridgeOn = false
-        delay(200)
+        delay(150)
         fridgeOn = true
     }
 
@@ -734,7 +734,8 @@ private fun ProductThumb(
     val shape = RoundedCornerShape(3.dp)
 
     val dimFactor = (dimAlpha / 0.55f).coerceIn(0f, 1f) // 0..1
-    val brightness = 1f - (0.55f * dimFactor)           // 1 -> ~0.45
+    val brightness = 1f - (0.70f * dimFactor)           // 1 -> ~0.30 (plus sombre)
+
     val dimFilter = remember(brightness) {
         // Multiplie R,G,B par "brightness" sans toucher A (alpha)
         ColorFilter.colorMatrix(
@@ -1083,7 +1084,7 @@ fun ShelfRow(
                             .giggleEvery(
                                 enabled = shouldGiggle,
                                 intervalMs = 4_200L,
-                                initialDelayMs = 220L + itemIndex * 90L
+                                initialDelayMs = 500L + itemIndex * 90L
                             )
                             .combinedClickable(
                                 onClick = { onClickItem(item) },
