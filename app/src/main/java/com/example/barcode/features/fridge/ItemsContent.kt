@@ -778,7 +778,10 @@ private fun ProductThumb(
     cornerIconTint: Color? = null,
     cornerIcon: ImageVector? = null,
     onImageLoaded: (Boolean) -> Unit = {},
-    dimAlpha: Float = 0f // ✅ NEW : assombrissement uniquement sur l'image
+    dimAlpha: Float = 0f, // ✅ NEW : assombrissement uniquement sur l'image
+    showImageBorder: Boolean = false,                 // ✅ NEW
+    imageBorderColor: Color = MaterialTheme.colorScheme.primary, // ✅ NEW
+    imageBorderWidth: Dp = 2.dp                       // ✅ NEW
 ) {
     val shape = RoundedCornerShape(3.dp)
 
@@ -874,7 +877,7 @@ private fun ProductThumb(
 
             val isImageReady = state is AsyncImagePainter.State.Success
 
-            if (isImageReady && cornerIconTint != null && cornerIcon != null && imgW != null && imgH != null && boxW > 0f && boxH > 0f) {
+            if (isImageReady && imgW != null && imgH != null && boxW > 0f && boxH > 0f) {
                 // Fit: l'image affichée est centrée dans le conteneur (ou collée en bas si alignBottom)
                 val scale = minOf(boxW / imgW!!, boxH / imgH!!)
                 val dw = imgW!! * scale
@@ -892,40 +895,55 @@ private fun ProductThumb(
                     val right = dx + dw
                     val bottom = dy + dh
 
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color.Transparent,
-                                0.3f to Color.Transparent,
-                                1f to cornerIconTint.copy(alpha = 1f) // ajuste alpha ici
+                    if (cornerIconTint != null) {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0f to Color.Transparent,
+                                    0.3f to Color.Transparent,
+                                    1f to cornerIconTint.copy(alpha = 1f)
+                                ),
+                                startY = top,
+                                endY = bottom
                             ),
-                            startY = top,
-                            endY = bottom
-                        ),
-                        topLeft = Offset(left, top),
-                        size = Size(dw, dh)
-                    )
+                            topLeft = Offset(left, top),
+                            size = Size(dw, dh)
+                        )
+                    }
+
+                    // border des images produits lors slection BottomSheet par exemple
+                    if (showImageBorder) {
+                        drawRoundRect(
+                            color = imageBorderColor,
+                            topLeft = Offset(left, top),
+                            size = Size(dw, dh),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = imageBorderWidth.toPx())
+                        )
+                    }
                 }
 
                 // position icône dans le coin haut-gauche de l'image affichée
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .offset(
-                            x = (dx / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp,
-                            y = (dy / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp
+                if (cornerIconTint != null && cornerIcon != null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .offset(
+                                x = (dx / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp,
+                                y = (dy / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp
+                            )
+                            .size(15.dp) // ✅ un peu plus grand qu’avant pour une bulle lisible
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(cornerIconTint),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = cornerIcon,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(11.dp) // ✅ icône plus petite dans la bulle
                         )
-                        .size(15.dp) // ✅ un peu plus grand qu’avant pour une bulle lisible
-                        .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(cornerIconTint),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = cornerIcon,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(11.dp) // ✅ icône plus petite dans la bulle
-                    )
+                    }
                 }
 
 
@@ -1068,6 +1086,12 @@ fun ShelfRow(
                     else -> null
                 }
 
+                val selectionBorderColor = when {
+                    item.expiryDate != null && isExpired(item.expiryDate) -> MaterialTheme.colorScheme.tertiary
+                    item.expiryDate != null && isSoon(item.expiryDate) -> Color(0xFFFFC107) // jaune
+                    else -> Color(0xFF2ECC71) // vert (ou utilise cs.tertiary si tu préfères un vert "theme")
+                }.copy(alpha = 0.95f)
+
                 var imageLoaded by remember(item.id) { mutableStateOf(false) }
 
                 val mt = MaterialTheme.colorScheme
@@ -1108,14 +1132,6 @@ fun ShelfRow(
                                     ),
                                     radius = radius * 0.65f,
                                     center = center
-                                )
-
-                                // Ring lumineux (net)
-                                drawCircle(
-                                    color = mt.primary.copy(alpha = 0.75f),
-                                    radius = radius * 0.52f,
-                                    center = center,
-                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx())
                                 )
                             }
 
@@ -1184,6 +1200,9 @@ fun ShelfRow(
                         cornerIconTint = glowColor,
                         onImageLoaded = { imageLoaded = it },
                         dimAlpha = if (isSheetSelected) 0f else dimAlpha,
+                        showImageBorder = isSheetSelected, // ✅ NEW
+                        imageBorderColor = selectionBorderColor,
+                        imageBorderWidth = 2.dp, // ✅ NEW
                         modifier = Modifier
                             .fillMaxSize()
                             .zIndex(if (isSheetSelected) 2f else 0f)
