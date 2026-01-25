@@ -979,7 +979,7 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
     ShelfPreset.MID -> ShelfSpec(
         height = 2.dp,
         insetTop = 26.dp,
-        lipHeight = 2.dp,
+        lipHeight = 1.dp,
         view = ShelfView.TOP,
         lipAlpha = 0.90f
     )
@@ -1029,7 +1029,7 @@ fun ShelfRow(
     val productDrop = when (preset) {
         ShelfPreset.TOP1 -> 9.dp
         ShelfPreset.TOP2 -> 5.dp
-        ShelfPreset.MID -> 2.dp
+        ShelfPreset.MID -> 1.dp
         ShelfPreset.BOTTOM1 -> 5.dp
         ShelfPreset.BOTTOM2 -> 9.dp
     }
@@ -1120,7 +1120,7 @@ fun ShelfRow(
                             }
 
 
-                            if (imageLoaded && glowColor != null) {
+                            /*if (imageLoaded && glowColor != null) {
                                 val radius = size.minDimension * 0.7f
 
                                 // --- couche 1 : glow fort (noyau)
@@ -1139,7 +1139,7 @@ fun ShelfRow(
                                     center = center
                                 )
 
-// --- couche 2 : diffusion large
+                                // --- couche 2 : diffusion large
                                 drawCircle(
                                     brush = Brush.radialGradient(
                                         colors = listOf(
@@ -1154,7 +1154,7 @@ fun ShelfRow(
                                     radius = radius,
                                     center = center
                                 )
-                            }
+                            }*/
                         },
                     contentAlignment = Alignment.BottomCenter
                 ) {
