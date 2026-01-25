@@ -1077,6 +1077,9 @@ fun ShelfRow(
 
                 val isSheetSelected = selectedSheetId != null && item.id == selectedSheetId // pour mettre l'item en surbrillance pendant le BottomSheetDetails
 
+                val hasSheetSelection = selectedSheetId != null
+                val dimOthers = hasSheetSelection && !isSheetSelected
+
                 val isSelected = selectionMode && selectedIds.contains(item.id)
 
                 val glowColor = when {
@@ -1098,43 +1101,7 @@ fun ShelfRow(
 
                 Box(
                     modifier = Modifier
-                        .size(productSize)
-                        .drawBehind {
-
-                            if (imageLoaded && isSheetSelected) {
-                                val radius = size.minDimension * 0.95f
-
-                                // Halo large (diffus)
-                                drawCircle(
-                                    brush = Brush.radialGradient(
-                                        colors = listOf(
-                                            mt.primary.copy(alpha = 0.85f),
-                                            mt.primary.copy(alpha = 0.30f),
-                                            Color.Transparent
-                                        ),
-                                        center = center,
-                                        radius = radius
-                                    ),
-                                    radius = radius,
-                                    center = center
-                                )
-
-                                // Halo "noyau" (plus concentré)
-                                drawCircle(
-                                    brush = Brush.radialGradient(
-                                        colors = listOf(
-                                            mt.primary.copy(alpha = 0.75f),
-                                            mt.primary.copy(alpha = 0.25f),
-                                            Color.Transparent
-                                        ),
-                                        center = center,
-                                        radius = radius * 0.65f
-                                    ),
-                                    radius = radius * 0.65f,
-                                    center = center
-                                )
-                            }
-                        },
+                        .size(productSize),
                     contentAlignment = Alignment.BottomCenter
                 ) {
                     val cornerIcon = when {
@@ -1162,12 +1129,17 @@ fun ShelfRow(
                         cornerIcon = cornerIcon,
                         cornerIconTint = glowColor,
                         onImageLoaded = { imageLoaded = it },
-                        dimAlpha = if (isSheetSelected) 0f else dimAlpha,
+                        dimAlpha = when {
+                            isSheetSelected -> 0f           // le sélectionné reste full bright
+                            dimOthers -> 0.5f              // assombrit les autres (AJUSTE ICI)
+                            else -> dimAlpha                // sinon: anim globale d’allumage frigo
+                        },
                         showImageBorder = isSheetSelected, // ✅ NEW
                         imageBorderColor = selectionBorderColor,
                         imageBorderWidth = 2.dp, // ✅ NEW
                         modifier = Modifier
                             .fillMaxSize()
+                            .alpha(if (dimOthers) 0.92f else 1f)
                             .zIndex(if (isSheetSelected) 2f else 0f)
                             .graphicsLayer {
                                 scaleX = selectedScale
