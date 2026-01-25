@@ -194,7 +194,7 @@ fun ItemsContent(
     var fridgeOn by remember { mutableStateOf(false) }
     val dimAlpha by animateFloatAsState(
         targetValue = if (fridgeOn) 0f else 0.55f, // 0.45f soft -> 0.65f fort
-        animationSpec = tween(durationMillis = 420),
+        animationSpec = tween(durationMillis = 240), // durée de l'anim d'allumage du frigo
         label = "fridgeDimAlpha"
     )
     LaunchedEffect(isActive, selectedViewMode) {
@@ -205,7 +205,7 @@ fun ItemsContent(
         }
 
         fridgeOn = false
-        delay(150)
+        delay(90) // delai avant "allumage"
         fridgeOn = true
     }
 
