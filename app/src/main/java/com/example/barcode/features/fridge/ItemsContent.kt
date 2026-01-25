@@ -618,9 +618,9 @@ fun ItemsContent(
                                     .height(48.dp),
                                 shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.error
+                                    contentColor = MaterialTheme.colorScheme.tertiary
                                 ),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.8f))
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f))
                             ) {
                                 Icon(Icons.Filled.Delete, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
@@ -1134,43 +1134,6 @@ fun ShelfRow(
                                     center = center
                                 )
                             }
-
-
-                            /*if (imageLoaded && glowColor != null) {
-                                val radius = size.minDimension * 0.7f
-
-                                // --- couche 1 : glow fort (noyau)
-                                drawCircle(
-                                    brush = Brush.radialGradient(
-                                        colors = listOf(
-                                            glowColor.copy(alpha = 0.88f),   // ↑
-                                            glowColor.copy(alpha = 0.52f),   // ↑
-                                            glowColor.copy(alpha = 0.12f),   // léger résiduel (évite un cut trop net)
-                                            Color.Transparent
-                                        ),
-                                        center = center,
-                                        radius = radius * 0.7f
-                                    ),
-                                    radius = radius * 0.7f,
-                                    center = center
-                                )
-
-                                // --- couche 2 : diffusion large
-                                drawCircle(
-                                    brush = Brush.radialGradient(
-                                        colors = listOf(
-                                            glowColor.copy(alpha = 0.55f),   // ↑
-                                            glowColor.copy(alpha = 0.30f),   // ↑
-                                            glowColor.copy(alpha = 0.10f),   // léger résiduel
-                                            Color.Transparent
-                                        ),
-                                        center = center,
-                                        radius = radius
-                                    ),
-                                    radius = radius,
-                                    center = center
-                                )
-                            }*/
                         },
                     contentAlignment = Alignment.BottomCenter
                 ) {
@@ -1584,7 +1547,7 @@ private fun expiryStrokeColor(expiry: Long?): Color {
     if (expiry == null) return base.copy(alpha = 0.35f)
 
     return when {
-        isExpired(expiry) -> MaterialTheme.colorScheme.error.copy(alpha = 0.65f) // expiré
+        isExpired(expiry) -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.65f) // expiré
         isSoon(expiry) -> Color(0xFFFFC107).copy(alpha = 0.45f) // bientôt (jaune)
         else -> base.copy(alpha = 0.55f) // ok
     }
@@ -1612,9 +1575,9 @@ private fun expiryChipStyle(expiry: Long?): ExpiryChipStyle {
 
     return when {
         isExpired(expiry) -> ExpiryChipStyle(
-            container = cs.error.copy(alpha = 0.12f),
-            label = cs.error.copy(alpha = 0.95f),
-            border = cs.error.copy(alpha = 0.35f)
+            container = cs.tertiary.copy(alpha = 0.12f),
+            label = cs.tertiary.copy(alpha = 0.95f),
+            border = cs.tertiary.copy(alpha = 0.35f)
         )
 
         isSoon(expiry) -> ExpiryChipStyle(
