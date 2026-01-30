@@ -1,16 +1,12 @@
 package com.example.barcode.features.fridge
 
-import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.MarqueeAnimationMode
-import androidx.compose.foundation.MarqueeSpacing
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -53,15 +49,12 @@ import java.time.*
 import java.time.temporal.ChronoUnit
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
@@ -82,10 +75,11 @@ import kotlin.math.abs
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
+import com.example.barcode.features.fridge.components.ItemCard
+import com.example.barcode.features.fridge.components.ProductThumb
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
-import kotlin.random.Random
+
 
 enum class ViewMode { List, Fridge }
 
@@ -679,290 +673,6 @@ fun ItemsContent(
 }
 
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ItemCard(
-    name: String,
-    brand: String?,
-    expiry: Long?,
-    imageUrl: String?,
-    selected: Boolean,
-    selectionMode: Boolean,
-    onClick: () -> Unit,
-    onLongPress: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val surface = MaterialTheme.colorScheme.surface
-    val onSurface = MaterialTheme.colorScheme.onSurface
-    val relativeCompact = remember(expiry) { expiry?.let { formatRelativeDaysCompact(it) } ?: "—" }
-
-    Card(
-        modifier = Modifier.combinedClickable(
-            onClick = onClick,
-            onLongClick = onLongPress
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected)
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-            else surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-        border = when {
-            selected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-            expiry == null -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            expiry != null && isSoon(expiry) -> BorderStroke(1.dp, Color.Yellow)
-            expiry != null && isExpired(expiry) -> BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary)
-            else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        }
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // TODO: removeBG natif
-            ProductThumb(imageUrl)
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(Modifier.weight(1f)) {
-
-                Text(
-                    text = name,
-                    fontWeight = FontWeight.SemiBold,
-                    color = onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip, // important: sinon l’ellipsis masque l’intérêt du marquee
-                    modifier = Modifier
-                        .fillMaxWidth() // important: il faut une contrainte de largeur
-                        .basicMarquee(
-                            animationMode = MarqueeAnimationMode.Immediately,
-                            iterations = Int.MAX_VALUE,
-                            initialDelayMillis = 1200,   // pause avant le 1er défilement
-                            repeatDelayMillis = 2000,    // pause entre chaque boucle (ton “interval régulier”)
-                            velocity = 28.dp,            // vitesse (dp/sec environ selon version)
-                            spacing = MarqueeSpacing(24.dp) // espace avant de “re-boucler”
-                        )
-                )
-
-                val brandText = brand?.takeIf { it.isNotBlank() } ?: "—"
-                Text(
-                    brandText,
-                    color = onSurface.copy(alpha = 0.7f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    softWrap = false
-                )
-
-                // “dans 3j.” / “aujourd’hui” / “hier” / “il y a 2j.”
-                Text(
-                    relativeCompact,
-                    color = when {
-                        expiry == null -> onSurface.copy(alpha = 0.6f)
-                        isSoon(expiry) -> Color.Yellow
-                        isExpired(expiry) -> MaterialTheme.colorScheme.tertiary
-                        else -> onSurface.copy(alpha = 0.8f)
-                    },
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProductThumb(
-    imageUrl: String?,
-    modifier: Modifier = Modifier,
-    alignBottom: Boolean = false,
-    cornerIconTint: Color? = null,
-    cornerIcon: ImageVector? = null,
-    onImageLoaded: (Boolean) -> Unit = {},
-    dimAlpha: Float = 0f, // ✅ NEW : assombrissement uniquement sur l'image
-    showImageBorder: Boolean = false,                 // ✅ NEW
-    imageBorderColor: Color = MaterialTheme.colorScheme.primary, // ✅ NEW
-    imageBorderWidth: Dp = 2.dp                       // ✅ NEW
-) {
-    val shape = RoundedCornerShape(3.dp)
-
-    val dimFactor = (dimAlpha / 0.55f).coerceIn(0f, 1f) // 0..1
-    val brightness = 1f - (0.70f * dimFactor)           // 1 -> ~0.30 (plus sombre)
-
-    val dimFilter = remember(brightness) {
-        // Multiplie R,G,B par "brightness" sans toucher A (alpha)
-        ColorFilter.colorMatrix(
-            ColorMatrix(
-                floatArrayOf(
-                    brightness, 0f,        0f,        0f, 0f,
-                    0f,         brightness,0f,        0f, 0f,
-                    0f,         0f,        brightness,0f, 0f,
-                    0f,         0f,        0f,        1f, 0f
-                )
-            )
-        )
-    }
-
-    var boxW by remember { mutableStateOf(0f) }
-    var boxH by remember { mutableStateOf(0f) }
-    var imgW by remember(imageUrl) { mutableStateOf<Float?>(null) }
-    var imgH by remember(imageUrl) { mutableStateOf<Float?>(null) }
-
-    Box(
-        modifier = modifier
-            .size(56.dp)
-            .onSizeChanged {
-                boxW = it.width.toFloat()
-                boxH = it.height.toFloat()
-            },
-        contentAlignment = if (alignBottom) Alignment.BottomCenter else Alignment.Center
-    ) {
-        if (!imageUrl.isNullOrBlank()) {
-            val painter = rememberAsyncImagePainter(imageUrl)
-            val state = painter.state  // ✅ Lecture simple (se met à jour à chaque recompo)
-
-            if (alignBottom) {
-                // ✅ boîte de placement : l'image est alignée en bas
-                Box(Modifier.matchParentSize(), contentAlignment = Alignment.BottomCenter) {
-                    Image(
-                        painter = painter,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .clip(shape),
-                        contentScale = ContentScale.Fit,
-                        colorFilter = if (dimAlpha > 0f) dimFilter else null
-                    )
-                }
-            } else {
-                Image(
-                    painter = painter,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .clip(shape),
-                    contentScale = ContentScale.Fit,
-                    colorFilter = if (dimAlpha > 0f) dimFilter else null
-                )
-            }
-
-            when (state) {
-                is AsyncImagePainter.State.Loading -> {
-                    onImageLoaded(false)
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .background(Color.Black.copy(alpha = 0.10f))
-                    )
-                    CircularProgressIndicator(
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(18.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-                    )
-                }
-                is AsyncImagePainter.State.Error -> {
-                    onImageLoaded(true)
-                    Text("🧴", fontSize = 20.sp)
-                }
-                is AsyncImagePainter.State.Success -> {
-                    onImageLoaded(true)
-                    val d = (state as AsyncImagePainter.State.Success).result.drawable
-                    val iw = d.intrinsicWidth
-                    val ih = d.intrinsicHeight
-                    imgW = iw.takeIf { it > 0 }?.toFloat()
-                    imgH = ih.takeIf { it > 0 }?.toFloat()
-                }
-                else -> Unit
-            }
-
-            val isImageReady = state is AsyncImagePainter.State.Success
-
-            if (isImageReady && imgW != null && imgH != null && boxW > 0f && boxH > 0f) {
-                // Fit: l'image affichée est centrée dans le conteneur (ou collée en bas si alignBottom)
-                val scale = minOf(boxW / imgW!!, boxH / imgH!!)
-                val dw = imgW!! * scale
-                val dh = imgH!! * scale
-
-                val dx = (boxW - dw) / 2f
-                val dy = if (alignBottom) (boxH - dh) else (boxH - dh) / 2f
-
-
-
-                // ✅ overlay dégradé : color (bas) -> transparent (haut), limité à la zone FIT
-                Canvas(Modifier.matchParentSize()) {
-                    val left = dx
-                    val top = dy
-                    val right = dx + dw
-                    val bottom = dy + dh
-
-                    if (cornerIconTint != null) {
-                        drawRect(
-                            brush = Brush.verticalGradient(
-                                colorStops = arrayOf(
-                                    0f to Color.Transparent,
-                                    0.3f to Color.Transparent,
-                                    1f to cornerIconTint.copy(alpha = 1f)
-                                ),
-                                startY = top,
-                                endY = bottom
-                            ),
-                            topLeft = Offset(left, top),
-                            size = Size(dw, dh)
-                        )
-                    }
-
-                    // border des images produits lors slection BottomSheet par exemple
-                    if (showImageBorder) {
-                        drawRoundRect(
-                            color = imageBorderColor,
-                            topLeft = Offset(left, top),
-                            size = Size(dw, dh),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx(), 2.dp.toPx()),
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = imageBorderWidth.toPx())
-                        )
-                    }
-                }
-
-                // position icône dans le coin haut-gauche de l'image affichée
-                if (cornerIconTint != null && cornerIcon != null) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .offset(
-                                x = (dx / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp,
-                                y = (dy / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp
-                            )
-                            .size(15.dp) // ✅ un peu plus grand qu’avant pour une bulle lisible
-                            .clip(androidx.compose.foundation.shape.CircleShape)
-                            .background(cornerIconTint),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = cornerIcon,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(11.dp) // ✅ icône plus petite dans la bulle
-                        )
-                    }
-                }
-
-
-
-            }
-
-
-        } else {
-            Text("🧴", fontSize = 20.sp)
-        }
-    }
-}
-
-
-
-
-
-
-
 // ---- ÉTAGÈRE selon index row (5 styles fixes)
 enum class ShelfView { TOP, BOTTOM }
 
@@ -1294,7 +1004,7 @@ fun ShelfTrapezoid(
 
 /* ——— Utils ——— */
 
-private fun formatRelativeDaysCompact(targetMillis: Long): String {
+fun formatRelativeDaysCompact(targetMillis: Long): String {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now(zone)
     val target = Instant.ofEpochMilli(targetMillis).atZone(zone).toLocalDate()
@@ -1308,7 +1018,7 @@ private fun formatRelativeDaysCompact(targetMillis: Long): String {
     }
 }
 
-private fun isExpired(expiry: Long): Boolean {
+fun isExpired(expiry: Long): Boolean {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now(zone)
     val target = Instant.ofEpochMilli(expiry).atZone(zone).toLocalDate()
@@ -1316,7 +1026,7 @@ private fun isExpired(expiry: Long): Boolean {
 }
 
 // Laisser l'utilisateur modifier la valeur de "isSoon" dans Settings
-private fun isSoon(expiry: Long): Boolean {
+fun isSoon(expiry: Long): Boolean {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now(zone)
     val target = Instant.ofEpochMilli(expiry).atZone(zone).toLocalDate()
