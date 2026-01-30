@@ -144,7 +144,7 @@ fun ShelfRow(
                         label = "selectedScale"
                     )
 
-                    ProductThumb(
+                    ItemThumbnail(
                         imageUrl = item.imageUrl,
                         alignBottom = true,
                         cornerIcon = cornerIcon,

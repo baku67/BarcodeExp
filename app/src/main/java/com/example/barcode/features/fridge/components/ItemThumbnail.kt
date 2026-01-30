@@ -37,7 +37,7 @@ import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 
 @Composable
-fun ProductThumb(
+fun ItemThumbnail(
     imageUrl: String?,
     modifier: Modifier = Modifier,
     alignBottom: Boolean = false,

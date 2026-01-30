@@ -69,7 +69,7 @@ public fun ItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // TODO: removeBG natif
-            ProductThumb(imageUrl)
+            ItemThumbnail(imageUrl)
 
             Spacer(Modifier.width(12.dp))
 
