@@ -78,6 +78,7 @@ import androidx.compose.animation.core.tween
 import com.example.barcode.features.fridge.components.ItemCard
 import com.example.barcode.features.fridge.components.ProductThumb
 import com.example.barcode.features.fridge.components.ShelfRow
+import com.example.barcode.features.fridge.components.bottomSheet.ItemDetailsHeader
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 
@@ -807,111 +808,7 @@ private fun DetailsOpenImageButtons(
     }
 }
 
-@Composable
-private fun ItemDetailsHeader(
-    itemEntity: ItemEntity,
-    onClose: () -> Unit,
-    onOpenViewer: (String) -> Unit
-) {
-    val name = itemEntity.name?.takeIf { it.isNotBlank() } ?: "(sans nom)"
-    val brand = itemEntity.brand?.takeIf { it.isNotBlank() } ?: "—"
-    val nutriScore = itemEntity.nutriScore?.takeIf { it.isNotBlank() } ?: "—"
-    val daysText = itemEntity.expiryDate?.let { formatRelativeDaysCompact(it) } ?: "—"
 
-    val chip = expiryChipStyle(itemEntity.expiryDate)
-
-    Box(Modifier.fillMaxWidth()) {
-
-        // ✅ Contenu header normal
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
-        ) {
-            // Image
-            Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .clickable(enabled = !itemEntity.imageUrl.isNullOrBlank()) {
-                        onOpenViewer(itemEntity.imageUrl!!)
-                    }
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                if (!itemEntity.imageUrl.isNullOrBlank()) {
-                    Image(
-                        painter = rememberAsyncImagePainter(itemEntity.imageUrl),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
-                    )
-                } else {
-                    Text("🧺", fontSize = 22.sp)
-                }
-            }
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = name.replaceFirstChar { it.titlecase() }, // Majuscule
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text(
-                    text = brand,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val nutriRes = nutriScoreRes(itemEntity.nutriScore)
-
-                    if (nutriRes != null) {
-                        Image(
-                            painter = painterResource(nutriRes),
-                            contentDescription = "Nutri-Score ${itemEntity.nutriScore}",
-                            modifier = Modifier.height(22.dp)
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(R.drawable.nutri_score_neutre),
-                            contentDescription = "Nutri-Score indisponible",
-                            modifier = Modifier
-                                .height(22.dp)
-                                .alpha(0.35f)
-                        )
-                    }
-
-                    Spacer(Modifier.weight(1f))
-
-                    AssistChip(
-                        onClick = {},
-                        enabled = false,
-                        label = { Text(daysText, fontWeight = FontWeight.SemiBold) },
-                        colors = AssistChipDefaults.assistChipColors(
-                            disabledContainerColor = chip.container,
-                            disabledLabelColor = chip.label
-                        ),
-                        border = BorderStroke(1.dp, chip.border)
-                    )
-                }
-            }
-        }
-    }
-}
 
 // Couleur du border top BottomSheet
 @Composable
@@ -927,46 +824,6 @@ private fun expiryStrokeColor(expiry: Long?): Color {
     }
 }
 
-
-@Immutable
-private data class ExpiryChipStyle(
-    val container: Color,
-    val label: Color,
-    val border: Color
-)
-
-@Composable
-private fun expiryChipStyle(expiry: Long?): ExpiryChipStyle {
-    val cs = MaterialTheme.colorScheme
-
-    if (expiry == null) {
-        return ExpiryChipStyle(
-            container = cs.surfaceVariant.copy(alpha = 0.55f),
-            label = cs.onSurface.copy(alpha = 0.55f),
-            border = cs.outlineVariant.copy(alpha = 0.55f)
-        )
-    }
-
-    return when {
-        isExpired(expiry) -> ExpiryChipStyle(
-            container = cs.tertiary.copy(alpha = 0.12f),
-            label = cs.tertiary.copy(alpha = 0.95f),
-            border = cs.tertiary.copy(alpha = 0.35f)
-        )
-
-        isSoon(expiry) -> ExpiryChipStyle(
-            container = Color(0xFFFFC107).copy(alpha = 0.16f),  // amber
-            label = Color(0xFFFFC107).copy(alpha = 0.95f),
-            border = Color(0xFFFFC107).copy(alpha = 0.40f)
-        )
-
-        else -> ExpiryChipStyle(
-            container = cs.primary.copy(alpha = 0.10f),
-            label = cs.primary.copy(alpha = 0.95f),
-            border = cs.primary.copy(alpha = 0.30f)
-        )
-    }
-}
 
 
 @Composable
@@ -1066,15 +923,6 @@ private fun TopRoundedStroke(
 
 
 
-@DrawableRes
-private fun nutriScoreRes(score: String?): Int? = when (score?.trim()?.uppercase()) {
-    "A" -> R.drawable.nutri_score_a
-    "B" -> R.drawable.nutri_score_b
-    "C" -> R.drawable.nutri_score_c
-    "D" -> R.drawable.nutri_score_d
-    "E" -> R.drawable.nutri_score_e
-    else -> null
-}
 
 
 
