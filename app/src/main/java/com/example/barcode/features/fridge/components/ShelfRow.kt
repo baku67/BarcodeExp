@@ -36,12 +36,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.barcode.data.local.entities.ItemEntity
-import com.example.barcode.features.fridge.ShelfPreset
-import com.example.barcode.features.fridge.ShelfTrapezoid
-import com.example.barcode.features.fridge.ShelfView
 import com.example.barcode.features.fridge.isExpired
 import com.example.barcode.features.fridge.isSoon
-import com.example.barcode.features.fridge.shelfSpec
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
