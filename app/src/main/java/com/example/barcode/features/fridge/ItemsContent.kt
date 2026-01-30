@@ -1367,7 +1367,11 @@ private fun ItemDetailsBottomSheet(
                 .padding(bottom = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            ItemDetailsHeader(itemEntity = itemEntity, onClose = onClose)
+            ItemDetailsHeader(
+                itemEntity = itemEntity,
+                onClose = onClose,
+                onOpenViewer = onOpenViewer
+            )
 
             DetailsOpenImageButtons(
                 ingredientsUrl = itemEntity.imageIngredientsUrl,
@@ -1412,7 +1416,8 @@ private fun DetailsOpenImageButtons(
 @Composable
 private fun ItemDetailsHeader(
     itemEntity: ItemEntity,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onOpenViewer: (String) -> Unit
 ) {
     val name = itemEntity.name?.takeIf { it.isNotBlank() } ?: "(sans nom)"
     val brand = itemEntity.brand?.takeIf { it.isNotBlank() } ?: "—"
@@ -1428,11 +1433,14 @@ private fun ItemDetailsHeader(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
         ) {
-            // Image...
+            // Image
             Box(
                 modifier = Modifier
                     .size(96.dp)
                     .clip(RoundedCornerShape(18.dp))
+                    .clickable(enabled = !itemEntity.imageUrl.isNullOrBlank()) {
+                        onOpenViewer(itemEntity.imageUrl!!)
+                    }
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
