@@ -1,4 +1,4 @@
-package com.example.barcode.features.fridge.components
+package com.example.barcode.features.fridge.components.shared
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -21,15 +22,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,7 +43,7 @@ import coil.compose.rememberAsyncImagePainter
 @Composable
 fun ItemThumbnail(
     imageUrl: String?,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier.Companion,
     alignBottom: Boolean = false,
     cornerIconTint: Color? = null,
     cornerIcon: ImageVector? = null,
@@ -56,13 +60,13 @@ fun ItemThumbnail(
 
     val dimFilter = remember(brightness) {
         // Multiplie R,G,B par "brightness" sans toucher A (alpha)
-        ColorFilter.colorMatrix(
+        ColorFilter.Companion.colorMatrix(
             ColorMatrix(
                 floatArrayOf(
-                    brightness, 0f,        0f,        0f, 0f,
-                    0f,         brightness,0f,        0f, 0f,
-                    0f,         0f,        brightness,0f, 0f,
-                    0f,         0f,        0f,        1f, 0f
+                    brightness, 0f, 0f, 0f, 0f,
+                    0f, brightness, 0f, 0f, 0f,
+                    0f, 0f, brightness, 0f, 0f,
+                    0f, 0f, 0f, 1f, 0f
                 )
             )
         )
@@ -80,7 +84,7 @@ fun ItemThumbnail(
                 boxW = it.width.toFloat()
                 boxH = it.height.toFloat()
             },
-        contentAlignment = if (alignBottom) Alignment.BottomCenter else Alignment.Center
+        contentAlignment = if (alignBottom) Alignment.Companion.BottomCenter else Alignment.Companion.Center
     ) {
         if (!imageUrl.isNullOrBlank()) {
             val painter = rememberAsyncImagePainter(imageUrl)
@@ -88,15 +92,18 @@ fun ItemThumbnail(
 
             if (alignBottom) {
                 // ✅ boîte de placement : l'image est alignée en bas
-                Box(Modifier.matchParentSize(), contentAlignment = Alignment.BottomCenter) {
+                Box(
+                    Modifier.Companion.matchParentSize(),
+                    contentAlignment = Alignment.Companion.BottomCenter
+                ) {
                     Image(
                         painter = painter,
                         contentDescription = null,
-                        modifier = Modifier
+                        modifier = Modifier.Companion
                             .fillMaxWidth()
                             .wrapContentHeight()
                             .clip(shape),
-                        contentScale = ContentScale.Fit,
+                        contentScale = ContentScale.Companion.Fit,
                         colorFilter = if (dimAlpha > 0f) dimFilter else null
                     )
                 }
@@ -104,10 +111,10 @@ fun ItemThumbnail(
                 Image(
                     painter = painter,
                     contentDescription = null,
-                    modifier = Modifier
+                    modifier = Modifier.Companion
                         .matchParentSize()
                         .clip(shape),
-                    contentScale = ContentScale.Fit,
+                    contentScale = ContentScale.Companion.Fit,
                     colorFilter = if (dimAlpha > 0f) dimFilter else null
                 )
             }
@@ -116,20 +123,22 @@ fun ItemThumbnail(
                 is AsyncImagePainter.State.Loading -> {
                     onImageLoaded(false)
                     Box(
-                        modifier = Modifier
+                        modifier = Modifier.Companion
                             .matchParentSize()
-                            .background(Color.Black.copy(alpha = 0.10f))
+                            .background(Color.Companion.Black.copy(alpha = 0.10f))
                     )
                     CircularProgressIndicator(
                         strokeWidth = 2.dp,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.Companion.size(18.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
                     )
                 }
+
                 is AsyncImagePainter.State.Error -> {
                     onImageLoaded(true)
                     Text("🧴", fontSize = 20.sp)
                 }
+
                 is AsyncImagePainter.State.Success -> {
                     onImageLoaded(true)
                     val d = (state as AsyncImagePainter.State.Success).result.drawable
@@ -138,6 +147,7 @@ fun ItemThumbnail(
                     imgW = iw.takeIf { it > 0 }?.toFloat()
                     imgH = ih.takeIf { it > 0 }?.toFloat()
                 }
+
                 else -> Unit
             }
 
@@ -153,9 +163,8 @@ fun ItemThumbnail(
                 val dy = if (alignBottom) (boxH - dh) else (boxH - dh) / 2f
 
 
-
                 // ✅ overlay dégradé : color (bas) -> transparent (haut), limité à la zone FIT
-                Canvas(Modifier.matchParentSize()) {
+                Canvas(Modifier.Companion.matchParentSize()) {
                     val left = dx
                     val top = dy
                     val right = dx + dw
@@ -163,10 +172,10 @@ fun ItemThumbnail(
 
                     if (cornerIconTint != null) {
                         drawRect(
-                            brush = Brush.verticalGradient(
+                            brush = Brush.Companion.verticalGradient(
                                 colorStops = arrayOf(
-                                    0f to Color.Transparent,
-                                    0.3f to Color.Transparent,
+                                    0f to Color.Companion.Transparent,
+                                    0.3f to Color.Companion.Transparent,
                                     1f to cornerIconTint.copy(alpha = 1f)
                                 ),
                                 startY = top,
@@ -183,8 +192,8 @@ fun ItemThumbnail(
                             color = imageBorderColor,
                             topLeft = Offset(left, top),
                             size = Size(dw, dh),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx(), 2.dp.toPx()),
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = imageBorderWidth.toPx())
+                            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+                            style = Stroke(width = imageBorderWidth.toPx())
                         )
                     }
                 }
@@ -192,26 +201,25 @@ fun ItemThumbnail(
                 // position icône dans le coin haut-gauche de l'image affichée
                 if (cornerIconTint != null && cornerIcon != null) {
                     Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
+                        modifier = Modifier.Companion
+                            .align(Alignment.Companion.TopStart)
                             .offset(
-                                x = (dx / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp,
-                                y = (dy / androidx.compose.ui.platform.LocalDensity.current.density).dp - 4.dp
+                                x = (dx / LocalDensity.current.density).dp - 4.dp,
+                                y = (dy / LocalDensity.current.density).dp - 4.dp
                             )
                             .size(15.dp) // ✅ un peu plus grand qu’avant pour une bulle lisible
-                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clip(CircleShape)
                             .background(cornerIconTint),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Companion.Center
                     ) {
                         Icon(
                             imageVector = cornerIcon,
                             contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(11.dp) // ✅ icône plus petite dans la bulle
+                            tint = Color.Companion.White,
+                            modifier = Modifier.Companion.size(11.dp) // ✅ icône plus petite dans la bulle
                         )
                     }
                 }
-
 
 
             }

@@ -40,11 +40,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import com.example.barcode.features.fridge.components.ItemCard
-import com.example.barcode.features.fridge.components.ShelfRow
-import com.example.barcode.features.fridge.components.VegetableDrawerCube3D
-import com.example.barcode.features.fridge.components.bottomSheet.ImageViewerDialog
-import com.example.barcode.features.fridge.components.bottomSheet.ItemDetailsBottomSheet
+import com.example.barcode.features.fridge.components.listDisplay.ItemListCard
+import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfRow
+import com.example.barcode.features.fridge.components.fridgeDisplay.VegetableDrawerCube3D
+import com.example.barcode.features.fridge.components.bottomSheetDetails.ImageViewerDialog
+import com.example.barcode.features.fridge.components.bottomSheetDetails.ItemDetailsBottomSheet
+import com.example.barcode.features.fridge.components.shared.FridgeDisplayIconToggle
 
 
 enum class ViewMode { List, Fridge }
@@ -417,7 +418,7 @@ fun ItemsContent(
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 items(sorted, key = { it.id }) { it ->
-                                    ItemCard(
+                                    ItemListCard(
                                         name = it.name ?: "(sans nom)",
                                         brand = it.brand,
                                         expiry = it.expiryDate,

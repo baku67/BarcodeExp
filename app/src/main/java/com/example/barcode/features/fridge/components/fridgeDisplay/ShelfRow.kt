@@ -1,4 +1,4 @@
-package com.example.barcode.features.fridge.components
+package com.example.barcode.features.fridge.components.fridgeDisplay
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
@@ -36,6 +36,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.barcode.data.local.entities.ItemEntity
+import com.example.barcode.features.fridge.components.shared.ItemThumbnail
+import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfPreset
+import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfTrapezoid
+import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfView
+import com.example.barcode.features.fridge.components.fridgeDisplay.shelfSpec
 import com.example.barcode.features.fridge.isExpired
 import com.example.barcode.features.fridge.isSoon
 import kotlinx.coroutines.coroutineScope
@@ -78,7 +83,7 @@ fun ShelfRow(
     val rowHeight = productSize + spec.height
 
     Box(
-        modifier = Modifier
+        modifier = Modifier.Companion
             .fillMaxWidth()
             .height(rowHeight)
     ) {
@@ -86,17 +91,18 @@ fun ShelfRow(
 
         // --- Produits
         Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
+            modifier = Modifier.Companion
+                .align(Alignment.Companion.TopCenter)
                 .padding(horizontal = 12.dp)
                 .offset(y = productDrop)
                 .zIndex(if (productsOnTop) 1f else 0f),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
+            verticalAlignment = Alignment.Companion.Bottom
         ) {
             itemEntities.forEachIndexed { itemIndex, item ->
 
-                val isSheetSelected = selectedSheetId != null && item.id == selectedSheetId // pour mettre l'item en surbrillance pendant le BottomSheetDetails
+                val isSheetSelected =
+                    selectedSheetId != null && item.id == selectedSheetId // pour mettre l'item en surbrillance pendant le BottomSheetDetails
 
                 val hasSheetSelection = selectedSheetId != null
                 val dimOthers = hasSheetSelection && !isSheetSelected
@@ -121,9 +127,9 @@ fun ShelfRow(
                 val mt = MaterialTheme.colorScheme
 
                 Box(
-                    modifier = Modifier
+                    modifier = Modifier.Companion
                         .size(productSize),
-                    contentAlignment = Alignment.BottomCenter
+                    contentAlignment = Alignment.Companion.BottomCenter
                 ) {
                     val cornerIcon = when {
                         item.expiryDate == null -> null
@@ -158,7 +164,7 @@ fun ShelfRow(
                         showImageBorder = isSheetSelected, // ✅ NEW
                         imageBorderColor = selectionBorderColor,
                         imageBorderWidth = 2.dp, // ✅ NEW
-                        modifier = Modifier
+                        modifier = Modifier.Companion
                             .fillMaxSize()
                             .alpha(if (dimOthers) 0.92f else 1f)
                             .zIndex(if (isSheetSelected) 2f else 0f)
@@ -177,24 +183,24 @@ fun ShelfRow(
                             )
                             .border(
                                 width = if (isSelected) 2.dp else 0.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Companion.Transparent,
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .background(
-                                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
-                                shape = RoundedCornerShape(12.dp)
+                                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Companion.Transparent,
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                             )
                     )
                 }
             }
 
-            repeat(5 - itemEntities.size) { Spacer(Modifier.size(productSize)) }
+            repeat(5 - itemEntities.size) { Spacer(Modifier.Companion.size(productSize)) }
         }
 
         // --- Étagère
         ShelfTrapezoid(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
+            modifier = Modifier.Companion
+                .align(Alignment.Companion.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
                 .zIndex(if (productsOnTop) 0f else 1f)
@@ -211,9 +217,6 @@ fun ShelfRow(
     }
 
 }
-
-
-
 
 
 @Composable

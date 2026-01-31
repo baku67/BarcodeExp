@@ -1,4 +1,4 @@
-package com.example.barcode.features.fridge.components
+package com.example.barcode.features.fridge.components.fridgeDisplay
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +10,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -71,11 +72,9 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
 }
 
 
-
-
 @Composable
 fun ShelfTrapezoid(
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier.Companion,
     height: Dp = 10.dp,
     insetTop: Dp = 18.dp,
     lipHeight: Dp = 2.dp,
@@ -89,11 +88,11 @@ fun ShelfTrapezoid(
 
     val dimFactor = (dimAlpha / 0.55f).coerceIn(0f, 1f) // 0..1
 
-    val baseShelf = androidx.compose.ui.graphics.lerp(cs.primary, cs.surface, 0.76f)
+    val baseShelf = lerp(cs.primary, cs.surface, 0.76f)
     val baseEdge = cs.primary
     // ✅ on assombrit uniquement les pixels dessinés (pas de rectangle overlay)
-    val shelfColor = androidx.compose.ui.graphics.lerp(baseShelf, Color.Black, dimFactor * 0.65f)
-    val edgeColor = androidx.compose.ui.graphics.lerp(baseEdge, Color.Black, dimFactor * 0.55f)
+    val shelfColor = lerp(baseShelf, Color.Companion.Black, dimFactor * 0.65f)
+    val edgeColor = lerp(baseEdge, Color.Companion.Black, dimFactor * 0.55f)
 
 
     Canvas(
@@ -163,4 +162,3 @@ fun ShelfTrapezoid(
         )
     }
 }
-

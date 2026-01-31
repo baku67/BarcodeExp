@@ -1,4 +1,4 @@
-package com.example.barcode.features.fridge
+package com.example.barcode.features.fridge.components.shared
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,10 +15,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import com.example.barcode.domain.models.AppIcon
+import com.example.barcode.features.fridge.ViewMode
 
 @Composable
 fun FridgeDisplayIconToggle(
@@ -29,7 +30,7 @@ fun FridgeDisplayIconToggle(
     val borderColor = MaterialTheme.colorScheme.outlineVariant
 
     Row(
-        modifier = Modifier
+        modifier = Modifier.Companion
             .clip(shape)
             .border(1.dp, borderColor, shape)
             .padding(2.dp)
@@ -59,12 +60,12 @@ fun SegIcon(
     onClick: () -> Unit,
     shape: RoundedCornerShape
 ) {
-    val bg = if (active) MaterialTheme.colorScheme.primary else Color.Transparent
+    val bg = if (active) MaterialTheme.colorScheme.primary else Color.Companion.Transparent
     val tint = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
 
     IconButton(
         onClick = onClick,
-        modifier = Modifier
+        modifier = Modifier.Companion
             .clip(shape)
             .background(bg)
             .size(40.dp)
@@ -75,6 +76,7 @@ fun SegIcon(
                 contentDescription = null,
                 tint = tint
             )
+
             is AppIcon.Drawable -> Icon(
                 painter = painterResource(icon.resId),
                 contentDescription = null,
@@ -83,4 +85,3 @@ fun SegIcon(
         }
     }
 }
-

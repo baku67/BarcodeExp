@@ -1,4 +1,4 @@
-package com.example.barcode.features.fridge.components
+package com.example.barcode.features.fridge.components.fridgeDisplay
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
@@ -10,16 +10,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-
 @Composable
 fun VegetableDrawerCube3D(
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier.Companion,
     height: Dp = 92.dp,
     depth: Dp = 16.dp,                 // profondeur du "toit"
     corner: Dp = 14.dp,                // arrondi bas uniquement (face avant)
@@ -34,23 +36,23 @@ fun VegetableDrawerCube3D(
 
     val dimFactor = (dimAlpha / 0.55f).coerceIn(0f, 1f) // 0..1 (même échelle que les étagères)
 
-    val baseFace = androidx.compose.ui.graphics.lerp(cs.primary, cs.surface, 0.76f)
+    val baseFace = lerp(cs.primary, cs.surface, 0.76f)
     val baseStroke = cs.primary.copy(alpha = 0.75f)
 
     // ✅ 1) GHOST : on rapproche de la surface (matière moins présente), sans transparence
-    val ghostFace = androidx.compose.ui.graphics.lerp(baseFace, cs.surface, ghostFactor)
-    val ghostStroke = androidx.compose.ui.graphics.lerp(baseStroke, cs.surface, ghostFactor * 0.65f)
+    val ghostFace = lerp(baseFace, cs.surface, ghostFactor)
+    val ghostStroke = lerp(baseStroke, cs.surface, ghostFactor * 0.65f)
 
     // ✅ 2) DIM : frigo éteint -> on assombrit (comme les étagères)
-    val faceColor = androidx.compose.ui.graphics.lerp(ghostFace, Color.Black, dimFactor * 0.65f)
-    val stroke = androidx.compose.ui.graphics.lerp(ghostStroke, Color.Black, dimFactor * 0.55f)
+    val faceColor = lerp(ghostFace, Color.Companion.Black, dimFactor * 0.65f)
+    val stroke = lerp(ghostStroke, Color.Companion.Black, dimFactor * 0.55f)
 
     // dessus plus clair que la face avant
     val front = faceColor.copy(alpha = 0.3f)
     val top = faceColor.copy(alpha = 0.15f)
 
     Box(modifier = modifier.height(height)) {
-        Canvas(Modifier.matchParentSize()) {
+        Canvas(Modifier.Companion.matchParentSize()) {
             val w = size.width
             val h = size.height
 
@@ -98,7 +100,7 @@ fun VegetableDrawerCube3D(
                 lineTo(x1, y1 - rb)   // descente droite
 
                 arcTo(
-                    rect = androidx.compose.ui.geometry.Rect(
+                    rect = Rect(
                         left = x1 - 2 * rb,
                         top = y1 - 2 * rb,
                         right = x1,
@@ -112,7 +114,7 @@ fun VegetableDrawerCube3D(
                 lineTo(x0 + rb, y1)
 
                 arcTo(
-                    rect = androidx.compose.ui.geometry.Rect(
+                    rect = Rect(
                         left = x0,
                         top = y1 - 2 * rb,
                         right = x0 + 2 * rb,
@@ -137,7 +139,7 @@ fun VegetableDrawerCube3D(
             drawPath(
                 path = topPath,
                 color = stroke,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = topSw)
+                style = Stroke(width = topSw)
             )
 
             // ✅ arêtes du toit (plus fines)
@@ -149,7 +151,7 @@ fun VegetableDrawerCube3D(
             drawPath(
                 path = frontPath,
                 color = stroke,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = frontSw)
+                style = Stroke(width = frontSw)
             )
 
             // petite ligne de relief sous le toit (optionnel)
@@ -163,7 +165,7 @@ fun VegetableDrawerCube3D(
 
         // Contenu au-dessus (on évite le toit)
         Box(
-            modifier = Modifier
+            modifier = Modifier.Companion
                 .matchParentSize()
                 .padding(top = depth)
                 .padding(contentPadding)
