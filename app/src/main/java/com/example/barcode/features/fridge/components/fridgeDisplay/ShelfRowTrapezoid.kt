@@ -73,7 +73,7 @@ fun shelfSpec(preset: ShelfPreset): ShelfSpec = when (preset) {
 
 
 @Composable
-fun ShelfTrapezoid(
+fun ShelfRowTrapezoid(
     modifier: Modifier = Modifier.Companion,
     height: Dp = 10.dp,
     insetTop: Dp = 18.dp,

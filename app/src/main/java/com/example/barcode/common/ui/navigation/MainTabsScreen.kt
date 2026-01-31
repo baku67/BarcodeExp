@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.features.dashboard.HomeContent
-import com.example.barcode.features.fridge.ItemsContent
+import com.example.barcode.features.fridge.FridgePage
 import com.example.barcode.features.listeCourse.ListeCoursesContent
 import com.example.barcode.features.recipies.RecipesContent
 import com.example.barcode.features.settings.SettingsContent
@@ -74,7 +74,7 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
                     isActive = isActive
                 )
 
-                "items" -> ItemsContent(
+                "items" -> FridgePage(
                     innerPadding = PaddingValues(),
                     authVm = authVm,
                     onAddItem = {

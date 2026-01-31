@@ -37,10 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.features.fridge.components.shared.ItemThumbnail
-import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfPreset
-import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfTrapezoid
-import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfView
-import com.example.barcode.features.fridge.components.fridgeDisplay.shelfSpec
 import com.example.barcode.features.fridge.isExpired
 import com.example.barcode.features.fridge.isSoon
 import kotlinx.coroutines.coroutineScope
@@ -198,7 +194,7 @@ fun ShelfRow(
         }
 
         // --- Étagère
-        ShelfTrapezoid(
+        ShelfRowTrapezoid(
             modifier = Modifier.Companion
                 .align(Alignment.Companion.BottomCenter)
                 .fillMaxWidth()

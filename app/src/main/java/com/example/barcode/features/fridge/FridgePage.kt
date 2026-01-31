@@ -53,7 +53,7 @@ enum class ViewMode { List, Fridge }
 // TODO: bouton explicite de rafraichissement ou alors padding en haut de liste (mais caché) qui permet de ne pas activer le pull-to-refresh sans faire expres (BAD UX°
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemsContent(
+fun FridgePage(
     innerPadding: PaddingValues,
     authVm: AuthViewModel,
     onAddItem: () -> Unit,
