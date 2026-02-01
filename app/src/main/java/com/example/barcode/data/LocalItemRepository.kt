@@ -2,6 +2,7 @@ package com.example.barcode.data
 
 import com.example.barcode.data.local.dao.ItemDao
 import com.example.barcode.data.local.entities.ItemEntity
+import com.example.barcode.data.local.entities.SyncStatus
 import kotlinx.coroutines.flow.Flow
 
 class LocalItemRepository(private val dao: ItemDao) {
@@ -28,5 +29,13 @@ class LocalItemRepository(private val dao: ItemDao) {
         dao.upsert(itemEntity)
     }
 
-    suspend fun delete(id: String) = dao.deleteById(id)
+    suspend fun delete(id: String) {
+        val item = dao.getById(id) ?: return
+
+        if (item.syncStatus == SyncStatus.PENDING_CREATE) {
+            dao.hardDelete(id) // ✅ pas besoin de sync delete
+        } else {
+            dao.markDeleted(id) // ✅ tombstone + pending delete
+        }
+    }
 }

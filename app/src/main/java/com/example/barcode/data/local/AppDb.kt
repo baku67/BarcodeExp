@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.dao.ItemDao
 
-@Database(entities = [ItemEntity::class], version = 4, exportSchema = true)
+@Database(entities = [ItemEntity::class], version = 6, exportSchema = true)
 abstract class AppDb : RoomDatabase() {
 
     abstract fun itemDao(): ItemDao
@@ -39,6 +39,42 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+
+                // ✅ Ajout du tombstone deletedAt (NULL par défaut)
+                if (!columnExists(db, "items", "deletedAt")) {
+                    db.execSQL("ALTER TABLE items ADD COLUMN deletedAt INTEGER")
+                }
+
+                // ✅ Optionnel mais utile: index pour filtrer vite (deletedAt IS NULL) + syncStatus
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_items_deletedAt ON items(deletedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_items_syncStatus ON items(syncStatus)")
+
+                // ✅ Propre: évite updatedAt=0 sur les rows existantes (sinon ta sync peut avoir des comportements bizarres)
+                db.execSQL("UPDATE items SET updatedAt = (strftime('%s','now') * 1000) WHERE updatedAt = 0")
+            }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                if (!columnExists(db, "items", "serverUpdatedAt")) {
+                    db.execSQL("ALTER TABLE items ADD COLUMN serverUpdatedAt INTEGER")
+                }
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_items_serverUpdatedAt ON items(serverUpdatedAt)")
+            }
+        }
+
+        private fun columnExists(db: SupportSQLiteDatabase, table: String, column: String): Boolean {
+            db.query("PRAGMA table_info($table)").use { cursor ->
+                val nameIndex = cursor.getColumnIndex("name")
+                while (cursor.moveToNext()) {
+                    if (cursor.getString(nameIndex) == column) return true
+                }
+            }
+            return false
+        }
+
         fun get(context: Context): AppDb =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -56,7 +92,8 @@ abstract class AppDb : RoomDatabase() {
                     .addMigrations(MIGRATION_1_2)
                     .addMigrations(MIGRATION_2_3)
                     .addMigrations(MIGRATION_3_4)
-
+                    .addMigrations(MIGRATION_4_5)
+                    .addMigrations(MIGRATION_5_6)
 
                     // Toujours à la fin
                     .build().also { INSTANCE = it }

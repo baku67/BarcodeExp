@@ -57,5 +57,12 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun deleteItem(id: String) = viewModelScope.launch { repo.delete(id) }
+    fun deleteItem(id: String) = viewModelScope.launch {
+        repo.delete(id) // ✅ devient un soft delete
+
+        // ✅ Si authentifié, on push la suppression
+        if (session.isAuthenticated()) {
+            SyncScheduler.enqueueSync(getApplication())
+        }
+    }
 }

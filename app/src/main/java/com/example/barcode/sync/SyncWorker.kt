@@ -33,9 +33,33 @@ class SyncWorker(
         val api = ApiClient.createApi(ItemsApi::class.java)
 
 
-        // 1) PUSH : envoyer les items en attente (PENDING_CREATE)
+        // 1) PUSH DELETE : envoyer les suppressions en attente (PENDING_DELETE)
+        val pendingDeletes = dao.getBySyncStatus(SyncStatus.PENDING_DELETE)
+
+        // TODO: Batch plutot que 1 requete par Item ?
+        pendingDeletes.forEach { item ->
+            try {
+                val res = api.deleteItemByClientId(
+                    authorization = "Bearer $token",
+                    clientId = item.id
+                )
+
+                // ✅ 204 = OK, ✅ 404 = déjà supprimé côté serveur => on purge local pareil
+                if (res.isSuccessful || res.code() == 404) {
+                    dao.hardDelete(item.id) // ✅ on nettoie la DB locale
+                } else {
+                    dao.updateSyncStatus(item.id, SyncStatus.FAILED)
+                }
+            } catch (e: Exception) {
+                dao.updateSyncStatus(item.id, SyncStatus.FAILED)
+            }
+        }
+
+
+        // 2) PUSH CREATE: envoyer les items en attente (PENDING_CREATE)
         val pending = dao.getBySyncStatus(SyncStatus.PENDING_CREATE)
 
+        // TODO: Batch plutot que 1 requete par Item ?
         pending.forEach { item ->
             try {
                 val dto = ItemCreateDto(
@@ -72,7 +96,7 @@ class SyncWorker(
         }
 
 
-        // 2) PULL : récupérer l'état serveur et upsert local (Room) par clientId
+        // 3) PULL : récupérer l'état serveur et upsert local (Room) par clientId
         try {
             val pull = api.getItems("Bearer $token")
             if (!pull.isSuccessful) {
@@ -84,8 +108,15 @@ class SyncWorker(
             val remoteItems = pull.body().orEmpty()
 
             remoteItems.forEach { dto ->
+                val clientId = dto.clientId ?: return@forEach
+
+                val serverUpdatedAt = dto.updatedAt.let(::parseAtomToEpochMs)
+
+                val serverDeletedAt = dto.deletedAt?.let { parseAtomToEpochMs(it) }
+                    ?: if (dto.isDeleted) serverUpdatedAt else null // fallback safe
+
                 val entity = ItemEntity(
-                    id = dto.clientId, // ✅ upsert direct sur UUID
+                    id = clientId,
                     barcode = dto.barcode,
                     name = dto.name,
                     brand = dto.brand,
@@ -96,12 +127,19 @@ class SyncWorker(
                     addedAt = dto.addedAt?.let { parseAtomToEpochMs(it) },
                     expiryDate = dto.expiryDate?.let { parseYyyyMmDdToEpochMs(it) },
                     addMode = dto.addMode ?: "barcode_scan",
+
                     syncStatus = SyncStatus.SYNCED,
-                    updatedAt = System.currentTimeMillis()
+                    // ✅ timestamp local (debug / tri / etc)
+                    localUpdatedAt = System.currentTimeMillis(),
+                    // ✅ timestamp serveur (delta sync / merge)
+                    serverUpdatedAt = serverUpdatedAt,
+                    // ✅ tombstone
+                    deletedAt = serverDeletedAt
                 )
 
                 dao.upsert(entity)
             }
+
         } catch (e: Exception) {
             // Pull qui échoue : on ne casse pas tout, on garde juste le local
             android.util.Log.e("SyncWorker", "pull exception=${e.message}")
