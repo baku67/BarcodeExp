@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.features.fridge.isExpired
 import com.example.barcode.features.fridge.isSoon
@@ -60,9 +61,18 @@ public fun ItemDetailsBottomSheet(
         CornerRadiusEtPoignee(
             radius = 28.dp,
             strokeWidth = 2.dp,
-            strokeColor = strokeColor, // couleur calculée en fonction exp Item
-            handleHeight = 4.dp
+            strokeColor = strokeColor,
+            handleHeight = 4.dp,
+            topEndContent = {
+                BottomSheetMenuButton(
+                    onEdit = { onEdit(itemEntity) },
+                    onRemove = { onRemove(itemEntity) },
+                    onAddToFavorites = { onAddToFavorites(itemEntity) },
+                    onAddToShoppingList = { onAddToShoppingList(itemEntity) },
+                )
+            }
         )
+
 
         Spacer(Modifier.height(5.dp))
 
@@ -73,19 +83,6 @@ public fun ItemDetailsBottomSheet(
                 .padding(bottom = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BottomSheetMenuButton(
-                    onEdit = { onEdit(itemEntity) },
-                    onRemove = { onRemove(itemEntity) },
-                    onAddToFavorites = { onAddToFavorites(itemEntity) },
-                    onAddToShoppingList = { onAddToShoppingList(itemEntity) },
-                )
-            }
 
             ItemDetailsHeader(
                 itemEntity = itemEntity,
@@ -219,7 +216,8 @@ private fun CornerRadiusEtPoignee(
     strokeWidth: Dp = 2.dp,
     strokeColor: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
     handleWidth: Dp = 44.dp,
-    handleHeight: Dp = 4.dp
+    handleHeight: Dp = 4.dp,
+    topEndContent: @Composable (() -> Unit)? = null
 ) {
     Box(
         modifier = modifier
@@ -233,6 +231,19 @@ private fun CornerRadiusEtPoignee(
             radius = radius,
             color = strokeColor
         )
+
+
+                // ✅ Slot action en haut à droite (menu 3 points)
+        if (topEndContent != null) {
+                        Box(
+                                modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(top = 2.dp, end = 8.dp)
+                                .zIndex(1f) // au-dessus du stroke Canvas
+                       ) {
+                               topEndContent()
+                           }
+                   }
 
         // ✅ Poignée DANS la zone (pas en dessous)
         Box(
