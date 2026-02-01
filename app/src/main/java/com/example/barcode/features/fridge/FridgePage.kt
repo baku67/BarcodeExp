@@ -220,7 +220,19 @@ fun FridgePage(
             ItemDetailsBottomSheet(
                 itemEntity = sheetItemEntity!!,
                 onClose = { closeSheet() },
-                onOpenViewer = { viewerUrl = it }
+                onOpenViewer = { viewerUrl = it },
+                onEdit = { item ->
+                    SnackbarBus.show("Modifier : \"${item.name ?: "(sans nom)"}\" (à venir)")
+                },
+                onRemove = { item ->
+                    SnackbarBus.show("Retirer : \"${item.name ?: "(sans nom)"}\" (à venir)")
+                },
+                onAddToFavorites = { item ->
+                    SnackbarBus.show("Ajouté aux favoris : \"${item.name ?: "(sans nom)"}\" (à venir)")
+                },
+                onAddToShoppingList = { item ->
+                    SnackbarBus.show("Ajouté à la liste de courses : \"${item.name ?: "(sans nom)"}\" (à venir)")
+                }
             )
         }
     }

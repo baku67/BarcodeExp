@@ -44,7 +44,11 @@ import com.example.barcode.features.fridge.isSoon
 public fun ItemDetailsBottomSheet(
     itemEntity: ItemEntity,
     onClose: () -> Unit,
-    onOpenViewer: (String) -> Unit
+    onOpenViewer: (String) -> Unit,
+    onEdit: (ItemEntity) -> Unit = {},
+    onRemove: (ItemEntity) -> Unit = {},
+    onAddToFavorites: (ItemEntity) -> Unit = {},
+    onAddToShoppingList: (ItemEntity) -> Unit = {},
 ) {
     val strokeColor by animateColorAsState(
         targetValue = expiryStrokeColor(itemEntity.expiryDate),
@@ -69,6 +73,20 @@ public fun ItemDetailsBottomSheet(
                 .padding(bottom = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BottomSheetMenuButton(
+                    onEdit = { onEdit(itemEntity) },
+                    onRemove = { onRemove(itemEntity) },
+                    onAddToFavorites = { onAddToFavorites(itemEntity) },
+                    onAddToShoppingList = { onAddToShoppingList(itemEntity) },
+                )
+            }
+
             ItemDetailsHeader(
                 itemEntity = itemEntity,
                 onClose = onClose,
