@@ -8,8 +8,15 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 
 object SyncScheduler {
+    /** Nom unique pour éviter d'empiler des syncs */
+    const val SYNC_UNIQUE_NAME = "sync_items"
+
+    /** Tag observable côté UI */
+    const val SYNC_TAG = "SYNC_ITEMS"
+
     fun enqueueSync(context: Context) {
         val req = OneTimeWorkRequestBuilder<SyncWorker>()
+            .addTag(SYNC_TAG) // ✅ IMPORTANT : sans ça l'UI ne peut pas "voir" la sync
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -18,6 +25,6 @@ object SyncScheduler {
             .build()
 
         WorkManager.getInstance(context)
-            .enqueueUniqueWork("sync_items", ExistingWorkPolicy.KEEP, req)
+            .enqueueUniqueWork(SYNC_UNIQUE_NAME, ExistingWorkPolicy.KEEP, req)
     }
 }

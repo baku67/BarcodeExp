@@ -51,6 +51,9 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 
 enum class ViewMode { List, Fridge }
 
@@ -71,6 +74,20 @@ fun FridgePage(
     val session = remember { SessionManager(appContext) }
     val scope = rememberCoroutineScope()
 
+    // Etats refresh ou initial loading du sync
+    val workManager = remember(appContext) { WorkManager.getInstance(appContext) }
+    val syncInfos by workManager
+        .getWorkInfosByTagLiveData(SyncScheduler.SYNC_TAG)
+        .observeAsState(emptyList())
+    val isSyncing = syncInfos.any { info ->
+        when (info.state) {
+            WorkInfo.State.RUNNING,
+            WorkInfo.State.ENQUEUED,
+            WorkInfo.State.BLOCKED -> true
+            else -> false
+        }
+    }
+
     val mode = session.appMode.collectAsState(initial = AppMode.AUTH).value
     val token = session.token.collectAsState(initial = null).value
 
@@ -83,8 +100,6 @@ fun FridgePage(
     }
 
     // --- Pull-to-refresh + initial load
-    var refreshing by rememberSaveable { mutableStateOf(false) }
-    var initialLoading by rememberSaveable { mutableStateOf(false) }
     var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Bac à legumes
@@ -179,9 +194,12 @@ fun FridgePage(
     // TODO: remplacer le delay par vrai refresh VM/API
     suspend fun refreshItems() {
         if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
-            // ✅ lance un sync push+pull en background
+            if (isSyncing) {
+                SnackbarBus.show("Synchronisation déjà en cours…")
+                return
+            }
             SyncScheduler.enqueueSync(appContext)
-            SnackbarBus.show("Synchronisation lancée…")
+            //SnackbarBus.show("Synchronisation lancée…")
         } else {
             SnackbarBus.show("Mode local : rien à synchroniser.")
         }
@@ -265,12 +283,10 @@ fun FridgePage(
         if (!canLoad) return@LaunchedEffect
         if (loadedForToken == token) return@LaunchedEffect
 
-        initialLoading = true
         try {
             refreshItems()
         } finally {
-            initialLoading = false
-            loadedForToken = token // même si échec => évite spam navigation (refresh manuel pour retenter)
+            loadedForToken = token
         }
     }
 
@@ -358,7 +374,7 @@ fun FridgePage(
     Box(Modifier.fillMaxSize()) {
 
         // Barre de chargement top
-        if (initialLoading) {
+        if (isSyncing) {
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -370,21 +386,15 @@ fun FridgePage(
         }
 
         PullToRefreshBox(
-            isRefreshing = refreshing,
+            isRefreshing = isSyncing,
             onRefresh = {
-                if (initialLoading || refreshing) return@PullToRefreshBox // Pas de pull to refresh si refresh en cours
+                if (isSyncing) return@PullToRefreshBox
                 scope.launch {
                     if (mode != AppMode.AUTH || token.isNullOrBlank()) {
                         SnackbarBus.show("Connecte-toi pour synchroniser.")
                         return@launch
                     }
-
-                    refreshing = true
-                    try {
-                        refreshItems()
-                    } finally {
-                        refreshing = false
-                    }
+                    refreshItems()
                 }
             },
             modifier = Modifier
@@ -465,7 +475,6 @@ fun FridgePage(
                     ViewMode.Fridge -> {
 
                         val isCompletelyEmpty = sorted.isEmpty()
-                        val isSyncing = initialLoading || refreshing
                         val emptyCenterLabel = when {
                             !isCompletelyEmpty -> null
                             isSyncing -> "Synchronisation…"
