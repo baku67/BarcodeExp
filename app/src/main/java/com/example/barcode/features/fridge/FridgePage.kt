@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +28,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.LocalAppTopBarState
 import com.example.barcode.core.session.AppMode
@@ -51,9 +54,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
 
 enum class ViewMode { List, Fridge }
 
@@ -79,6 +79,7 @@ fun FridgePage(
     val syncInfos by workManager
         .getWorkInfosByTagLiveData(SyncScheduler.SYNC_TAG)
         .observeAsState(emptyList())
+
     val isSyncing = syncInfos.any { info ->
         when (info.state) {
             WorkInfo.State.RUNNING,
@@ -128,6 +129,13 @@ fun FridgePage(
             compareBy<ItemEntity> { it.expiryDate ?: Long.MAX_VALUE }
                 .thenBy { (it.name ?: "").lowercase() }
         )
+    }
+
+    // ✅ Message d'état centré quand la liste est vide (LIST et FRIDGE)
+    val emptyCenterLabel: String? = when {
+        sorted.isNotEmpty() -> null
+        isSyncing -> "Synchronisation…"
+        else -> "Aucun produit"
     }
 
     // --- Sélection multiple (IDs = String)
@@ -425,23 +433,19 @@ fun FridgePage(
 
                     // LIST
                     ViewMode.List -> {
-                        if (sorted.isEmpty()) {
-                            // ✅ Message uniquement en mode LISTE (Fridge doit afficher ses étagères vides)
-                            LazyColumn(
-                                state = listState,
+                        if (emptyCenterLabel != null) {
+                            // ✅ Pas d'étagères en mode LISTE : on centre le message sur l'aire de contenu
+                            Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxWidth(),
-                                contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp)
+                                contentAlignment = Alignment.Center
                             ) {
-                                item {
-                                    Box(
-                                        modifier = Modifier.fillParentMaxHeight(),
-                                        contentAlignment = Alignment.TopCenter
-                                    ) {
-                                        Text("Aucun produit. Tire vers le bas pour synchroniser.")
-                                    }
-                                }
+                                Text(
+                                    text = emptyCenterLabel,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         } else {
                             LazyColumn(
@@ -473,14 +477,6 @@ fun FridgePage(
 
                     // FRIDGE DESIGN
                     ViewMode.Fridge -> {
-
-                        val isCompletelyEmpty = sorted.isEmpty()
-                        val emptyCenterLabel = when {
-                            !isCompletelyEmpty -> null
-                            isSyncing -> "Synchronisation…"
-                            else -> "Aucun produit"
-                        }
-
                         // ✅ Même si sorted est vide, shelves contient au moins 5 rangées → affichage “éteint”
                         LazyColumn(
                             state = listState,
