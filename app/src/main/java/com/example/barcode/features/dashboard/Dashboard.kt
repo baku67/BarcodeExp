@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -49,9 +50,11 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.barcode.R
 import kotlinx.coroutines.delay
+import kotlin.math.min
 
 
 // TODO: vraies données route dashboard (counts et 5 nextExpiring)
@@ -170,7 +173,7 @@ private fun DashboardCardProductsWide(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(170.dp),
+            .height(140.dp),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -189,7 +192,7 @@ private fun DashboardCardProductsWide(
                     .weight(1f)
                     .padding(horizontal = 16.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically,     // ✅ centrage vertical
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
 
 
@@ -218,7 +221,7 @@ private fun DashboardCardProductsWide(
                                 painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
                                 contentDescription = "Produits",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
-                                modifier = Modifier.size(60.dp)
+                                modifier = Modifier.size(72.dp)
                             )
                         }
 
@@ -229,20 +232,22 @@ private fun DashboardCardProductsWide(
                         ) {
                             AnimatedCountText(
                                 target = total,
-                                style = MaterialTheme.typography.displaySmall,
+                                style = MaterialTheme.typography.displayMedium,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.primary,
                                 durationMillis = 750
                             )
                             Text(
                                 text = "Produits",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodyLarge, // au lieu de bodyMedium
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.80f)
                             )
                         }
 
                     }
 
+                    // PILLS
+                    /*
                     Spacer(Modifier.height(15.dp))
 
                     // Mini-sections en ligne (ordre cohérent avec la barre : rouge → jaune → vert)
@@ -273,7 +278,7 @@ private fun DashboardCardProductsWide(
                             color = MaterialTheme.colorScheme.tertiary,
                             iconAlpha = 0.80f
                         )
-                    }
+                    }*/
                 }
 
                 // 3) Droite : mini-liste "À consommer"
@@ -584,7 +589,6 @@ private fun DashboardCardRecipesFake(
 }
 
 
-
 @Composable
 private fun ExpiryProgressBar(
     total: Int,
@@ -593,6 +597,8 @@ private fun ExpiryProgressBar(
     expired: Int,
     modifier: Modifier = Modifier,
     animate: Boolean = true,
+    barHeight: Dp = 3.dp,            // ✅ plus fin (au lieu de 4.dp)
+    smoothFraction: Float = 0.03f,   // ✅ largeur de “fondu” autour des frontières (3% de la barre)
 ) {
     val t = total.coerceAtLeast(1)
 
@@ -621,29 +627,72 @@ private fun ExpiryProgressBar(
         label = "expiryBarReveal"
     )
 
+    // ✅ Ordre plus “logique” pour une jauge de risque : EXPIRED -> SOON -> FRESH
+    val cExpired = MaterialTheme.colorScheme.tertiary
+    val cSoon = Color(0xFFF9A825)
+    val cFresh = MaterialTheme.colorScheme.primary
+
+    // Segments non nuls
+    val segments = listOf(
+        we to cExpired,
+        ws to cSoon,
+        wf to cFresh
+    ).filter { it.first > 0f }
+
+    val brush = when (segments.size) {
+        0 -> Brush.horizontalGradient(
+            colors = listOf(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.surfaceVariant)
+        )
+        1 -> Brush.horizontalGradient(colors = listOf(segments[0].second, segments[0].second))
+        else -> {
+            val stops = mutableListOf<Pair<Float, Color>>()
+
+            var cum = 0f
+            stops += 0f to segments.first().second
+
+            for (i in 0 until segments.lastIndex) {
+                val (wPrev, cPrev) = segments[i]
+                val (wNext, cNext) = segments[i + 1]
+
+                cum += wPrev
+
+                // ✅ on réduit le fondu si un segment est minuscule
+                val s = min(smoothFraction, min(wPrev, wNext) / 2f)
+
+                val left = (cum - s).coerceIn(0f, 1f)
+                val right = (cum + s).coerceIn(0f, 1f)
+
+                stops += left to cPrev
+                stops += right to cNext
+            }
+
+            stops += 1f to segments.last().second
+
+            Brush.horizontalGradient(colorStops = stops.toTypedArray())
+        }
+    }
+
     // Track (fond)
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(4.dp)
+            .height(barHeight)
             .clip(RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
     ) {
-        // Contenu (segments) -> reveal via scaleX depuis la gauche
-        Row(
+        // ✅ un seul “draw” (plus clean + souvent plus optimisé que 3 Box)
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
                     scaleX = reveal
                     transformOrigin = TransformOrigin(0f, 0.5f)
                 }
-        ) {
-            if (wf > 0f) Box(Modifier.weight(wf).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
-            if (ws > 0f) Box(Modifier.weight(ws).fillMaxHeight().background(Color(0xFFF9A825)))
-            if (we > 0f) Box(Modifier.weight(we).fillMaxHeight().background(MaterialTheme.colorScheme.tertiary))
-        }
+                .background(brush = brush)
+        )
     }
 }
+
 
 
 @Composable
