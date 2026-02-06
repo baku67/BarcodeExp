@@ -372,6 +372,7 @@ fun FridgePage(
         PullToRefreshBox(
             isRefreshing = refreshing,
             onRefresh = {
+                if (initialLoading || refreshing) return@PullToRefreshBox // Pas de pull to refresh si refresh en cours
                 scope.launch {
                     if (mode != AppMode.AUTH || token.isNullOrBlank()) {
                         SnackbarBus.show("Connecte-toi pour synchroniser.")
@@ -464,6 +465,12 @@ fun FridgePage(
                     ViewMode.Fridge -> {
 
                         val isCompletelyEmpty = sorted.isEmpty()
+                        val isSyncing = initialLoading || refreshing
+                        val emptyCenterLabel = when {
+                            !isCompletelyEmpty -> null
+                            isSyncing -> "Synchronisation…"
+                            else -> "Aucun produit"
+                        }
 
                         // ✅ Même si sorted est vide, shelves contient au moins 5 rangées → affichage “éteint”
                         LazyColumn(
@@ -503,7 +510,7 @@ fun FridgePage(
                                     dimAlpha = dimAlpha,
                                     selectedSheetId = sheetItemEntity?.id,
                                     emptyOpacity = if (shelfItems.isEmpty()) ghostOpacity else 1f,
-                                    emptyCenterLabel = if (isCompletelyEmpty && index == 2) "Aucun produit" else null // message "liste vide" ou "sync" sur etagere 5 par exemple
+                                    emptyCenterLabel = if (index == 2) emptyCenterLabel else null // message "liste vide" ou "sync" sur etagere 5 par exemple
                                 )
                             }
 
