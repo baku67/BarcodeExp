@@ -55,6 +55,9 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.R
 import kotlinx.coroutines.delay
 import kotlin.math.min
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 
 
 // TODO: vraies données route dashboard (counts et 5 nextExpiring)
@@ -291,11 +294,21 @@ private fun DashboardCardProductsWide(
                         .padding(12.dp)
                 ) {
                     // Liste (max 5)
-                    nextExpiring.take(5).forEach { item ->
-                        val lineColor = when (item.kind) {
+                    val lines = nextExpiring.take(5)
+
+                    lines.forEachIndexed { index, item ->
+                        val baseColor = when (item.kind) {
                             ExpiryKind.EXPIRED -> MaterialTheme.colorScheme.tertiary
                             ExpiryKind.SOON -> Color(0xFFF9A825)
                             ExpiryKind.FRESH -> MaterialTheme.colorScheme.onSurface
+                        }
+
+                        // ✅ Dégradé vertical vers le bas (sur le TEXT uniquement)
+                        val alpha = when {
+                            lines.size < 2 -> 1f
+                            index == lines.lastIndex -> 0.22f        // dernier : très transparent
+                            index == lines.lastIndex - 1 -> 0.55f    // avant-dernier : moins transparent
+                            else -> 1f
                         }
 
                         Text(
@@ -303,9 +316,10 @@ private fun DashboardCardProductsWide(
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = lineColor
+                            color = baseColor.copy(alpha = alpha)
                         )
                     }
+
 
                     Spacer(modifier = Modifier.weight(1f)) // ✅ pousse le bouton en bas
 
@@ -739,4 +753,29 @@ fun AnimatedCountText(
         overflow = overflow
     )
 }
+
+
+
+private fun Modifier.textFadeToRight(
+    fadeWidthFraction: Float = 0.33f // 33% de la largeur à la fin du texte
+): Modifier = this
+    // ✅ indispensable pour que BlendMode.DstIn fonctionne proprement
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+
+        val start = (1f - fadeWidthFraction).coerceIn(0f, 1f)
+
+        // ✅ Masque alpha : opaque -> transparent (uniquement sur le contenu dessiné = le texte)
+        drawRect(
+            brush = Brush.horizontalGradient(
+                colorStops = arrayOf(
+                    0f to Color.White,
+                    start to Color.White,
+                    1f to Color.Transparent
+                )
+            ),
+            blendMode = BlendMode.DstIn
+        )
+    }
 
