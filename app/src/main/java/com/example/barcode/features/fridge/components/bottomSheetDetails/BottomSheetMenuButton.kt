@@ -1,8 +1,6 @@
 package com.example.barcode.features.fridge.components.bottomSheetDetails
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.CheckCircleOutline
@@ -11,10 +9,11 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,8 +21,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-
 
 @Composable
 fun BottomSheetMenuButton(
@@ -36,20 +35,27 @@ fun BottomSheetMenuButton(
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier) {
-        IconButton(
+        SmallFloatingActionButton(
             onClick = { expanded = true },
-            modifier = Modifier.size(40.dp)
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f),
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 10.dp,
+                hoveredElevation = 8.dp,
+                focusedElevation = 8.dp
+            )
         ) {
             Icon(
                 imageVector = Icons.Filled.MoreVert,
-                contentDescription = "Menu",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f)
+                contentDescription = "Menu"
             )
         }
 
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            offset = DpOffset(x = 0.dp, y = 8.dp) // petit gap sous le FAB
         ) {
             DropdownMenuItem(
                 text = { Text("Modifier") },
@@ -63,7 +69,7 @@ fun BottomSheetMenuButton(
                 onClick = { expanded = false; onRemove() }
             )
 
-            HorizontalDivider(Modifier.padding(vertical = 4.dp))
+            HorizontalDivider()
 
             DropdownMenuItem(
                 text = { Text("Ajouter aux favoris") },

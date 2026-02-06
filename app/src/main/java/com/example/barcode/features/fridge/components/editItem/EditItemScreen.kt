@@ -148,7 +148,7 @@ fun EditItemScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // --- IMAGE (même vibe que DetailsStepScreen) ---
-                /*Box(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(220.dp)
@@ -233,7 +233,7 @@ fun EditItemScreen(
                             Icon(Icons.Filled.Image, contentDescription = "Modifier l'image")
                         }
                     }
-                }*/
+                }
 
                 if (showImageDialog) {
                     EditImageUrlDialog(

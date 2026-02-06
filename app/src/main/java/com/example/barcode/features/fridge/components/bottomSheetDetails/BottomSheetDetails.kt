@@ -56,47 +56,52 @@ public fun ItemDetailsBottomSheet(
         label = "sheetStrokeColor"
     )
 
-    Column(Modifier.fillMaxWidth()) {
+    Box(Modifier.fillMaxWidth()) {
 
-        CornerRadiusEtPoignee(
-            radius = 28.dp,
-            strokeWidth = 2.dp,
-            strokeColor = strokeColor,
-            handleHeight = 4.dp,
-            topEndContent = {
-                BottomSheetMenuButton(
-                    onEdit = { onEdit(itemEntity) },
-                    onRemove = { onRemove(itemEntity) },
-                    onAddToFavorites = { onAddToFavorites(itemEntity) },
-                    onAddToShoppingList = { onAddToShoppingList(itemEntity) },
+        Column(Modifier.fillMaxWidth()) {
+
+            CornerRadiusEtPoignee(
+                radius = 28.dp,
+                strokeWidth = 2.dp,
+                strokeColor = strokeColor,
+                handleHeight = 4.dp,
+                topEndContent = null // <- on n'utilise plus le slot ici
+            )
+
+            Spacer(Modifier.height(5.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                ItemDetailsHeader(
+                    itemEntity = itemEntity,
+                    onClose = onClose,
+                    onOpenViewer = onOpenViewer
+                )
+
+                DetailsOpenImageButtons(
+                    ingredientsUrl = itemEntity.imageIngredientsUrl,
+                    nutritionUrl = itemEntity.imageNutritionUrl,
+                    onOpenViewer = onOpenViewer
                 )
             }
-        )
-
-
-        Spacer(Modifier.height(5.dp))
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-
-            ItemDetailsHeader(
-                itemEntity = itemEntity,
-                onClose = onClose,
-                onOpenViewer = onOpenViewer
-            )
-
-            DetailsOpenImageButtons(
-                ingredientsUrl = itemEntity.imageIngredientsUrl,
-                nutritionUrl = itemEntity.imageNutritionUrl,
-                onOpenViewer = onOpenViewer
-            )
-
         }
+
+        // ✅ FAB overlay (ne prend PAS de place dans le layout)
+        BottomSheetMenuButton(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 10.dp, end = 12.dp)
+                .zIndex(10f),
+            onEdit = { onEdit(itemEntity) },
+            onRemove = { onRemove(itemEntity) },
+            onAddToFavorites = { onAddToFavorites(itemEntity) },
+            onAddToShoppingList = { onAddToShoppingList(itemEntity) },
+        )
     }
 }
 
