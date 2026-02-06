@@ -2,6 +2,7 @@ package com.example.barcode.data.remote
 
 import android.util.Log
 import com.example.barcode.domain.models.ProductInfo
+import com.example.barcode.util.sanitizeNutriScore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -105,10 +106,15 @@ suspend fun fetchProductInfo(code: String): FetchResult =
 
             val name = pickProductName(obj, lang)
             val brand = obj.optString("brands", "Marque inconnue") // TODO: null et géré dans View/VM pour trad entre autre
-            val nutri = obj.optString("nutrition_grade_fr", "").ifEmpty {
-                obj.optJSONArray("nutrition_grades_tags")?.optString(0)?.substringAfterLast('-')
+
+            val nutriRaw = obj.optString("nutrition_grade_fr", "").ifEmpty {
+                obj.optJSONArray("nutrition_grades_tags")
+                    ?.optString(0)
+                    ?.substringAfterLast('-')
                     ?: ""
             }
+            val nutri = sanitizeNutriScore(nutriRaw) // ✅ "A".."E" ou null
+
             // image principale par défaut (thumbnail)
             val imgUrl = frontUrl ?: obj.optString("image_url", "")
             // // Images candidates aux choix parmis 4 images uploadés par des randoms (un peu claqué et peut correspondre aux images ingredients et nutrition...)
@@ -126,7 +132,7 @@ suspend fun fetchProductInfo(code: String): FetchResult =
                     name = name,
                     brand = brand,
                     imageUrl = imgUrl,
-                    nutriScore = nutri,
+                    nutriScore = nutri ?: "",
                     imageCandidates = candidates, // Images candidates aux choix parmis 4 images uploadés par des randoms (un peu claqué et peut correspondre aux images ingredients et nutrition...)
                     imageIngredientsUrl = ingredientsUrl,
                     imageNutritionUrl = nutritionUrl

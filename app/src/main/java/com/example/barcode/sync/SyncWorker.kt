@@ -11,6 +11,7 @@ import com.example.barcode.data.local.entities.PendingOperation
 import com.example.barcode.data.local.entities.SyncState
 import com.example.barcode.features.addItems.data.remote.api.ItemsApi
 import com.example.barcode.features.addItems.data.remote.dto.ItemCreateDto
+import com.example.barcode.util.sanitizeNutriScore
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.ZoneId
@@ -195,11 +196,6 @@ class SyncWorker(
     }
 
 
-
-    fun sanitizeNutriScore(raw: String?): String? {
-        val v = raw?.trim()?.uppercase(Locale.ROOT) ?: return null
-        return if (v in setOf("A","B","C","D","E")) v else null
-    }
 
     private val yyyyMMdd = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private fun epochMsToYyyyMmDd(ms: Long): String =
