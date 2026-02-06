@@ -1,5 +1,7 @@
 package com.example.barcode.features.fridge
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +15,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -21,41 +24,37 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.barcode.features.addItems.ItemsViewModel
+import com.example.barcode.common.bus.SnackbarBus
+import com.example.barcode.common.ui.components.LocalAppTopBarState
 import com.example.barcode.core.session.AppMode
 import com.example.barcode.core.session.SessionManager
-import java.time.*
-import java.time.temporal.ChronoUnit
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.ui.window.Dialog
 import com.example.barcode.data.local.entities.ItemEntity
-import com.example.barcode.features.auth.AuthViewModel
-import com.example.barcode.common.ui.components.LocalAppTopBarState
-import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.UserPreferences
+import com.example.barcode.features.addItems.ItemsViewModel
+import com.example.barcode.features.auth.AuthViewModel
+import com.example.barcode.features.fridge.components.bottomSheetDetails.ImageViewerDialog
+import com.example.barcode.features.fridge.components.bottomSheetDetails.ItemDetailsBottomSheet
+import com.example.barcode.features.fridge.components.editItem.EditItemResult
+import com.example.barcode.features.fridge.components.editItem.EditItemScreen
+import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfRow
+import com.example.barcode.features.fridge.components.fridgeDisplay.VegetableDrawerCube3D
+import com.example.barcode.features.fridge.components.listDisplay.ItemListCard
+import com.example.barcode.features.fridge.components.shared.FridgeDisplayIconToggle
 import com.example.barcode.sync.SyncScheduler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import com.example.barcode.features.fridge.components.listDisplay.ItemListCard
-import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfRow
-import com.example.barcode.features.fridge.components.fridgeDisplay.VegetableDrawerCube3D
-import com.example.barcode.features.fridge.components.bottomSheetDetails.ImageViewerDialog
-import com.example.barcode.features.fridge.components.bottomSheetDetails.ItemDetailsBottomSheet
-import com.example.barcode.features.fridge.components.shared.FridgeDisplayIconToggle
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.example.barcode.features.fridge.components.editItem.EditItemScreen
-import com.example.barcode.features.fridge.components.editItem.EditItemResult
-
-
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 enum class ViewMode { List, Fridge }
 
-// TODO: bouton explicite de rafraichissement ou alors padding en haut de liste (mais caché) qui permet de ne pas activer le pull-to-refresh sans faire expres (BAD UX°
+// TODO: bouton explicite de rafraichissement ou alors padding en haut de liste (mais caché) qui permet de ne pas activer le pull-to-refresh sans faire expres (BAD UX°)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FridgePage(
@@ -104,6 +103,7 @@ fun FridgePage(
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
+
     // Viewer plein écran (click sur images BottomSheet)
     var viewerUrl by remember { mutableStateOf<String?>(null) }
 
@@ -131,27 +131,17 @@ fun FridgePage(
         selectedIds = emptySet()
     }
 
-    // Etageres grid
+    // ✅ Etageres grid: TOUJOURS au moins 5 rangées en mode Fridge
     val itemsPerShelf = 5
-    val shelves = remember(sorted, selectedViewMode, selectionMode) {
+    val minShelvesCount = 5
+    val shelves = remember(sorted, selectedViewMode) {
         val base = sorted.chunked(itemsPerShelf).toMutableList()
 
         val isFridge = selectedViewMode == ViewMode.Fridge
-
-        // Cas 0 item : on affiche quand même 1 étagère vide (en mode Fridge)
-        if (isFridge && base.isEmpty()) {
-            base.add(emptyList())
-            return@remember base
-        }
-
-        // ✅ Ajoute TOUJOURS UNE étagère vide "inoccupée" si on a au moins 1 étagère occupée
-        val shouldAddOneEmptyShelf =
-            isFridge &&
-                    !selectionMode &&
-                    base.isNotEmpty()
-
-        if (shouldAddOneEmptyShelf) {
-            base.add(emptyList())
+        if (isFridge) {
+            while (base.size < minShelvesCount) {
+                base.add(emptyList())
+            }
         }
 
         base
@@ -178,7 +168,6 @@ fun FridgePage(
         fridgeOn = true
     }
 
-
     // Viewer d'Image plein écran (click sur images BottomSheet)
     if (viewerUrl != null) {
         ImageViewerDialog(
@@ -186,8 +175,6 @@ fun FridgePage(
             onDismiss = { viewerUrl = null }
         )
     }
-
-
 
     // TODO: remplacer le delay par vrai refresh VM/API
     suspend fun refreshItems() {
@@ -207,16 +194,6 @@ fun FridgePage(
             sheetItemEntity = null
         }
     }
-
-    // Couleur du calque pour le composant du fond quand BottomSheet actif
-    // if (sheetItem != null) {
-    //     Box(
-    //         modifier = Modifier
-    //             .fillMaxSize()
-    //             .background(Color.Black.copy(alpha = 0.35f))
-    //             .clickable { closeSheet() } // tap outside => close (optionnel)
-    //     )
-    // }
 
     // Ecran Edition Item
     if (editItemEntity != null) {
@@ -251,7 +228,6 @@ fun FridgePage(
         }
     }
 
-
     // BottomSheet
     if (sheetItemEntity != null) {
         ModalBottomSheet(
@@ -265,10 +241,10 @@ fun FridgePage(
                 onOpenViewer = { viewerUrl = it },
                 onEdit = { item ->
                     scope.launch {
-                            sheetState.hide()
-                            sheetItemEntity = null
-                            editItemEntity = item
-                        }
+                        sheetState.hide()
+                        sheetItemEntity = null
+                        editItemEntity = item
+                    }
                 },
                 onRemove = { item ->
                     SnackbarBus.show("Retirer : \"${item.name ?: "(sans nom)"}\" (à venir)")
@@ -283,12 +259,10 @@ fun FridgePage(
         }
     }
 
-
     // --- Auto-load 1 seule fois quand l’onglet est réellement actif
     LaunchedEffect(isActive, mode, token) {
         val canLoad = isActive && mode == AppMode.AUTH && !token.isNullOrBlank()
         if (!canLoad) return@LaunchedEffect
-
         if (loadedForToken == token) return@LaunchedEffect
 
         initialLoading = true
@@ -301,22 +275,18 @@ fun FridgePage(
     }
 
     // Tout ça pour relancer l'anim open BottomSheet
-    // ✅ Quand on ouvre (sheetItem != null), on force l’anim show()
     LaunchedEffect(sheetItemEntity) {
         if (sheetItemEntity != null) {
             sheetState.show()
         }
     }
-    // ✅ Si l’utilisateur ferme en swipant vers le bas, on “nettoie” sheetItem
     LaunchedEffect(sheetState.currentValue) {
         if (sheetState.currentValue == SheetValue.Hidden) {
             sheetItemEntity = null
         }
     }
 
-
     val topBarState = LocalAppTopBarState.current
-
 
     var showHelp by rememberSaveable { mutableStateOf(false) }
     // Modal d'aide onClick sur "?" à coté du titre page
@@ -355,9 +325,7 @@ fun FridgePage(
         }
     }
 
-
     val owner = "items"
-
     LaunchedEffect(isActive, selectedViewMode) {
         if (isActive) {
             topBarState.setTitleTrailing(owner) {
@@ -386,9 +354,6 @@ fun FridgePage(
             topBarState.clearTitleTrailing(owner)
         }
     }
-
-
-
 
     Box(Modifier.fillMaxSize()) {
 
@@ -425,7 +390,6 @@ fun FridgePage(
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            // ✅ On garde ton layout : header + list scroll + bouton sticky en bas
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -446,30 +410,29 @@ fun FridgePage(
                     }
                 }
 
+                when (selectedViewMode) {
 
-                if (sorted.isEmpty()) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp)
-                    ) {
-                        item {
-                            Box(
-                                modifier = Modifier.fillParentMaxHeight(),
-                                contentAlignment = Alignment.TopCenter
+                    // LIST
+                    ViewMode.List -> {
+                        if (sorted.isEmpty()) {
+                            // ✅ Message uniquement en mode LISTE (Fridge doit afficher ses étagères vides)
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                                contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp)
                             ) {
-                                Text("Aucun produit. Tire vers le bas pour synchroniser.")
+                                item {
+                                    Box(
+                                        modifier = Modifier.fillParentMaxHeight(),
+                                        contentAlignment = Alignment.TopCenter
+                                    ) {
+                                        Text("Aucun produit. Tire vers le bas pour synchroniser.")
+                                    }
+                                }
                             }
-                        }
-                    }
-                } else {
-                    when (selectedViewMode) {
-
-
-                        // LIST
-                        ViewMode.List -> {
+                        } else {
                             LazyColumn(
                                 state = listState,
                                 modifier = Modifier.weight(1f),
@@ -484,13 +447,10 @@ fun FridgePage(
                                         selected = selectionMode && selectedIds.contains(it.id),
                                         selectionMode = selectionMode,
                                         onClick = {
-                                            if (selectionMode) toggleSelect(it.id) else sheetItemEntity =
-                                                it
+                                            if (selectionMode) toggleSelect(it.id) else sheetItemEntity = it
                                         },
                                         onLongPress = {
-                                            if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(
-                                                it.id
-                                            )
+                                            if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
                                         },
                                         onDelete = { vm.deleteItem(it.id) }
                                     )
@@ -498,74 +458,70 @@ fun FridgePage(
                                 item { Spacer(Modifier.height(4.dp)) }
                             }
                         }
+                    }
 
+                    // FRIDGE DESIGN
+                    ViewMode.Fridge -> {
+                        // ✅ Même si sorted est vide, shelves contient au moins 5 rangées → affichage “éteint”
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                            contentPadding = PaddingValues(
+                                bottom = if (!canScroll) 8.dp else 0.dp
+                            )
+                        ) {
+                            itemsIndexed(shelves) { index, shelfItems ->
 
-                        // FRIDGE DESIGN
-                        ViewMode.Fridge -> {
-
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(14.dp),
-                                contentPadding = PaddingValues(
-                                    bottom = if (!canScroll) 8.dp else 0.dp
-                                )
-                            ) {
-                                itemsIndexed(shelves) { index, shelfItems ->
-
-                                    // ✅ espace supplémentaire AVANT certaines rangées
-                                    val extraTop = when (index) {
-                                        1 -> 5.dp
-                                        2 -> 10.dp
-                                        3 -> 10.dp
-                                        4 -> 10.dp
-                                        else -> 6.dp // léger espacement constant pour les MID supplémentaires
-                                    }
-                                    if (extraTop > 0.dp) {
-                                        Spacer(Modifier.height(extraTop))
-                                    }
-
-                                    ShelfRow(
-                                        index = index,
-                                        itemEntities = shelfItems,
-                                        selectionMode = selectionMode,
-                                        selectedIds = selectedIds,
-                                        onClickItem = { item ->
-                                            if (selectionMode) toggleSelect(item.id) else sheetItemEntity =
-                                                item
-                                        },
-                                        onLongPressItem = { item ->
-                                            if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(
-                                                item.id
-                                            )
-                                        },
-                                        dimAlpha = dimAlpha, // pour anim allumage frigo
-                                        selectedSheetId = sheetItemEntity?.id,
-                                        emptyOpacity = if (shelfItems.isEmpty()) ghostOpacity else 1f
-                                    )
+                                // ✅ espace supplémentaire AVANT certaines rangées
+                                val extraTop = when (index) {
+                                    1 -> 5.dp
+                                    2 -> 10.dp
+                                    3 -> 10.dp
+                                    4 -> 10.dp
+                                    else -> 6.dp
                                 }
 
-                                // ✅ Bac DANS le scroll si la liste est longue
-                                if (canScroll && !selectionMode) {
-                                    item {
-                                        VegetableDrawerCube3D(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 6.dp),
-                                            height = vegDrawerHeight,
-                                            depth = 16.dp,
-                                            dimAlpha = dimAlpha,
-                                            isGhost = vegDrawerEmpty
-                                        ) {
-                                            if (vegDrawerEmpty) {
-                                                Text(
-                                                    text = "Bac à légumes vide",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-                                                )
-                                            }
-                                        }
+                                if (extraTop > 0.dp) {
+                                    Spacer(Modifier.height(extraTop))
+                                }
 
+                                ShelfRow(
+                                    index = index,
+                                    itemEntities = shelfItems,
+                                    selectionMode = selectionMode,
+                                    selectedIds = selectedIds,
+                                    onClickItem = { item ->
+                                        if (selectionMode) toggleSelect(item.id) else sheetItemEntity = item
+                                    },
+                                    onLongPressItem = { item ->
+                                        if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id)
+                                    },
+                                    dimAlpha = dimAlpha,
+                                    selectedSheetId = sheetItemEntity?.id,
+                                    emptyOpacity = if (shelfItems.isEmpty()) ghostOpacity else 1f
+                                )
+                            }
+
+                            // ✅ Bac DANS le scroll si la liste est longue
+                            if (canScroll && !selectionMode) {
+                                item {
+                                    VegetableDrawerCube3D(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 6.dp),
+                                        height = vegDrawerHeight,
+                                        depth = 16.dp,
+                                        dimAlpha = dimAlpha,
+                                        isGhost = vegDrawerEmpty
+                                    ) {
+                                        if (vegDrawerEmpty) {
+                                            Text(
+                                                text = "Bac à légumes vide",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -575,7 +531,7 @@ fun FridgePage(
 
                 Spacer(Modifier.height(8.dp))
 
-                if(selectionMode) {
+                if (selectionMode) {
                     // ✅ mini ligne au-dessus : compteur + Annuler (secondaire)
                     Row(
                         modifier = Modifier
@@ -615,10 +571,9 @@ fun FridgePage(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
 
-                            // 🧠 Chercher recette (primaire, mais non destructif)
+                            // 🧠 Chercher recette
                             Button(
                                 onClick = {
-                                    // TODO plus tard: récupérer ingrédients depuis les items sélectionnés
                                     SnackbarBus.show("Bientôt: recherche de recette avec les ingrédients sélectionnés.")
                                 },
                                 modifier = Modifier
@@ -626,12 +581,12 @@ fun FridgePage(
                                     .height(48.dp),
                                 shape = RoundedCornerShape(14.dp)
                             ) {
-                                Icon(Icons.Filled.Add, contentDescription = null) // TODO: remplace par une icône "restaurant" plus tard
+                                Icon(Icons.Filled.Add, contentDescription = null) // TODO: icône "restaurant"
                                 Spacer(Modifier.width(8.dp))
                                 Text("Recette", fontWeight = FontWeight.SemiBold)
                             }
 
-                            // 🗑 Supprimer (destructif, mais sans wording culpabilisant)
+                            // 🗑 Supprimer
                             OutlinedButton(
                                 onClick = {
                                     selectedIds.forEach { id -> vm.deleteItem(id) }
@@ -654,13 +609,12 @@ fun FridgePage(
                     }
                 }
 
-
                 if (!selectionMode) {
 
                     val showPinnedVegDrawer =
                         selectedViewMode == ViewMode.Fridge &&
                                 !selectionMode &&
-                                !canScroll   // ✅ LE POINT CLÉ
+                                !canScroll
 
                     // ✅ Bac à légumes FIXE uniquement en DESIGN
                     if (showPinnedVegDrawer) {
@@ -696,19 +650,10 @@ fun FridgePage(
                         Text("Ajouter un produit")
                     }
                 }
-
             }
         }
     }
 }
-
-
-
-
-
-
-
-
 
 /* ——— Utils ——— */
 
@@ -720,7 +665,7 @@ fun formatRelativeDaysCompact(targetMillis: Long): String {
     return when {
         days == 0 -> "aujourd'hui"
         days == 1 -> "demain"
-        days > 1  -> "dans ${days}j"
+        days > 1 -> "dans ${days}j"
         days == -1 -> "hier"
         else -> "il y a ${-days}j (!)"
     }
@@ -742,7 +687,6 @@ fun isSoon(expiry: Long): Boolean {
     return days in 0..2
 }
 
-
 // Template ligne/étape contenu Modal d'aide (click "?"):
 @Composable
 private fun HelpRow(icon: String, text: String) {
@@ -752,8 +696,3 @@ private fun HelpRow(icon: String, text: String) {
         Text(text)
     }
 }
-
-
-
-
-
