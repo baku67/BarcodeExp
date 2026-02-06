@@ -103,13 +103,22 @@ fun FridgePage(
     // --- Pull-to-refresh + initial load
     var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
 
-// Bac à legumes
+
+
+    // ✅ Bac à legumes
     val vegDrawerHeight = 88.dp
     val ghostOpacity = 0.34f
 
-    // ✅ Étagères vides (trapezoid) : beaucoup plus discrètes
+    // ✅ Trapezoids des étagères vides : très discrets
     val emptyShelfOpacity = 0.18f
-    val emptyShelfOpacityWithLabel = 0.28f // garde "Aucun produit / Synchronisation" lisible
+
+    // ✅ Rangée qui affiche "Aucun produit" / "Synchronisation…" : un poil plus visible
+    val emptyShelfOpacityWithLabel = 0.28f
+
+    // ✅ Étape intermédiaire : étagère juste après la dernière occupée
+    val nextAfterLastOccupiedOpacity = 0.45f
+
+
 
     // TODO plus tard : calculer via une vraie source (enum zone, tags, etc.)
     val vegDrawerEmpty = true
@@ -505,9 +514,14 @@ fun FridgePage(
                                     Spacer(Modifier.height(extraTop))
                                 }
 
+                                val lastOccupiedIndex = shelves.indexOfLast { it.isNotEmpty() }
+                                val nextAfterLastOccupiedIndex =
+                                    (lastOccupiedIndex + 1).takeIf { lastOccupiedIndex >= 0 && it < shelves.size }
+
                                 val shelfOpacity = when {
                                     shelfItems.isNotEmpty() -> 1f
                                     index == 2 && emptyCenterLabel != null -> emptyShelfOpacityWithLabel
+                                    nextAfterLastOccupiedIndex != null && index == nextAfterLastOccupiedIndex -> nextAfterLastOccupiedOpacity
                                     else -> emptyShelfOpacity
                                 }
 
