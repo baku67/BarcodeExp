@@ -233,17 +233,17 @@ private fun CornerRadiusEtPoignee(
         )
 
 
-                // ✅ Slot action en haut à droite (menu 3 points)
+        // ✅ TODO Slot action en haut à droite (menu 3 points) mieu
         if (topEndContent != null) {
-                        Box(
-                                modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(top = 2.dp, end = 8.dp)
-                                .zIndex(1f) // au-dessus du stroke Canvas
-                       ) {
-                               topEndContent()
-                           }
-                   }
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 2.dp, end = 8.dp)
+                .zIndex(1f) // au-dessus du stroke Canvas
+           ) {
+               topEndContent()
+           }
+       }
 
         // ✅ Poignée DANS la zone (pas en dessous)
         Box(

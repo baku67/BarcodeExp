@@ -148,7 +148,7 @@ fun EditItemScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // --- IMAGE (même vibe que DetailsStepScreen) ---
-                Box(
+                /*Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(220.dp)
@@ -233,7 +233,7 @@ fun EditItemScreen(
                             Icon(Icons.Filled.Image, contentDescription = "Modifier l'image")
                         }
                     }
-                }
+                }*/
 
                 if (showImageDialog) {
                     EditImageUrlDialog(
@@ -376,10 +376,11 @@ fun EditItemScreen(
                     }
                 }
 
-                Spacer(Modifier.height(18.dp))
-                HorizontalDivider()
 
                 // --- OPTIONNEL : images ingrédients / nutrition (pratique si tu les modifies aussi) ---
+                /*Spacer(Modifier.height(18.dp))
+                HorizontalDivider()
+
                 Text(
                     text = "Images (optionnel)",
                     style = MaterialTheme.typography.titleSmall,
@@ -401,7 +402,7 @@ fun EditItemScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(10.dp))*/
             }
 
             // Footer bouton (tu peux le garder si tu préfères au TopBar)

@@ -53,6 +53,7 @@ data class ItemEntity(
 enum class SyncStatus {
     PENDING_CREATE,
     PENDING_DELETE,
+    PENDING_EDIT,
     SYNCED,
     FAILED
 }

@@ -57,6 +57,35 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+
+    fun updateItem(
+        id: String,
+        name: String?,
+        brand: String?,
+        expiry: Long?,
+        imageUrl: String?,
+        imageIngredientsUrl: String?,
+        imageNutritionUrl: String?,
+        nutriScore: String?,
+    ) = viewModelScope.launch {
+
+        repo.updateItem(
+            id = id,
+            name = name,
+            brand = brand,
+            expiry = expiry,
+            imageUrl = imageUrl,
+            imageIngredientsUrl = imageIngredientsUrl,
+            imageNutritionUrl = imageNutritionUrl,
+            nutriScore = nutriScore
+        )
+
+        if (session.isAuthenticated()) {
+            SyncScheduler.enqueueSync(getApplication())
+        }
+    }
+
+
     fun deleteItem(id: String) = viewModelScope.launch {
         repo.delete(id) // ✅ devient un soft delete
 

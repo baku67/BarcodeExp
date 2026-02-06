@@ -232,21 +232,19 @@ fun FridgePage(
                     itemEntity = editItemEntity!!,
                     onCancel = { editItemEntity = null },
                     onSave = { result: EditItemResult ->
-                        // ✅ Ici tu branches ton update VM / DAO
-                        // Exemple (à adapter à ton VM) :
-                        // vm.updateItem(
-                        //   id = editItemEntity!!.id,
-                        //   name = result.name,
-                        //   brand = result.brand,
-                        //   expiry = result.expiryDate,
-                        //   imageUrl = result.imageUrl,
-                        //   nutriScore = result.nutriScore,
-                        //   ingredientsUrl = result.imageIngredientsUrl,
-                        //   nutritionUrl = result.imageNutritionUrl
-                        // )
+                        vm.updateItem(
+                            id = editItemEntity!!.id,
+                            name = result.name,
+                            brand = result.brand,
+                            expiry = result.expiryDate,
+                            imageUrl = result.imageUrl,
+                            imageIngredientsUrl = result.imageIngredientsUrl,
+                            imageNutritionUrl = result.imageNutritionUrl,
+                            nutriScore = result.nutriScore
+                        )
 
-                        SnackbarBus.show("Modifications enregistrées (à brancher)")
                         editItemEntity = null
+                        SnackbarBus.show("Produit modifié ✅")
                     }
                 )
             }

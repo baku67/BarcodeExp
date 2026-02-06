@@ -29,6 +29,40 @@ class LocalItemRepository(private val dao: ItemDao) {
         dao.upsert(itemEntity)
     }
 
+    suspend fun updateItem(
+        id: String,
+        name: String?,
+        brand: String?,
+        expiry: Long?,
+        imageUrl: String?,
+        imageIngredientsUrl: String?,
+        imageNutritionUrl: String?,
+        nutriScore: String?,
+    ) {
+        val current = dao.getById(id) ?: return
+
+        val nextStatus = when (current.syncStatus) {
+            SyncStatus.PENDING_CREATE -> SyncStatus.PENDING_CREATE // ✅ pas encore push => reste "create"
+            SyncStatus.PENDING_DELETE -> SyncStatus.PENDING_DELETE // (ne devrait pas arriver via l’UI)
+            else -> SyncStatus.PENDING_EDIT // ✅ item déjà existant => update à push
+        }
+
+        dao.upsert(
+            current.copy(
+                name = name,
+                brand = brand,
+                expiryDate = expiry,
+                imageUrl = imageUrl,
+                imageIngredientsUrl = imageIngredientsUrl,
+                imageNutritionUrl = imageNutritionUrl,
+                nutriScore = nutriScore,
+                syncStatus = nextStatus,
+                localUpdatedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
+
     suspend fun delete(id: String) {
         val item = dao.getById(id) ?: return
 
