@@ -167,6 +167,11 @@ fun FridgePage(
         selectedIds = emptySet()
     }
 
+    // ✅ Retirer des items (même logique partout : multi-select + menu bottom sheet)
+    fun removeItems(ids: Iterable<String>) {
+        ids.forEach { id -> vm.deleteItem(id) }
+    }
+
     // ✅ Etageres grid: TOUJOURS au moins 5 rangées en mode Fridge
     val itemsPerShelf = 5
     val minShelvesCount = 5
@@ -286,7 +291,8 @@ fun FridgePage(
                     }
                 },
                 onRemove = { item ->
-                    SnackbarBus.show("Retirer : \"${item.name ?: "(sans nom)"}\" (à venir)")
+                    removeItems(listOf(item.id))
+                    closeSheet()
                 },
                 onAddToFavorites = { item ->
                     SnackbarBus.show("Ajouté aux favoris : \"${item.name ?: "(sans nom)"}\" (à venir)")
@@ -629,7 +635,7 @@ fun FridgePage(
                             // 🗑 Supprimer
                             OutlinedButton(
                                 onClick = {
-                                    selectedIds.forEach { id -> vm.deleteItem(id) }
+                                    removeItems(selectedIds)
                                     exitSelection()
                                 },
                                 modifier = Modifier
