@@ -444,7 +444,7 @@ fun FridgePage(
                                 Text(
                                     text = emptyCenterLabel,
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = ghostOpacity) // ✅ même "ghost" que Fridge
                                 )
                             }
                         } else {
