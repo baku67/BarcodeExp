@@ -103,9 +103,13 @@ fun FridgePage(
     // --- Pull-to-refresh + initial load
     var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Bac à legumes
+// Bac à legumes
     val vegDrawerHeight = 88.dp
     val ghostOpacity = 0.34f
+
+    // ✅ Étagères vides (trapezoid) : beaucoup plus discrètes
+    val emptyShelfOpacity = 0.18f
+    val emptyShelfOpacityWithLabel = 0.28f // garde "Aucun produit / Synchronisation" lisible
 
     // TODO plus tard : calculer via une vraie source (enum zone, tags, etc.)
     val vegDrawerEmpty = true
@@ -203,7 +207,7 @@ fun FridgePage(
     suspend fun refreshItems() {
         if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
             if (isSyncing) {
-                SnackbarBus.show("Synchronisation déjà en cours…")
+                // SnackbarBus.show("Synchronisation déjà en cours…") // relou
                 return
             }
             SyncScheduler.enqueueSync(appContext)
@@ -501,6 +505,12 @@ fun FridgePage(
                                     Spacer(Modifier.height(extraTop))
                                 }
 
+                                val shelfOpacity = when {
+                                    shelfItems.isNotEmpty() -> 1f
+                                    index == 2 && emptyCenterLabel != null -> emptyShelfOpacityWithLabel
+                                    else -> emptyShelfOpacity
+                                }
+
                                 ShelfRow(
                                     index = index,
                                     itemEntities = shelfItems,
@@ -514,7 +524,7 @@ fun FridgePage(
                                     },
                                     dimAlpha = dimAlpha,
                                     selectedSheetId = sheetItemEntity?.id,
-                                    emptyOpacity = if (shelfItems.isEmpty()) ghostOpacity else 1f,
+                                    emptyOpacity = shelfOpacity,
                                     emptyCenterLabel = if (index == 2) emptyCenterLabel else null // message "liste vide" ou "sync" sur etagere 5 par exemple
                                 )
                             }
