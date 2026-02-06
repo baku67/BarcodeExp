@@ -6,48 +6,46 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.barcode.bootstrap.GlobalLoaderScreen
+import com.example.barcode.features.bootstrap.GlobalLoaderScreen
 import androidx.navigation.compose.navigation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.barcode.addItems.AddItemViewModel
-import com.example.barcode.addItems.ScanBarCodeStepScreen
-import com.example.barcode.addItems.DetailsStepScreen
-import com.example.barcode.addItems.ScanDlcStepScreen
-import com.example.barcode.auth.ui.LoginScreen
-import com.example.barcode.addItems.ItemsViewModel
+import com.example.barcode.features.addItems.AddItemViewModel
+import com.example.barcode.features.addItems.ScanBarCodeStepScreen
+import com.example.barcode.features.addItems.DetailsStepScreen
+import com.example.barcode.features.addItems.ScanDlcStepScreen
+import com.example.barcode.features.auth.LoginScreen
+import com.example.barcode.features.addItems.ItemsViewModel
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.barcode.addItems.AddItemChooseScreen
-import com.example.barcode.addItems.ItemAddMode
-import com.example.barcode.addItems.manual.ManualDetailsStepScreen
-import com.example.barcode.addItems.manual.ManualExpiryStepScreen
-import com.example.barcode.addItems.manual.ManualSubtypeStepScreen
-import com.example.barcode.addItems.manual.ManualType
-import com.example.barcode.addItems.manual.ManualTypeStepScreen
-import com.example.barcode.auth.*
-import com.example.barcode.auth.ui.RegisterScreen
-import com.example.barcode.ui.MainTabsScreen
-import com.example.barcode.bootstrap.TimelineIntro.TimelineIntroScreen
+import com.example.barcode.features.addItems.AddItemChooseScreen
+import com.example.barcode.features.addItems.ItemAddMode
+import com.example.barcode.features.addItems.manual.ManualDetailsStepScreen
+import com.example.barcode.features.addItems.manual.ManualExpiryStepScreen
+import com.example.barcode.features.addItems.manual.ManualSubtypeStepScreen
+import com.example.barcode.features.addItems.manual.ManualType
+import com.example.barcode.features.addItems.manual.ManualTypeStepScreen
+import com.example.barcode.features.auth.RegisterScreen
+import com.example.barcode.common.ui.navigation.MainTabsScreen
+import com.example.barcode.features.bootstrap.TimelineIntroScreen
+import com.example.barcode.features.auth.AuthRepository
+import com.example.barcode.features.auth.AuthViewModel
+import com.example.barcode.core.session.SessionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import com.example.barcode.ui.components.SnackbarBus
-import com.example.barcode.ui.theme.AppBackground
-import com.example.barcode.ui.theme.Theme
+import com.example.barcode.common.bus.SnackbarBus
+import com.example.barcode.common.ui.components.AppBackground
+import com.example.barcode.common.ui.theme.Theme
+import com.example.barcode.sync.SyncScheduler
 
 
 object DeepLinkBus {
@@ -69,11 +67,11 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             val appContext = LocalContext.current.applicationContext
-            val session = remember { SessionManager(appContext) }
-            val repo = remember { AuthRepository(ApiClient.authApi) }
-            val authVm: AuthViewModel = viewModel(
-                factory = AuthViewModelFactory(repo, session)
-            )
+
+            val repo = remember { AuthRepository() }
+            val session = remember(appContext) { SessionManager(appContext) }
+            val authVm = remember { AuthViewModel(repo, session) }
+
             val navController = rememberNavController()
 
             Theme(session = session) {
@@ -101,6 +99,20 @@ class MainActivity : ComponentActivity() {
 
                                     // ✅ 3) (optionnel) rafraîchir /me pour récupérer isVerified=true
                                     // scope.launch { repo.me(token)... }
+                                }
+                            }
+                        }
+
+                        // ✅ déclenche une sync WorkManager après login/register pour pousser les items ajoutés en mode LOCAL (PENDING_CREATE) vers le backend
+                        LaunchedEffect(Unit) {
+                            authVm.events.collect { event ->
+                                when (event) {
+                                    AuthViewModel.AuthEvent.GoHome -> {
+                                        SyncScheduler.enqueueSync(appContext) // ✅ Sync Items
+                                        navController.navigate("tabs") {
+                                            launchSingleTop = true
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -251,6 +263,7 @@ class MainActivity : ComponentActivity() {
                                             addVm.setExpiryDate(expiry)
 
                                             itemsVm.addItem(
+                                                barcode = (draft.barcode ?: "(sans barcode)"),
                                                 name = (name ?: draft.name ?: "(sans nom)"),
                                                 brand = (brand ?: draft.brand ?: "(sans brand)"),
                                                 expiry = (expiry ?: draft.expiryDate),
@@ -389,6 +402,7 @@ class MainActivity : ComponentActivity() {
                                             addVm.setExpiryDate(expiry)
 
                                             itemsVm.addItem(
+                                                barcode = (draft.barcode ?: "(sans barcode)"),
                                                 name = (name ?: draft.name ?: "(sans nom)"),
                                                 brand = (brand ?: draft.brand ?: "(sans brand)"),
                                                 expiry = (expiry ?: draft.expiryDate),

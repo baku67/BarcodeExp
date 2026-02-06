@@ -76,6 +76,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.runtime.livedata)
     // Room (localStorage DB ?)
     val room = "2.6.1"
     implementation("androidx.room:room-runtime:$room")
