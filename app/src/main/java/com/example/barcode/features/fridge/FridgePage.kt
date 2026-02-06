@@ -46,6 +46,11 @@ import com.example.barcode.features.fridge.components.fridgeDisplay.VegetableDra
 import com.example.barcode.features.fridge.components.bottomSheetDetails.ImageViewerDialog
 import com.example.barcode.features.fridge.components.bottomSheetDetails.ItemDetailsBottomSheet
 import com.example.barcode.features.fridge.components.shared.FridgeDisplayIconToggle
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.example.barcode.features.fridge.components.editItem.EditItemScreen
+import com.example.barcode.features.fridge.components.editItem.EditItemResult
+
 
 
 enum class ViewMode { List, Fridge }
@@ -90,6 +95,9 @@ fun FridgePage(
     // TODO plus tard : calculer via une vraie source (enum zone, tags, etc.)
     val vegDrawerEmpty = true
     val vegDrawerOpacity = if (vegDrawerEmpty) ghostOpacity else 1f
+
+    // Ecran d'édition Item:
+    var editItemEntity by remember { mutableStateOf<ItemEntity?>(null) }
 
     // bottom sheet au clic sur ItemCard
     var sheetItemEntity by remember { mutableStateOf<ItemEntity?>(null) }
@@ -210,6 +218,42 @@ fun FridgePage(
     //     )
     // }
 
+    // Ecran Edition Item
+    if (editItemEntity != null) {
+        Dialog(
+            onDismissRequest = { editItemEntity = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                EditItemScreen(
+                    itemEntity = editItemEntity!!,
+                    onCancel = { editItemEntity = null },
+                    onSave = { result: EditItemResult ->
+                        // ✅ Ici tu branches ton update VM / DAO
+                        // Exemple (à adapter à ton VM) :
+                        // vm.updateItem(
+                        //   id = editItemEntity!!.id,
+                        //   name = result.name,
+                        //   brand = result.brand,
+                        //   expiry = result.expiryDate,
+                        //   imageUrl = result.imageUrl,
+                        //   nutriScore = result.nutriScore,
+                        //   ingredientsUrl = result.imageIngredientsUrl,
+                        //   nutritionUrl = result.imageNutritionUrl
+                        // )
+
+                        SnackbarBus.show("Modifications enregistrées (à brancher)")
+                        editItemEntity = null
+                    }
+                )
+            }
+        }
+    }
+
+
     // BottomSheet
     if (sheetItemEntity != null) {
         ModalBottomSheet(
@@ -222,7 +266,11 @@ fun FridgePage(
                 onClose = { closeSheet() },
                 onOpenViewer = { viewerUrl = it },
                 onEdit = { item ->
-                    SnackbarBus.show("Modifier : \"${item.name ?: "(sans nom)"}\" (à venir)")
+                    scope.launch {
+                            sheetState.hide()
+                            sheetItemEntity = null
+                            editItemEntity = item
+                        }
                 },
                 onRemove = { item ->
                     SnackbarBus.show("Retirer : \"${item.name ?: "(sans nom)"}\" (à venir)")
