@@ -67,11 +67,11 @@ fun ShelfRow(
     val spec = shelfSpec(preset)
 
     val productDrop = when (preset) {
-        ShelfPreset.TOP1 -> 9.dp
+        ShelfPreset.TOP1 -> 7.dp
         ShelfPreset.TOP2 -> 5.dp
         ShelfPreset.MID -> 1.dp
         ShelfPreset.BOTTOM1 -> 5.dp
-        ShelfPreset.BOTTOM2 -> 9.dp
+        ShelfPreset.BOTTOM2 -> 8.dp
     }
 
     // Hauteur de la rangée = produits + étagère (le drop ne change pas la hauteur)
@@ -92,7 +92,7 @@ fun ShelfRow(
                 .padding(horizontal = 12.dp)
                 .offset(y = productDrop)
                 .zIndex(if (productsOnTop) 1f else 0f),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(3.dp), // espacement produits
             verticalAlignment = Alignment.Companion.Bottom
         ) {
             itemEntities.forEachIndexed { itemIndex, item ->
