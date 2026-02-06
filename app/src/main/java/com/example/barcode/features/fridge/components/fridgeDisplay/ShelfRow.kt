@@ -105,7 +105,9 @@ fun ShelfRow(
                 val hasSheetSelection = selectedSheetId != null
                 val dimOthers = hasSheetSelection && !isSheetSelected
 
-                val isSelected = selectionMode && selectedIds.contains(item.id)
+                val isMultiSelected = selectionMode && selectedIds.contains(item.id)
+                // ✅ Même rendu que la sélection “single” (BottomSheet) : bordure calée à l'image
+                val isVisuallySelected = isSheetSelected || isMultiSelected
 
                 val glowColor = when {
                     item.expiryDate == null -> null
@@ -159,7 +161,7 @@ fun ShelfRow(
                             dimOthers -> 0.5f              // assombrit les autres (AJUSTE ICI)
                             else -> dimAlpha                // sinon: anim globale d’allumage frigo
                         },
-                        showImageBorder = isSheetSelected, // ✅ NEW
+                        showImageBorder = isVisuallySelected, // ✅ NEW
                         imageBorderColor = selectionBorderColor,
                         imageBorderWidth = 2.dp, // ✅ NEW
                         modifier = Modifier.Companion
@@ -178,15 +180,6 @@ fun ShelfRow(
                             .combinedClickable(
                                 onClick = { onClickItem(item) },
                                 onLongClick = { onLongPressItem(item) }
-                            )
-                            .border(
-                                width = if (isSelected) 2.dp else 0.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Companion.Transparent,
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .background(
-                                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Companion.Transparent,
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                             )
                     )
                 }
