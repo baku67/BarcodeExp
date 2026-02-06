@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.outlined.TimerOff
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,7 +55,8 @@ fun ShelfRow(
     onLongPressItem: (ItemEntity) -> Unit,
     dimAlpha: Float = 0f, // pour anim allumage frigo
     selectedSheetId: String? = null,
-    emptyOpacity: Float = 1f
+    emptyOpacity: Float = 1f,
+    emptyCenterLabel: String? = null
 ) {
     val preset = when (index) {
         0 -> ShelfPreset.TOP1
@@ -208,6 +210,20 @@ fun ShelfRow(
             lipAlpha = spec.lipAlpha,
             dimAlpha = dimAlpha // ✅ NEW
         )
+
+
+        // ✅ Message "liste vide" intégré au design (uniquement étagère MID)
+        if (emptyCenterLabel != null && itemEntities.isEmpty() && preset == ShelfPreset.MID) {
+            Text(
+                text = emptyCenterLabel,
+                style = MaterialTheme.typography.titleMedium, // ✅ plus gros que bodyMedium
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f), // ✅ plus visible
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .offset(y = (-16).dp) // légèrement moins haut
+                    .alpha((emptyOpacity * 1.15f).coerceIn(0f, 1f)) // ✅ garde l'effet "ghost", mais moins fade
+            )
+        }
 
 
     }

@@ -462,6 +462,9 @@ fun FridgePage(
 
                     // FRIDGE DESIGN
                     ViewMode.Fridge -> {
+
+                        val isCompletelyEmpty = sorted.isEmpty()
+
                         // ✅ Même si sorted est vide, shelves contient au moins 5 rangées → affichage “éteint”
                         LazyColumn(
                             state = listState,
@@ -499,7 +502,8 @@ fun FridgePage(
                                     },
                                     dimAlpha = dimAlpha,
                                     selectedSheetId = sheetItemEntity?.id,
-                                    emptyOpacity = if (shelfItems.isEmpty()) ghostOpacity else 1f
+                                    emptyOpacity = if (shelfItems.isEmpty()) ghostOpacity else 1f,
+                                    emptyCenterLabel = if (isCompletelyEmpty && index == 2) "Aucun produit" else null // message "liste vide" ou "sync" sur etagere 5 par exemple
                                 )
                             }
 
