@@ -4,12 +4,14 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.dao.ItemDao
 
-@Database(entities = [ItemEntity::class], version = 6, exportSchema = true)
+@TypeConverters(RoomConverters::class)
+@Database(entities = [ItemEntity::class], version = 7, exportSchema = true)
 abstract class AppDb : RoomDatabase() {
 
     abstract fun itemDao(): ItemDao
@@ -65,6 +67,81 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
+
+        // Migration 6 -> 7 : remplacement syncStatus par pendingOperation + syncState
+        // + ajout lastSyncError / failedAt
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+
+                db.execSQL(
+                    """
+            CREATE TABLE IF NOT EXISTS items_new (
+                id TEXT NOT NULL PRIMARY KEY,
+                pendingOperation TEXT NOT NULL DEFAULT 'NONE',
+                syncState TEXT NOT NULL DEFAULT 'OK',
+                lastSyncError TEXT,
+                failedAt INTEGER,
+                updatedAt INTEGER NOT NULL DEFAULT 0,
+                serverUpdatedAt INTEGER,
+
+                barcode TEXT,
+                name TEXT,
+                brand TEXT,
+                imageUrl TEXT,
+                imageIngredientsUrl TEXT,
+                imageNutritionUrl TEXT,
+                nutriScore TEXT,
+                addedAt INTEGER,
+                deletedAt INTEGER,
+                expiryDate INTEGER,
+                addMode TEXT NOT NULL DEFAULT 'barcode_scan'
+            )
+            """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+            INSERT INTO items_new (
+                id, pendingOperation, syncState, lastSyncError, failedAt,
+                updatedAt, serverUpdatedAt,
+                barcode, name, brand,
+                imageUrl, imageIngredientsUrl, imageNutritionUrl, nutriScore,
+                addedAt, deletedAt, expiryDate, addMode
+            )
+            SELECT
+                id,
+                CASE syncStatus
+                    WHEN 'PENDING_CREATE' THEN 'CREATE'
+                    WHEN 'PENDING_EDIT'   THEN 'UPDATE'
+                    WHEN 'PENDING_DELETE' THEN 'DELETE'
+                    ELSE 'NONE'
+                END AS pendingOperation,
+                CASE syncStatus
+                    WHEN 'FAILED' THEN 'FAILED'
+                    ELSE 'OK'
+                END AS syncState,
+                NULL AS lastSyncError,
+                NULL AS failedAt,
+                updatedAt,
+                serverUpdatedAt,
+                barcode, name, brand,
+                imageUrl, imageIngredientsUrl, imageNutritionUrl, nutriScore,
+                addedAt, deletedAt, expiryDate,
+                COALESCE(addMode, 'barcode_scan')
+            FROM items
+            """.trimIndent()
+                )
+
+                db.execSQL("DROP TABLE items")
+                db.execSQL("ALTER TABLE items_new RENAME TO items")
+
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_items_deletedAt ON items(deletedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_items_pendingOperation ON items(pendingOperation)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_items_syncState ON items(syncState)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_items_serverUpdatedAt ON items(serverUpdatedAt)")
+            }
+        }
+
         private fun columnExists(db: SupportSQLiteDatabase, table: String, column: String): Boolean {
             db.query("PRAGMA table_info($table)").use { cursor ->
                 val nameIndex = cursor.getColumnIndex("name")
@@ -94,6 +171,7 @@ abstract class AppDb : RoomDatabase() {
                     .addMigrations(MIGRATION_3_4)
                     .addMigrations(MIGRATION_4_5)
                     .addMigrations(MIGRATION_5_6)
+                    .addMigrations(MIGRATION_6_7)
 
                     // Toujours à la fin
                     .build().also { INSTANCE = it }

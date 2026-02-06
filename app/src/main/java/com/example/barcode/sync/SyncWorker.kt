@@ -7,13 +7,15 @@ import com.example.barcode.core.network.ApiClient
 import com.example.barcode.core.session.SessionManager
 import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
-import com.example.barcode.data.local.entities.SyncStatus
+import com.example.barcode.data.local.entities.PendingOperation
+import com.example.barcode.data.local.entities.SyncState
 import com.example.barcode.features.addItems.data.remote.api.ItemsApi
 import com.example.barcode.features.addItems.data.remote.dto.ItemCreateDto
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class SyncWorker(
     ctx: Context,
@@ -33,8 +35,9 @@ class SyncWorker(
         val api = ApiClient.createApi(ItemsApi::class.java)
 
 
-        // 1) PUSH DELETE : envoyer les suppressions en attente (PENDING_DELETE)
-        val pendingDeletes = dao.getBySyncStatus(SyncStatus.PENDING_DELETE)
+        // 1) PUSH DELETE : envoyer les suppressions en attente
+        // ✅ getPending() exclut les FAILED => pas de retry automatique
+        val pendingDeletes = dao.getPending(PendingOperation.DELETE)
 
         // TODO: Batch plutot que 1 requete par Item ?
         pendingDeletes.forEach { item ->
@@ -48,19 +51,19 @@ class SyncWorker(
                 if (res.isSuccessful || res.code() == 404) {
                     dao.hardDelete(item.id) // ✅ on nettoie la DB locale
                 } else {
-                    dao.updateSyncStatus(item.id, SyncStatus.FAILED)
+                    dao.markFailed(item.id, error = "delete failed code=${res.code()}")
                 }
             } catch (e: Exception) {
-                dao.updateSyncStatus(item.id, SyncStatus.FAILED)
+                dao.markFailed(item.id, error = "delete exception=${e.message}")
             }
         }
 
 
-        // 2) PUSH CREATE: envoyer les items en attente (PENDING_CREATE)
-        val pending = dao.getBySyncStatus(SyncStatus.PENDING_CREATE)
+        // 2) PUSH CREATE: envoyer les items en attente
+        val pendingCreates = dao.getPending(PendingOperation.CREATE)
 
         // TODO: Batch plutot que 1 requete par Item ?
-        pending.forEach { item ->
+        pendingCreates.forEach { item ->
             try {
                 val dto = ItemCreateDto(
                     clientId = item.id,
@@ -70,7 +73,7 @@ class SyncWorker(
                     imageUrl = item.imageUrl,
                     imageIngredientsUrl = item.imageIngredientsUrl,
                     imageNutritionUrl = item.imageNutritionUrl,
-                    nutriScore = item.nutriScore,
+                    nutriScore = sanitizeNutriScore(item.nutriScore),
                     expiryDate = item.expiryDate?.let { epochMsToYyyyMmDd(it) },
                     addMode = item.addMode,
                 )
@@ -86,17 +89,50 @@ class SyncWorker(
                     android.util.Log.e("SyncWorker", "422 body=$err")
                 }
 
-                if (res.isSuccessful) dao.updateSyncStatus(item.id, SyncStatus.SYNCED)
-                else dao.updateSyncStatus(item.id, SyncStatus.FAILED)
+                if (res.isSuccessful) dao.clearPending(item.id)
+                else dao.markFailed(item.id, error = "create failed code=${res.code()}")
 
             } catch (e: Exception) {
-                dao.updateSyncStatus(item.id, SyncStatus.FAILED)
+                dao.markFailed(item.id, error = "create exception=${e.message}")
                 // On continue les autres; tu pourras plus tard faire Result.retry()
             }
         }
 
 
-        // 3) PULL : récupérer l'état serveur et upsert local (Room) par clientId
+        // 3) PUSH UPDATE : envoyer les edits en attente
+        // ⚠️ Ici on réutilise createItem comme "upsert" (clientId stable).
+        // Si ton backend a un vrai PATCH/PUT, remplace par api.updateItem(...)
+        val pendingUpdates = dao.getPending(PendingOperation.UPDATE)
+        pendingUpdates.forEach { item ->
+                try {
+                        val dto = ItemCreateDto(
+                                clientId = item.id,
+                                barcode = item.barcode,
+                                name = item.name,
+                                brand = item.brand,
+                                imageUrl = item.imageUrl,
+                                imageIngredientsUrl = item.imageIngredientsUrl,
+                                imageNutritionUrl = item.imageNutritionUrl,
+                                nutriScore = sanitizeNutriScore(item.nutriScore),
+                                expiryDate = item.expiryDate?.let { epochMsToYyyyMmDd(it) },
+                                addMode = item.addMode,
+                            )
+
+                        val res = api.createItem(
+                                authorization = "Bearer $token",
+                                body = dto
+                                    )
+
+                        if (res.isSuccessful) dao.clearPending(item.id)
+                        else dao.markFailed(item.id, error = "update(upsert) failed code=${res.code()}")
+
+                    } catch (e: Exception) {
+                        dao.markFailed(item.id, error = "update(upsert) exception=${e.message}")
+                    }
+            }
+
+
+        // 4) PULL : récupérer l'état serveur et upsert local (Room) par clientId
         try {
             val pull = api.getItems("Bearer $token")
             if (!pull.isSuccessful) {
@@ -109,6 +145,13 @@ class SyncWorker(
 
             remoteItems.forEach { dto ->
                 val clientId = dto.clientId ?: return@forEach
+
+                // ✅ Ne pas écraser un item local qui a des changements non push (pending)
+                // ou un item bloqué FAILED (pas de retry auto)
+                val local = dao.getById(clientId)
+                if (local != null && (local.pendingOperation != PendingOperation.NONE || local.syncState == SyncState.FAILED)) {
+                    return@forEach
+                }
 
                 val serverUpdatedAt = dto.updatedAt.let(::parseAtomToEpochMs)
 
@@ -127,8 +170,10 @@ class SyncWorker(
                     addedAt = dto.addedAt?.let { parseAtomToEpochMs(it) },
                     expiryDate = dto.expiryDate?.let { parseYyyyMmDdToEpochMs(it) },
                     addMode = dto.addMode ?: "barcode_scan",
-
-                    syncStatus = SyncStatus.SYNCED,
+                    pendingOperation = PendingOperation.NONE,
+                    syncState = SyncState.OK,
+                    lastSyncError = null,
+                    failedAt = null,
                     // ✅ timestamp local (debug / tri / etc)
                     localUpdatedAt = System.currentTimeMillis(),
                     // ✅ timestamp serveur (delta sync / merge)
@@ -149,6 +194,12 @@ class SyncWorker(
         return Result.success()
     }
 
+
+
+    fun sanitizeNutriScore(raw: String?): String? {
+        val v = raw?.trim()?.uppercase(Locale.ROOT) ?: return null
+        return if (v in setOf("A","B","C","D","E")) v else null
+    }
 
     private val yyyyMMdd = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private fun epochMsToYyyyMmDd(ms: Long): String =

@@ -4,6 +4,8 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.example.barcode.data.local.entities.PendingOperation
+import com.example.barcode.data.local.entities.SyncState
 import java.util.UUID
 
 // Table SQLite (stockage LOCAL, pas Cache)
@@ -12,7 +14,8 @@ import java.util.UUID
     tableName = "items",
     indices = [
         Index(value = ["deletedAt"], name = "index_items_deletedAt"),
-        Index(value = ["syncStatus"], name = "index_items_syncStatus"),
+        Index(value = ["pendingOperation"], name = "index_items_pendingOperation"),
+        Index(value = ["syncState"], name = "index_items_syncState"),
         Index(value = ["serverUpdatedAt"], name = "index_items_serverUpdatedAt"),
     ]
 )
@@ -20,14 +23,19 @@ data class ItemEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
 
     // 🔹 Sync
-    @ColumnInfo(defaultValue = "PENDING_CREATE")
-    val syncStatus: SyncStatus = SyncStatus.PENDING_CREATE,
+    @ColumnInfo(defaultValue = "NONE")
+    val pendingOperation: PendingOperation = PendingOperation.NONE,
 
-    // ⚠️ On garde le NOM de colonne "updatedAt" car ta DB l’a déjà
+    @ColumnInfo(defaultValue = "OK")
+    val syncState: SyncState = SyncState.OK,
+
+    val lastSyncError: String? = null,
+    val failedAt: Long? = null,
+
     @ColumnInfo(name = "updatedAt", defaultValue = "0")
     val localUpdatedAt: Long = System.currentTimeMillis(),
 
-    // ✅ Timestamp serveur (pour delta sync / debug / merge):
+    // Timestamp serveur (pour delta sync / debug / merge):
     val serverUpdatedAt: Long? = null,
 
 
@@ -48,12 +56,3 @@ data class ItemEntity(
     @ColumnInfo(defaultValue = "barcode_scan")
     val addMode: String = "barcode_scan",
 )
-
-
-enum class SyncStatus {
-    PENDING_CREATE,
-    PENDING_DELETE,
-    PENDING_EDIT,
-    SYNCED,
-    FAILED
-}

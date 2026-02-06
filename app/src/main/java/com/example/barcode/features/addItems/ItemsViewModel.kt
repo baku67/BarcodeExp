@@ -6,8 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.LocalItemRepository
-import com.example.barcode.data.local.entities.SyncStatus
+import com.example.barcode.data.local.entities.PendingOperation
 import com.example.barcode.sync.SyncScheduler
+import com.example.barcode.data.local.entities.SyncState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -46,7 +47,8 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
             imageNutritionUrl = imageNutritionUrl,
             nutriScore = nutriScore,
             addMode = addMode,
-            syncStatus = SyncStatus.PENDING_CREATE
+            pendingOperation = PendingOperation.CREATE,
+            syncState = SyncState.OK
         )
 
         repo.addOrUpdate(entity)

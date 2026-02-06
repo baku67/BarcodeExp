@@ -2,7 +2,7 @@ package com.example.barcode.data.local.dao
 
 import androidx.room.*
 import com.example.barcode.data.local.entities.ItemEntity
-import com.example.barcode.data.local.entities.SyncStatus
+import com.example.barcode.data.local.entities.PendingOperation
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -22,18 +22,20 @@ interface ItemDao {
     @Query("SELECT * FROM items WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): ItemEntity?
 
-    // ✅ Soft delete : on garde une trace locale pour sync + éviter la résurrection au prochain PULL
+    // ✅ Soft delete : tombstone + pending delete + débloque FAILED
     @Query("""
-        UPDATE items
-        SET deletedAt = :deletedAt,
-            syncStatus = :status,
-            updatedAt = :updatedAt
-        WHERE id = :id
+      UPDATE items
+      SET deletedAt = :deletedAt,
+          pendingOperation = 'DELETE',
+          syncState = 'OK',
+          lastSyncError = NULL,
+          failedAt = NULL,
+          updatedAt = :updatedAt
+      WHERE id = :id
     """)
     suspend fun markDeleted(
         id: String,
         deletedAt: Long = System.currentTimeMillis(),
-        status: SyncStatus = SyncStatus.PENDING_DELETE,
         updatedAt: Long = System.currentTimeMillis()
     )
 
@@ -45,13 +47,40 @@ interface ItemDao {
     @Query("DELETE FROM items WHERE id = :id")
     suspend fun deleteById(id: String)
 
-    @Query("SELECT * FROM items WHERE syncStatus = :status")
-    suspend fun getBySyncStatus(status: SyncStatus): List<ItemEntity>
+    // ✅ Items à pousser (FAILED exclus => pas de retry automatique)
+    @Query("""
+      SELECT * FROM items
+      WHERE pendingOperation = :op
+        AND syncState != 'FAILED'
+      ORDER BY updatedAt ASC
+    """)
+    suspend fun getPending(op: PendingOperation): List<ItemEntity>
 
-    @Query("UPDATE items SET syncStatus = :status, updatedAt = :updatedAt WHERE id = :id")
-    suspend fun updateSyncStatus(
+    // ✅ Succès push => reset pending + reset FAILED
+    @Query("""
+      UPDATE items
+      SET pendingOperation = 'NONE',
+          syncState = 'OK',
+          lastSyncError = NULL,
+          failedAt = NULL,
+          updatedAt = :updatedAt
+      WHERE id = :id
+    """)
+    suspend fun clearPending(id: String, updatedAt: Long = System.currentTimeMillis())
+
+    // ✅ Échec push => FAILED (bloqué, non retenté)
+    @Query("""
+      UPDATE items
+      SET syncState = 'FAILED',
+          lastSyncError = :error,
+          failedAt = :failedAt,
+          updatedAt = :updatedAt
+      WHERE id = :id
+    """)
+    suspend fun markFailed(
         id: String,
-        status: SyncStatus,
+        error: String? = null,
+        failedAt: Long = System.currentTimeMillis(),
         updatedAt: Long = System.currentTimeMillis()
     )
 }

@@ -2,7 +2,8 @@ package com.example.barcode.data
 
 import com.example.barcode.data.local.dao.ItemDao
 import com.example.barcode.data.local.entities.ItemEntity
-import com.example.barcode.data.local.entities.SyncStatus
+import com.example.barcode.data.local.entities.PendingOperation
+import com.example.barcode.data.local.entities.SyncState
 import kotlinx.coroutines.flow.Flow
 
 class LocalItemRepository(private val dao: ItemDao) {
@@ -41,11 +42,11 @@ class LocalItemRepository(private val dao: ItemDao) {
     ) {
         val current = dao.getById(id) ?: return
 
-        val nextStatus = when (current.syncStatus) {
-            SyncStatus.PENDING_CREATE -> SyncStatus.PENDING_CREATE // ✅ pas encore push => reste "create"
-            SyncStatus.PENDING_DELETE -> SyncStatus.PENDING_DELETE // (ne devrait pas arriver via l’UI)
-            else -> SyncStatus.PENDING_EDIT // ✅ item déjà existant => update à push
-        }
+        val nextOp = when (current.pendingOperation) {
+                PendingOperation.CREATE -> PendingOperation.CREATE // ✅ pas encore push => reste CREATE
+                PendingOperation.DELETE -> PendingOperation.DELETE // (ne devrait pas arriver via l’UI)
+                else -> PendingOperation.UPDATE // ✅ item déjà existant => UPDATE à push
+            }
 
         dao.upsert(
             current.copy(
@@ -56,7 +57,10 @@ class LocalItemRepository(private val dao: ItemDao) {
                 imageIngredientsUrl = imageIngredientsUrl,
                 imageNutritionUrl = imageNutritionUrl,
                 nutriScore = nutriScore,
-                syncStatus = nextStatus,
+                pendingOperation = nextOp,
+                syncState = SyncState.OK,    // ✅ action utilisateur => débloque un éventuel FAILED
+                lastSyncError = null,
+                failedAt = null,
                 localUpdatedAt = System.currentTimeMillis()
             )
         )
@@ -66,10 +70,10 @@ class LocalItemRepository(private val dao: ItemDao) {
     suspend fun delete(id: String) {
         val item = dao.getById(id) ?: return
 
-        if (item.syncStatus == SyncStatus.PENDING_CREATE) {
+        if (item.pendingOperation == PendingOperation.CREATE) {
             dao.hardDelete(id) // ✅ pas besoin de sync delete
         } else {
-            dao.markDeleted(id) // ✅ tombstone + pending delete
+            dao.markDeleted(id) // ✅ tombstone + pending DELETE + débloque FAILED (si ton DAO le fait)
         }
     }
 }
