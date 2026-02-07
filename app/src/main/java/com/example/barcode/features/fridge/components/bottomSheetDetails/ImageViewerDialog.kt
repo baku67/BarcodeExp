@@ -50,8 +50,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
 import kotlinx.coroutines.launch
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 
 public enum class ViewerImageKind {
     Preview,
@@ -182,10 +185,16 @@ private fun ZoomableImagePage(
         onScaleChanged(scale)
     }
 
+    // pour pas moove infini dans le vide quand zoomed
+    var containerSize by remember(url) { mutableStateOf(IntSize.Zero) }
+    var imageSize by remember(url) { mutableStateOf(IntSize.Zero) }
+
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .onSizeChanged { containerSize = it }
     ) {
         val painter = rememberAsyncImagePainter(url)
         val pState = painter.state
@@ -198,6 +207,9 @@ private fun ZoomableImagePage(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(18.dp)
+                    .onGloballyPositioned { coords ->
+                        imageSize = coords.size
+                    }
                     .pointerInput(url) {
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
@@ -223,7 +235,11 @@ private fun ZoomableImagePage(
                                     val newScale = (scale * zoom).coerceIn(1f, 8f)
                                     scale = newScale
                                     rotation += rot
-                                    offset += pan
+                                    offset = (offset + pan).clampToBounds(
+                                        containerSize = containerSize,
+                                        contentSize = imageSize,
+                                        scale = scale
+                                    )
 
                                     if (kotlin.math.abs(scale - 1f) < 0.03f) {
                                         scale = 1f
@@ -278,3 +294,24 @@ private fun ZoomableImagePage(
         }
     }
 }
+
+private fun androidx.compose.ui.geometry.Offset.clampToBounds(
+    containerSize: IntSize,
+    contentSize: IntSize,
+    scale: Float
+): androidx.compose.ui.geometry.Offset {
+    if (containerSize.width == 0 || containerSize.height == 0) return this
+    if (contentSize.width == 0 || contentSize.height == 0) return this
+
+    val scaledW = contentSize.width * scale
+    val scaledH = contentSize.height * scale
+
+    val maxX = ((scaledW - containerSize.width) / 2f).coerceAtLeast(0f)
+    val maxY = ((scaledH - containerSize.height) / 2f).coerceAtLeast(0f)
+
+    val clampedX = x.coerceIn(-maxX, maxX)
+    val clampedY = y.coerceIn(-maxY, maxY)
+
+    return androidx.compose.ui.geometry.Offset(clampedX, clampedY)
+}
+
