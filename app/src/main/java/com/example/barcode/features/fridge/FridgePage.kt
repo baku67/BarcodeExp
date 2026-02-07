@@ -41,6 +41,7 @@ import com.example.barcode.features.addItems.ItemsViewModel
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.features.fridge.components.bottomSheetDetails.ImageViewerDialog
 import com.example.barcode.features.fridge.components.bottomSheetDetails.ItemDetailsBottomSheet
+import com.example.barcode.features.fridge.components.bottomSheetDetails.ViewerImage
 import com.example.barcode.features.fridge.components.editItem.EditItemResult
 import com.example.barcode.features.fridge.components.editItem.EditItemScreen
 import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfRow
@@ -134,7 +135,8 @@ fun FridgePage(
     )
 
     // Viewer plein écran (click sur images BottomSheet)
-    var viewerUrl by remember { mutableStateOf<String?>(null) }
+    var viewerImages by remember { mutableStateOf<List<ViewerImage>?>(null) }
+    var viewerStartIndex by remember { mutableStateOf(0) }
 
     // Tri croissant : expirés + plus proches en haut, plus lointaines en bas
     val sorted = remember(list) {
@@ -210,12 +212,17 @@ fun FridgePage(
     }
 
     // Viewer d'Image plein écran (click sur images BottomSheet)
-    if (viewerUrl != null) {
+    if (!viewerImages.isNullOrEmpty()) {
         ImageViewerDialog(
-            url = viewerUrl!!,
-            onDismiss = { viewerUrl = null }
+            images = viewerImages!!,
+            startIndex = viewerStartIndex,
+            onDismiss = {
+                viewerImages = null
+                viewerStartIndex = 0
+            }
         )
     }
+
 
     // TODO: remplacer le delay par vrai refresh VM/API
     suspend fun refreshItems() {
@@ -282,7 +289,10 @@ fun FridgePage(
             ItemDetailsBottomSheet(
                 itemEntity = sheetItemEntity!!,
                 onClose = { closeSheet() },
-                onOpenViewer = { viewerUrl = it },
+                onOpenViewer = { images, startIndex ->
+                    viewerImages = images
+                    viewerStartIndex = startIndex
+                },
                 onEdit = { item ->
                     scope.launch {
                         sheetState.hide()

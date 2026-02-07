@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,12 +41,13 @@ import com.example.barcode.features.fridge.isSoon
 
 
 
+
 // BOTTOM SHEET 1/2:
 @Composable
 public fun ItemDetailsBottomSheet(
     itemEntity: ItemEntity,
     onClose: () -> Unit,
-    onOpenViewer: (String) -> Unit,
+    onOpenViewer: (List<ViewerImage>, Int) -> Unit,
     onEdit: (ItemEntity) -> Unit = {},
     onRemove: (ItemEntity) -> Unit = {},
     onAddToFavorites: (ItemEntity) -> Unit = {},
@@ -55,6 +57,36 @@ public fun ItemDetailsBottomSheet(
         targetValue = expiryStrokeColor(itemEntity.expiryDate),
         label = "sheetStrokeColor"
     )
+
+    val viewerImages = remember(
+        itemEntity.imageUrl,
+        itemEntity.imageIngredientsUrl,
+        itemEntity.imageNutritionUrl
+    ) {
+        buildViewerImages(
+            previewUrl = itemEntity.imageUrl,
+            ingredientsUrl = itemEntity.imageIngredientsUrl,
+            nutritionUrl = itemEntity.imageNutritionUrl
+        )
+    }
+
+    val openViewerFromUrl: (String) -> Unit = open@{ clickedUrl ->
+        if (viewerImages.isEmpty()) return@open
+        val startIndex = viewerImages.indexOfFirst { it.url == clickedUrl }.let { idx ->
+            if (idx >= 0) idx else 0
+        }
+        onOpenViewer(viewerImages, startIndex)
+    }
+
+    val openViewerFromKind: (ViewerImageKind) -> Unit = open@{ kind ->
+        if (viewerImages.isEmpty()) return@open
+
+        val startIndex = viewerImages.indexOfFirst { it.kind == kind }.let { idx ->
+            if (idx >= 0) idx else 0
+        }
+
+        onOpenViewer(viewerImages, startIndex)
+    }
 
     Box(Modifier.fillMaxWidth()) {
 
@@ -80,13 +112,13 @@ public fun ItemDetailsBottomSheet(
                 ItemDetailsHeader(
                     itemEntity = itemEntity,
                     onClose = onClose,
-                    onOpenViewer = onOpenViewer
+                    onOpenViewer = openViewerFromKind
                 )
 
                 DetailsOpenImageButtons(
                     ingredientsUrl = itemEntity.imageIngredientsUrl,
                     nutritionUrl = itemEntity.imageNutritionUrl,
-                    onOpenViewer = onOpenViewer
+                    onOpenViewer = openViewerFromUrl
                 )
             }
         }
@@ -320,6 +352,33 @@ private fun DetailsTabButton(
             Text(text, fontWeight = FontWeight.SemiBold, color = content)
         }
     }
+}
+
+
+
+
+
+
+private fun buildViewerImages(
+    previewUrl: String?,
+    ingredientsUrl: String?,
+    nutritionUrl: String?
+): List<ViewerImage> {
+    val out = mutableListOf<ViewerImage>()
+
+    previewUrl?.trim()?.takeIf { it.isNotBlank() }?.let {
+        out += ViewerImage(ViewerImageKind.Preview, it)
+    }
+
+    ingredientsUrl?.trim()?.takeIf { it.isNotBlank() }?.let {
+        out += ViewerImage(ViewerImageKind.Ingredients, it)
+    }
+
+    nutritionUrl?.trim()?.takeIf { it.isNotBlank() }?.let {
+        out += ViewerImage(ViewerImageKind.Nutrition, it)
+    }
+
+    return out
 }
 
 

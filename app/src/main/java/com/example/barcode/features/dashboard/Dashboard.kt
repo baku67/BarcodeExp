@@ -226,12 +226,12 @@ private fun DashboardCardProductsWide(
                             Icon(
                                 painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
                                 contentDescription = "Produits",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                                 modifier = Modifier
                                     .size(60.dp)
                                     .iconGlowRightAndFadeLeft(
                                         glowColor = MaterialTheme.colorScheme.primary,
-                                        fadeWidthFraction = 0.7f,
+                                        fadeWidthFraction = 0.45f,
                                         glowStrength = 1.45f
                                     )
                             )
@@ -473,12 +473,12 @@ private fun DashboardCardShoppingListFake(
                     Icon(
                         imageVector = Icons.Filled.ReceiptLong,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         modifier = Modifier
                             .size(60.dp)
                             .iconGlowRightAndFadeLeft(
                                 glowColor = MaterialTheme.colorScheme.primary,
-                                fadeWidthFraction = 0.9f,
+                                fadeWidthFraction = 0.6f,
                                 glowStrength = 1.45f
                             )
                     )
@@ -567,12 +567,12 @@ private fun DashboardCardRecipesFake(
                     Icon(
                         imageVector = Icons.Outlined.RestaurantMenu,
                         contentDescription = "Recettes",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         modifier = Modifier
                             .size(60.dp)
                             .iconGlowRightAndFadeLeft(
                                 glowColor = MaterialTheme.colorScheme.primary,
-                                fadeWidthFraction = 0.9f,
+                                fadeWidthFraction = 0.6f,
                                 glowStrength = 1.45f
                             )
                     )
