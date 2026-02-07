@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -56,8 +57,10 @@ import com.example.barcode.R
 import kotlinx.coroutines.delay
 import kotlin.math.min
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
+
 
 
 // TODO: vraies données route dashboard (counts et 5 nextExpiring)
@@ -225,8 +228,12 @@ private fun DashboardCardProductsWide(
                                 contentDescription = "Produits",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
                                 modifier = Modifier
-                                    .size(72.dp)
-                                    .textFadeToRight(fadeWidthFraction = 0.65f)
+                                    .size(60.dp)
+                                    .iconGlowRightAndFadeLeft(
+                                        glowColor = MaterialTheme.colorScheme.primary,
+                                        fadeWidthFraction = 0.55f,
+                                        glowStrength = 1.25f
+                                    )
                             )
                         }
 
@@ -465,12 +472,17 @@ private fun DashboardCardShoppingListFake(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ReceiptLong,
-                        contentDescription = "Courses",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f),
                         modifier = Modifier
                             .size(60.dp)
-                            .textFadeToRight(fadeWidthFraction = 0.65f)
+                            .iconGlowRightAndFadeLeft(
+                                glowColor = MaterialTheme.colorScheme.primary,
+                                fadeWidthFraction = 0.7f,
+                                glowStrength = 1.25f
+                            )
                     )
+
                 }
 
                 // Droite : nombre + label alignés à gauche
@@ -558,7 +570,11 @@ private fun DashboardCardRecipesFake(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
                         modifier = Modifier
                             .size(60.dp)
-                            .textFadeToRight(fadeWidthFraction = 0.65f)
+                            .iconGlowRightAndFadeLeft(
+                                glowColor = MaterialTheme.colorScheme.primary,
+                                fadeWidthFraction = 0.7f,
+                                glowStrength = 1.25f
+                            )
                     )
 
                 }
@@ -786,3 +802,52 @@ private fun Modifier.textFadeToRight(
         )
     }
 
+
+
+fun Modifier.iconGlowRightAndFadeLeft(
+    glowColor: Color,
+    fadeWidthFraction: Float = 0.35f, // 0.25f = léger, 0.50f = moitié gauche
+    glowStrength: Float = 1.25f
+) = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithCache {
+
+        // --- HALO (vient de la droite)
+        val haloCenter = Offset(size.width, size.height * 0.5f)
+
+        val softHalo = Brush.radialGradient(
+            colors = listOf(glowColor.copy(alpha = 0.5f * glowStrength), Color.Transparent),
+            center = haloCenter,
+            radius = size.minDimension * 1.20f
+        )
+
+        val coreHalo = Brush.radialGradient(
+            colors = listOf(glowColor.copy(alpha = 0.9f * glowStrength), Color.Transparent),
+            center = haloCenter,
+            radius = size.minDimension * 0.7f
+        )
+
+        // --- FADE (gauche -> transparent vers la gauche)
+        val fw = (size.width * fadeWidthFraction).coerceIn(1f, size.width)
+        val stop = fw / size.width
+
+        val fadeMask = Brush.horizontalGradient(
+            colorStops = arrayOf(
+                0f to Color.Transparent,   // bord gauche invisible
+                stop to Color.White,       // redevient opaque
+                1f to Color.White          // reste opaque jusqu’à droite
+            )
+        )
+
+        onDrawWithContent {
+            // 1) icône normale
+            drawContent()
+
+            // 2) halo sur les pixels de l’icône uniquement
+            drawRect(softHalo, blendMode = BlendMode.SrcAtop)
+            drawRect(coreHalo, blendMode = BlendMode.SrcAtop)
+
+            // 3) mask alpha pour rendre la gauche transparente
+            drawRect(fadeMask, blendMode = BlendMode.DstIn)
+        }
+    }
