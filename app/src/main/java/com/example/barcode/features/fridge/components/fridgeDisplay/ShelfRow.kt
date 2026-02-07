@@ -106,6 +106,20 @@ fun ShelfRow(
                 val hasSheetSelection = selectedSheetId != null
                 val dimOthers = hasSheetSelection && !isSheetSelected
 
+                val sheetOtherAlpha by animateFloatAsState(
+                    targetValue = if (dimOthers) 0.55f else 1f,
+                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                    label = "sheetOtherAlpha"
+                )
+
+                val sheetDimOverlay by animateFloatAsState(
+                    targetValue = if (dimOthers) 0.50f else 0f,
+                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                    label = "sheetDimOverlay"
+                )
+
+                val effectiveDim = maxOf(dimAlpha, sheetDimOverlay)
+
                 val isMultiSelected = selectionMode && selectedIds.contains(item.id)
                 // ✅ Même rendu que la sélection “single” (BottomSheet) : bordure calée à l'image
                 val isVisuallySelected = isSheetSelected || isMultiSelected
@@ -165,10 +179,9 @@ fun ShelfRow(
                         cornerIconTint = glowColor,
                         onImageLoaded = { imageLoaded = it },
                         dimAlpha = when {
-                            isSheetSelected -> 0f                         // le sélectionné reste full bright
-                            dimForMultiSelect -> 0.55f                    // ✅ assombrit les non-sélectionnés en multi-select
-                            dimOthers -> 0.5f                             // assombrit les autres (BottomSheet selection)
-                            else -> dimAlpha                               // anim globale d’allumage frigo
+                            isSheetSelected -> 0f
+                            dimForMultiSelect -> 0.55f
+                            else -> effectiveDim
                         },
                         showImageBorder = isVisuallySelected, // ✅ NEW
                         imageBorderColor = selectionBorderColor,
@@ -178,9 +191,8 @@ fun ShelfRow(
                             .alpha(
                                 when {
                                     isSheetSelected -> 1f
-                                    selectionMode -> multiAlpha               // ✅ fade smooth multi-select
-                                    dimOthers -> 0.92f
-                                    else -> 1f
+                                    selectionMode -> multiAlpha
+                                    else -> sheetOtherAlpha
                                 }
                             )
                             .zIndex(if (isSheetSelected) 2f else 0f)
