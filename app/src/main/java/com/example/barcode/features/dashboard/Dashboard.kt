@@ -226,13 +226,13 @@ private fun DashboardCardProductsWide(
                             Icon(
                                 painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
                                 contentDescription = "Produits",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
                                 modifier = Modifier
                                     .size(60.dp)
                                     .iconGlowRightAndFadeLeft(
                                         glowColor = MaterialTheme.colorScheme.primary,
-                                        fadeWidthFraction = 0.55f,
-                                        glowStrength = 1.25f
+                                        fadeWidthFraction = 0.7f,
+                                        glowStrength = 1.45f
                                     )
                             )
                         }
@@ -473,13 +473,13 @@ private fun DashboardCardShoppingListFake(
                     Icon(
                         imageVector = Icons.Filled.ReceiptLong,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
                         modifier = Modifier
                             .size(60.dp)
                             .iconGlowRightAndFadeLeft(
                                 glowColor = MaterialTheme.colorScheme.primary,
-                                fadeWidthFraction = 0.7f,
-                                glowStrength = 1.25f
+                                fadeWidthFraction = 0.9f,
+                                glowStrength = 1.45f
                             )
                     )
 
@@ -567,13 +567,13 @@ private fun DashboardCardRecipesFake(
                     Icon(
                         imageVector = Icons.Outlined.RestaurantMenu,
                         contentDescription = "Recettes",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
                         modifier = Modifier
                             .size(60.dp)
                             .iconGlowRightAndFadeLeft(
                                 glowColor = MaterialTheme.colorScheme.primary,
-                                fadeWidthFraction = 0.7f,
-                                glowStrength = 1.25f
+                                fadeWidthFraction = 0.9f,
+                                glowStrength = 1.45f
                             )
                     )
 
