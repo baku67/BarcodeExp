@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +46,12 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import kotlin.math.abs
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import kotlinx.coroutines.launch
 
 public enum class ViewerImageKind {
     Preview,
@@ -82,6 +89,7 @@ public fun ImageViewerDialog(
     val pageScales = remember { mutableStateMapOf<Int, Float>() }
     val currentScale = pageScales[pagerState.currentPage] ?: 1f
     val canSwipe = currentScale <= 1.02f
+    val scope = rememberCoroutineScope()
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -103,26 +111,48 @@ public fun ImageViewerDialog(
                 )
             }
 
-            // ✅ Titre au-dessus : "Aperçu" / "Ingrédients" / "Nutrition"
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                Text(
-                    text = images.getOrNull(pagerState.currentPage)?.title.orEmpty(),
-                    color = Color.White.copy(alpha = 0.92f),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.CenterEnd)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Fermer", tint = Color.White)
+                    ScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        modifier = Modifier.weight(1f),
+                        containerColor = Color.Transparent,
+                        contentColor = Color.White,
+                        edgePadding = 0.dp,
+                        divider = {}
+                    ) {
+                        images.forEachIndexed { index, img ->
+                            val selected = pagerState.currentPage == index
+
+                            Tab(
+                                selected = selected,
+                                onClick = {
+                                    scope.launch { pagerState.animateScrollToPage(index) }
+                                },
+                                text = {
+                                    Text(
+                                        text = img.title,
+                                        maxLines = 1,
+                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = Color.White.copy(alpha = if (selected) 0.95f else 0.65f),
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                }
+                            )
+                        }
+                    }
+
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Filled.Close, contentDescription = "Fermer", tint = Color.White)
+                    }
                 }
             }
         }
@@ -180,7 +210,7 @@ private fun ZoomableImagePage(
                                 val pressedCount = event.changes.count { it.pressed }
                                 val zoom = event.calculateZoom()
                                 val pan = event.calculatePan()
-                                val rot = event.calculateRotation()
+                                val rot = 0f
 
                                 // ✅ On ne "prend la main" QUE si:
                                 // - multi-touch (pinch), ou
