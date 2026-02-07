@@ -226,7 +226,7 @@ private fun DashboardCardProductsWide(
                             Icon(
                                 painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
                                 contentDescription = "Produits",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
                                 modifier = Modifier
                                     .size(60.dp)
                                     .iconGlowRightAndFadeLeft(
@@ -473,7 +473,7 @@ private fun DashboardCardShoppingListFake(
                     Icon(
                         imageVector = Icons.Filled.ReceiptLong,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
                         modifier = Modifier
                             .size(60.dp)
                             .iconGlowRightAndFadeLeft(
@@ -567,7 +567,7 @@ private fun DashboardCardRecipesFake(
                     Icon(
                         imageVector = Icons.Outlined.RestaurantMenu,
                         contentDescription = "Recettes",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
                         modifier = Modifier
                             .size(60.dp)
                             .iconGlowRightAndFadeLeft(
