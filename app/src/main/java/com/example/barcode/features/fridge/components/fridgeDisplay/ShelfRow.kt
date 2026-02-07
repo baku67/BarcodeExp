@@ -1,6 +1,7 @@
 package com.example.barcode.features.fridge.components.fridgeDisplay
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -109,6 +110,13 @@ fun ShelfRow(
                 // ✅ Même rendu que la sélection “single” (BottomSheet) : bordure calée à l'image
                 val isVisuallySelected = isSheetSelected || isMultiSelected
 
+                val dimForMultiSelect = selectionMode && !isMultiSelected
+                val multiAlpha by animateFloatAsState(
+                    targetValue = if (dimForMultiSelect) 0.45f else 1f,
+                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                    label = "multiSelectAlpha"
+                )
+
                 val glowColor = when {
                     item.expiryDate == null -> null
                     isExpired(item.expiryDate) -> MaterialTheme.colorScheme.tertiary
@@ -157,16 +165,24 @@ fun ShelfRow(
                         cornerIconTint = glowColor,
                         onImageLoaded = { imageLoaded = it },
                         dimAlpha = when {
-                            isSheetSelected -> 0f           // le sélectionné reste full bright
-                            dimOthers -> 0.5f              // assombrit les autres (AJUSTE ICI)
-                            else -> dimAlpha                // sinon: anim globale d’allumage frigo
+                            isSheetSelected -> 0f                         // le sélectionné reste full bright
+                            dimForMultiSelect -> 0.55f                    // ✅ assombrit les non-sélectionnés en multi-select
+                            dimOthers -> 0.5f                             // assombrit les autres (BottomSheet selection)
+                            else -> dimAlpha                               // anim globale d’allumage frigo
                         },
                         showImageBorder = isVisuallySelected, // ✅ NEW
                         imageBorderColor = selectionBorderColor,
                         imageBorderWidth = 2.dp, // ✅ NEW
                         modifier = Modifier.Companion
                             .fillMaxSize()
-                            .alpha(if (dimOthers) 0.92f else 1f)
+                            .alpha(
+                                when {
+                                    isSheetSelected -> 1f
+                                    selectionMode -> multiAlpha               // ✅ fade smooth multi-select
+                                    dimOthers -> 0.92f
+                                    else -> 1f
+                                }
+                            )
                             .zIndex(if (isSheetSelected) 2f else 0f)
                             .graphicsLayer {
                                 scaleX = selectedScale

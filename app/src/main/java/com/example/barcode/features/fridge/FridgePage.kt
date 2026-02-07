@@ -21,6 +21,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -483,22 +484,33 @@ fun FridgePage(
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 items(sorted, key = { it.id }) { it ->
-                                    ItemListCard(
-                                        name = it.name ?: "(sans nom)",
-                                        brand = it.brand,
-                                        expiry = it.expiryDate,
-                                        imageUrl = it.imageUrl,
-                                        selected = selectionMode && selectedIds.contains(it.id),
-                                        selectionMode = selectionMode,
-                                        onClick = {
-                                            if (selectionMode) toggleSelect(it.id) else sheetItemEntity = it
-                                        },
-                                        onLongPress = {
-                                            if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
-                                        },
-                                        onDelete = { vm.deleteItem(it.id) }
+                                    val isSelected = selectionMode && selectedIds.contains(it.id)
+
+                                    val rowAlpha by animateFloatAsState(
+                                        targetValue = if (selectionMode && !isSelected) 0.45f else 1f,
+                                        animationSpec = tween(durationMillis = 180),
+                                        label = "listMultiSelectAlpha"
                                     )
+
+                                    Box(modifier = Modifier.alpha(rowAlpha)) {
+                                        ItemListCard(
+                                            name = it.name ?: "(sans nom)",
+                                            brand = it.brand,
+                                            expiry = it.expiryDate,
+                                            imageUrl = it.imageUrl,
+                                            selected = isSelected,
+                                            selectionMode = selectionMode,
+                                            onClick = {
+                                                if (selectionMode) toggleSelect(it.id) else sheetItemEntity = it
+                                            },
+                                            onLongPress = {
+                                                if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
+                                            },
+                                            onDelete = { vm.deleteItem(it.id) }
+                                        )
+                                    }
                                 }
+
                                 item { Spacer(Modifier.height(4.dp)) }
                             }
                         }
