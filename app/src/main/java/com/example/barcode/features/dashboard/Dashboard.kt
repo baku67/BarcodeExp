@@ -226,7 +226,7 @@ private fun DashboardCardProductsWide(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
                                 modifier = Modifier
                                     .size(72.dp)
-                                    .textFadeToRight(fadeWidthFraction = 0.5f)
+                                    .textFadeToRight(fadeWidthFraction = 0.65f)
                             )
                         }
 
@@ -469,7 +469,7 @@ private fun DashboardCardShoppingListFake(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
                         modifier = Modifier
                             .size(60.dp)
-                            .textFadeToRight(fadeWidthFraction = 0.5f)
+                            .textFadeToRight(fadeWidthFraction = 0.65f)
                     )
                 }
 
@@ -558,8 +558,9 @@ private fun DashboardCardRecipesFake(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.20f),
                         modifier = Modifier
                             .size(60.dp)
-                            .textFadeToRight(fadeWidthFraction = 0.5f)
+                            .textFadeToRight(fadeWidthFraction = 0.65f)
                     )
+
                 }
 
                 // Droite : nombre + label alignés à gauche
