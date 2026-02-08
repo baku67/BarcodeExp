@@ -12,6 +12,8 @@ import com.example.barcode.domain.models.UserPreferences
 import com.example.barcode.domain.models.UserProfile
 import com.example.barcode.domain.models.toUserPreferences
 import com.example.barcode.sync.SyncScheduler
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 // Etat réseau uniquement
@@ -43,7 +46,16 @@ class AuthViewModel(
     val userIsVerified: Flow<Boolean?> = session.userIsVerified
     val preferences: Flow<UserPreferences> = session.preferences
 
+    // Pour auth auto après register
+    sealed interface AuthEvent {
+        data object GoHome : AuthEvent
+    }
+    private val _events = Channel<AuthEvent>(Channel.BUFFERED)
+    val events = _events.receiveAsFlow()
     private val patchFlow = MutableSharedFlow<Map<String, String>>(extraBufferCapacity = 1)
+
+    private var loginJob: Job? = null
+
 
     // Patch des préférences en BDD au lancement ?
     init {
@@ -95,32 +107,51 @@ class AuthViewModel(
     }
 
     fun onLogin(email: String, password: String) {
-        viewModelScope.launch {
-            uiState.value = uiState.value.copy(loading = true)
-            repo.login(email, password)
+        // évite double taps / auto-login + bouton
+        if (uiState.value.loading) return
+
+        loginJob?.cancel()
+        loginJob = viewModelScope.launch {
+            uiState.value = AuthUiState(loading = true, error = null)
+
+            // IMPORTANT : évite de te faire croire qu’un vieux token = login OK
+            session.saveToken("")
+            runCatching { session.saveRefreshToken("") }
+
+            val result = repo.login(email.trim(), password)
+
+            result
                 .onSuccess { res ->
                     session.saveToken(res.token)
                     res.refreshToken?.let { session.saveRefreshToken(it) }
-                    repo.me(res.token).onSuccess { profile ->
-                        session.saveUser(profile)
-                        session.savePreferences(profile.toUserPreferences())
-                    }
+
+                    // ✅ mets le mode + navigation tout de suite
                     session.setAppMode(AppMode.AUTH)
-                    uiState.value = uiState.value.copy(loading = false, error = null)
-                    _events.emit(AuthEvent.GoHome)
+                    uiState.value = AuthUiState(loading = false, error = null)
+                    _events.trySend(AuthEvent.GoHome)
+
+                    // ✅ /me en background (ne bloque pas l’UI)
+                    viewModelScope.launch {
+                        repo.me(res.token)
+                            .onSuccess { profile ->
+                                session.saveUser(profile)
+                                session.savePreferences(profile.toUserPreferences())
+                            }
+                            .onFailure {
+                                SnackbarBus.show("Profil non chargé : ${it.message ?: it}")
+                            }
+                    }
                 }
                 .onFailure { err ->
-                    uiState.value = uiState.value.copy(error = err.message, loading = false)
+                    val msg = buildString {
+                        append(err::class.simpleName ?: "Erreur")
+                        err.message?.let { append(": $it") }
+                    }
+                    uiState.value = AuthUiState(loading = false, error = msg)
                 }
         }
     }
 
-    // Pour auth auto après register
-    sealed interface AuthEvent {
-        data object GoHome : AuthEvent
-    }
-    private val _events = MutableSharedFlow<AuthEvent>()
-    val events = _events.asSharedFlow()
 
     fun onRegister(email: String, password: String, confirmPassword: String) {
         // petit garde-fou front (évite un call inutile)
@@ -140,7 +171,7 @@ class AuthViewModel(
                     session.saveUser(UserProfile(id = res.id, email = email, isVerified = false))
                     session.setAppMode(AppMode.AUTH)
 
-                    _events.emit(AuthEvent.GoHome)
+                    _events.send(AuthEvent.GoHome)
                 }
                 .onFailure { err ->
                     uiState.value = uiState.value.copy(error = err.message ?: "Erreur", loading = false)

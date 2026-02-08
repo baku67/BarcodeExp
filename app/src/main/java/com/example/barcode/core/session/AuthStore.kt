@@ -29,8 +29,8 @@ class AuthStore(private val context: Context) {
 
     val appMode: Flow<AppMode> = ds.data.map { prefs ->
         when (prefs[APP_MODE_KEY]) {
-            AppMode.LOCAL.name -> AppMode.LOCAL
-            else -> AppMode.AUTH
+            AppMode.AUTH.name -> AppMode.AUTH
+            else -> AppMode.LOCAL
         }
     }
 
@@ -72,7 +72,7 @@ class AuthStore(private val context: Context) {
             it.remove(USER_ID_KEY)
             it.remove(USER_EMAIL_KEY)
             it.remove(USER_IS_VERIFIED_KEY)
-            it[APP_MODE_KEY] = AppMode.AUTH.name
+            it[APP_MODE_KEY] = AppMode.LOCAL.name
         }
     }
 }

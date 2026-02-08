@@ -6,7 +6,9 @@ import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
 import com.example.barcode.domain.models.UserProfile
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 internal const val SESSION_STORE_NAME = "session_store"
 internal val Context.sessionDataStore by preferencesDataStore(name = SESSION_STORE_NAME)
@@ -30,7 +32,9 @@ class SessionManager(context: Context) {
     suspend fun saveUser(profile: UserProfile) = auth.saveUser(profile)
 
     suspend fun clear() = auth.clearTokensOnly()
-    suspend fun logout() = auth.logout()
+    suspend fun logout() = withContext(NonCancellable) {
+        auth.logout()
+    }
 
     // --- Preferences ---
     val preferences = prefs.preferences

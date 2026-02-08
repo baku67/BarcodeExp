@@ -25,8 +25,10 @@ class AuthRepository {
             } else {
                 Result.failure(Exception("HTTP ${response.code()} - ${response.message()}"))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.failure(e) // <-- empêche le crash, et tu affiches e.message dans l'UI
+            Result.failure(e)
         }
     }
 
