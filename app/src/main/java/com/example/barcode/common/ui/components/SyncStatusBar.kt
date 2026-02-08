@@ -1,30 +1,31 @@
 package com.example.barcode.common.ui.components
 
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.unit.dp
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -34,13 +35,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.example.barcode.sync.SyncUiState
+
+private val BarHeight = 34.dp              // ✅ moins épais (avant 44.dp)
+private const val RotateDurationMs = 1800  // ✅ rotation plus lente (avant 900)
 
 @Composable
 fun SyncStatusBar(
@@ -50,12 +53,16 @@ fun SyncStatusBar(
 ) {
     val visible = state !is SyncUiState.Idle
 
-    // ✅ Barre épaisse grisâtre
-    val bg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.78f)
+    // ✅ Barre grisâtre
+    val bg = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f) // ✅ surface + légère transparence
 
-    // ✅ Bordure bottom "un peu plus claire"
-    val bottomBorder: Color =
-        Color.White.copy(alpha = if (bg.luminance() < 0.5f) 0.10f else 0.28f)
+    // ✅ Bordure bottom un peu plus claire
+    val bottomBorder =
+        if (MaterialTheme.colorScheme.surface.luminance() < 0.5f)
+            Color.White.copy(alpha = 0.10f)  // dark theme → bordure plus claire
+        else
+            Color.Black.copy(alpha = 0.08f)  // light theme → bordure légèrement marquée
+
 
     AnimatedVisibility(
         visible = visible,
@@ -63,10 +70,10 @@ fun SyncStatusBar(
         enter = expandVertically() + fadeIn(),
         exit = shrinkVertically() + fadeOut()
     ) {
-        Box(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth()) {
             Surface(
                 color = bg,
-                shape = RectangleShape, // ✅ bords droits
+                shape = RoundedCornerShape(0.dp),
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp,
                 modifier = Modifier.fillMaxWidth()
@@ -79,56 +86,10 @@ fun SyncStatusBar(
                 }
             }
 
-            // ✅ "border bottom" plus clair
-            Box(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .padding(horizontal = 0.dp)
-                    .graphicsLayer { }
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .graphicsLayer { }
-                        .let { it } // (juste pour garder la structure)
-                )
-            }
-        }
-
-        // draw simple line (séparée pour rester ultra claire)
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .padding(0.dp)
-                .let { it }
-        ) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .graphicsLayer { }
-                    .padding(0.dp)
-            )
-        }
-    }
-
-    // petite astuce : on met la ligne en dehors de l’AnimatedVisibility pour éviter des glitches
-    // (mais on la garde conditionnée au visible)
-    if (visible) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-        ) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .graphicsLayer { }
+            // ✅ vrai border bottom
+            HorizontalDivider(
+                thickness = 1.dp,
+                color = bottomBorder
             )
         }
     }
@@ -136,14 +97,14 @@ fun SyncStatusBar(
 
 @Composable
 private fun SyncingRow() {
-    val accent = MaterialTheme.colorScheme.primary // ✅ ton "vert" (si ton primary est vert)
+    val accent = MaterialTheme.colorScheme.primary
 
     val infinite = rememberInfiniteTransition(label = "sync-rotate")
     val rotation by infinite.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = LinearEasing),
+            animation = tween(durationMillis = RotateDurationMs, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "rotation"
@@ -152,7 +113,7 @@ private fun SyncingRow() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp) // ✅ épais
+            .height(BarHeight)
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start
@@ -181,7 +142,7 @@ private fun OfflineRow() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(BarHeight)
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -195,7 +156,9 @@ private fun OfflineRow() {
         Text(
             text = "Hors connexion",
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-            style = MaterialTheme.typography.labelMedium
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -207,7 +170,7 @@ private fun ErrorRow(onRetry: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(BarHeight)
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
