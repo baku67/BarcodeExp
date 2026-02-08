@@ -26,12 +26,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.barcode.core.network.ApiClient
 import com.example.barcode.R
 import com.example.barcode.features.auth.AuthRepository
 import com.example.barcode.core.session.SessionManager
 import androidx.compose.runtime.getValue
-import com.example.barcode.features.dashboard.DashboardRepository
+
 
 
 @Composable
@@ -43,11 +42,10 @@ fun GlobalLoaderScreen(nav: NavHostController) {
     val session = remember { SessionManager(appContext) }
     val repo = remember { AuthRepository() }
 
-    val dashboardRepo = remember { DashboardRepository() }
     val timelineRepo = remember { TimelineRepository() }
 
     val vm: BootstrapViewModel = viewModel(
-        factory = BootstrapViewModelFactory(repo, session, timelineIntroStore, dashboardRepo, timelineRepo)
+        factory = BootstrapViewModelFactory(repo, session, timelineIntroStore, timelineRepo)
     )
 
     val state by vm.state.collectAsState()

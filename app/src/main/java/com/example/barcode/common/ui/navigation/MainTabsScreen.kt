@@ -18,6 +18,7 @@ import com.example.barcode.features.fridge.FridgePage
 import com.example.barcode.features.listeCourse.ListeCoursesContent
 import com.example.barcode.features.recipies.RecipesContent
 import com.example.barcode.features.settings.SettingsContent
+import com.example.barcode.sync.SyncUiState
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -45,6 +46,7 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
     AppContentWithBars(
         navController = navController,
         selectedRoute = selectedRoute,
+        syncState = SyncUiState.Syncing, // ✅ TEST (remets Idle ensuite)
         onTabClick = { route -> goToTab(route) }
     ) { innerPadding, snackbarHostState  ->
 

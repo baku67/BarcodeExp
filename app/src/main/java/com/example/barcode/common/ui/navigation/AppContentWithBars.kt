@@ -1,6 +1,8 @@
 package com.example.barcode.common.ui.navigation
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ReceiptLong
@@ -17,18 +19,23 @@ import com.example.barcode.common.ui.components.HeaderBar
 import com.example.barcode.common.ui.components.NavBar
 import com.example.barcode.common.ui.components.NavBarItem
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.example.barcode.R
 import com.example.barcode.domain.models.AppIcon
 import com.example.barcode.common.ui.components.HeaderBarState
 import com.example.barcode.common.ui.components.LocalAppTopBarState
 import com.example.barcode.common.bus.SnackbarBus
+import com.example.barcode.common.ui.components.SyncStatusBar
+import com.example.barcode.sync.SyncUiState
 
 @Composable
 fun AppContentWithBars(
     navController: NavHostController,
     selectedRoute: String,
     onTabClick: (String) -> Unit,
+    syncState: SyncUiState = SyncUiState.Idle,     // pour etat SyncStatusBar
+    onSyncRetry: () -> Unit = {},                  // pour etat SyncStatusBar
     content: @Composable (PaddingValues, snackbarHostState: SnackbarHostState) -> Unit
 ) {
     // Icones du NavBar
@@ -77,13 +84,21 @@ fun AppContentWithBars(
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                HeaderBar(
-                    title = topBarState.title,
-                    subtitle = topBarState.subtitle,
-                    icon = topBarState.icon,
-                    titleTrailing = topBarState.titleTrailing,                 // ✅ NEW
-                    actions = { topBarState.actions?.invoke(this) ?: Unit }
-                )
+                Column(Modifier.fillMaxWidth()) { // empile HeaderBar + SyncStatusBar
+                    HeaderBar(
+                        title = topBarState.title,
+                        subtitle = topBarState.subtitle,
+                        icon = topBarState.icon,
+                        titleTrailing = topBarState.titleTrailing,
+                        actions = { topBarState.actions?.invoke(this) ?: Unit }
+                    )
+
+                    SyncStatusBar(
+                        state = syncState,
+                        onRetry = onSyncRetry,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             },
             bottomBar = {
                 NavBar(
