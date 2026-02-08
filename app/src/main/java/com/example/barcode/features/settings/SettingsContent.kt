@@ -211,7 +211,12 @@ fun SettingsContent(
                                 // Déconnexion
                                 Button(
                                     modifier = Modifier.fillMaxWidth(),
-                                    onClick = onGoToLogin
+                                    onClick = {
+                                        scope.launch {
+                                            authVm.logout()     // ✅ d’abord : purge DataStore
+                                            onGoToLogin()       // ✅ ensuite : navigation
+                                        }
+                                    }
                                 ) {
                                     Text("Se déconnecter")
                                 }
