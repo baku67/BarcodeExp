@@ -46,7 +46,7 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
     AppContentWithBars(
         navController = navController,
         selectedRoute = selectedRoute,
-        syncState = SyncUiState.Syncing, // ✅ TEST (remets Idle ensuite)
+        syncState = SyncUiState.Idle, // ✅ TESTs (remets Idle ensuite)
         onTabClick = { route -> goToTab(route) }
     ) { innerPadding, snackbarHostState  ->
 

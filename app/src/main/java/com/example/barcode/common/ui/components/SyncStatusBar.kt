@@ -35,12 +35,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.barcode.sync.SyncUiState
+import androidx.compose.ui.util.lerp
 
 private val BarHeight = 34.dp              // ✅ moins épais (avant 44.dp)
 private const val RotateDurationMs = 1800  // ✅ rotation plus lente (avant 900)
@@ -99,7 +102,9 @@ fun SyncStatusBar(
 private fun SyncingRow() {
     val accent = MaterialTheme.colorScheme.primary
 
-    val infinite = rememberInfiniteTransition(label = "sync-rotate")
+    val infinite = rememberInfiniteTransition(label = "sync-anim")
+
+    // ✅ rotation icône
     val rotation by infinite.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
@@ -108,6 +113,30 @@ private fun SyncingRow() {
             repeatMode = RepeatMode.Restart
         ),
         label = "rotation"
+    )
+
+    // ✅ glow lent (0 → 1 → 0)
+    val glowT by infinite.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = LinearEasing), // ✅ plus rapide (avant 3200)
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow"
+    )
+
+    // Opacité un peu plus perceptible (mais pas “disco”)
+    val textAlpha = lerp(0.60f, 1.00f, glowT) // ✅ plus de différence (avant ~0.75→1.00)
+
+    // Glow shadow (léger)
+    val shadowAlpha = lerp(0.10f, 0.40f, glowT) // ✅ plus visible
+    val blur = lerp(2f, 16f, glowT)             // ✅ glow plus perceptible
+
+    val glowShadow = Shadow(
+        color = accent.copy(alpha = shadowAlpha),
+        offset = Offset(0f, 0f),
+        blurRadius = blur
     )
 
     Row(
@@ -126,16 +155,27 @@ private fun SyncingRow() {
                 .size(18.dp)
                 .graphicsLayer { rotationZ = rotation }
         )
+
         Spacer(Modifier.width(10.dp))
+
+        // ✅ Texte animé : alpha + glow
         Text(
             text = "Synchronisation en cours…",
-            color = accent,
-            style = MaterialTheme.typography.labelMedium,
+            color = accent.copy(alpha = textAlpha),
+            style = MaterialTheme.typography.labelMedium.copy(
+                shadow = Shadow(
+                    color = accent.copy(alpha = shadowAlpha),
+                    offset = Offset(0f, 0f),
+                    blurRadius = blur
+                )
+            ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
 }
+
+
 
 @Composable
 private fun OfflineRow() {
