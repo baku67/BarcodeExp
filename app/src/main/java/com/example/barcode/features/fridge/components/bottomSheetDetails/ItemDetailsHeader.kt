@@ -99,7 +99,7 @@ private fun expiryChipStyle(expiry: Long?): ExpiryChipStyle {
 fun ItemDetailsHeader(
     itemEntity: ItemEntity,
     onClose: () -> Unit,
-    onOpenViewer: (String) -> Unit
+    onOpenViewer: (ViewerImageKind) -> Unit
 ) {
     val name = itemEntity.name?.takeIf { it.isNotBlank() } ?: "(sans nom)"
     val brand = itemEntity.brand?.takeIf { it.isNotBlank() } ?: "—"
@@ -121,7 +121,7 @@ fun ItemDetailsHeader(
                     .size(96.dp)
                     .clip(RoundedCornerShape(18.dp))
                     .clickable(enabled = !itemEntity.imageUrl.isNullOrBlank()) {
-                        onOpenViewer(itemEntity.imageUrl!!)
+                        onOpenViewer(ViewerImageKind.Preview)
                     }
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center

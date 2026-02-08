@@ -21,6 +21,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,7 @@ import com.example.barcode.features.addItems.ItemsViewModel
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.features.fridge.components.bottomSheetDetails.ImageViewerDialog
 import com.example.barcode.features.fridge.components.bottomSheetDetails.ItemDetailsBottomSheet
+import com.example.barcode.features.fridge.components.bottomSheetDetails.ViewerImage
 import com.example.barcode.features.fridge.components.editItem.EditItemResult
 import com.example.barcode.features.fridge.components.editItem.EditItemScreen
 import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfRow
@@ -134,7 +136,8 @@ fun FridgePage(
     )
 
     // Viewer plein écran (click sur images BottomSheet)
-    var viewerUrl by remember { mutableStateOf<String?>(null) }
+    var viewerImages by remember { mutableStateOf<List<ViewerImage>?>(null) }
+    var viewerStartIndex by remember { mutableStateOf(0) }
 
     // Tri croissant : expirés + plus proches en haut, plus lointaines en bas
     val sorted = remember(list) {
@@ -210,12 +213,17 @@ fun FridgePage(
     }
 
     // Viewer d'Image plein écran (click sur images BottomSheet)
-    if (viewerUrl != null) {
+    if (!viewerImages.isNullOrEmpty()) {
         ImageViewerDialog(
-            url = viewerUrl!!,
-            onDismiss = { viewerUrl = null }
+            images = viewerImages!!,
+            startIndex = viewerStartIndex,
+            onDismiss = {
+                viewerImages = null
+                viewerStartIndex = 0
+            }
         )
     }
+
 
     // TODO: remplacer le delay par vrai refresh VM/API
     suspend fun refreshItems() {
@@ -282,7 +290,10 @@ fun FridgePage(
             ItemDetailsBottomSheet(
                 itemEntity = sheetItemEntity!!,
                 onClose = { closeSheet() },
-                onOpenViewer = { viewerUrl = it },
+                onOpenViewer = { images, startIndex ->
+                    viewerImages = images
+                    viewerStartIndex = startIndex
+                },
                 onEdit = { item ->
                     scope.launch {
                         sheetState.hide()
@@ -473,22 +484,33 @@ fun FridgePage(
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 items(sorted, key = { it.id }) { it ->
-                                    ItemListCard(
-                                        name = it.name ?: "(sans nom)",
-                                        brand = it.brand,
-                                        expiry = it.expiryDate,
-                                        imageUrl = it.imageUrl,
-                                        selected = selectionMode && selectedIds.contains(it.id),
-                                        selectionMode = selectionMode,
-                                        onClick = {
-                                            if (selectionMode) toggleSelect(it.id) else sheetItemEntity = it
-                                        },
-                                        onLongPress = {
-                                            if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
-                                        },
-                                        onDelete = { vm.deleteItem(it.id) }
+                                    val isSelected = selectionMode && selectedIds.contains(it.id)
+
+                                    val rowAlpha by animateFloatAsState(
+                                        targetValue = if (selectionMode && !isSelected) 0.45f else 1f,
+                                        animationSpec = tween(durationMillis = 180),
+                                        label = "listMultiSelectAlpha"
                                     )
+
+                                    Box(modifier = Modifier.alpha(rowAlpha)) {
+                                        ItemListCard(
+                                            name = it.name ?: "(sans nom)",
+                                            brand = it.brand,
+                                            expiry = it.expiryDate,
+                                            imageUrl = it.imageUrl,
+                                            selected = isSelected,
+                                            selectionMode = selectionMode,
+                                            onClick = {
+                                                if (selectionMode) toggleSelect(it.id) else sheetItemEntity = it
+                                            },
+                                            onLongPress = {
+                                                if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
+                                            },
+                                            onDelete = { vm.deleteItem(it.id) }
+                                        )
+                                    }
                                 }
+
                                 item { Spacer(Modifier.height(4.dp)) }
                             }
                         }
