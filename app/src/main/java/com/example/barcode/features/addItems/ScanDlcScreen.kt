@@ -45,6 +45,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -54,6 +55,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -96,6 +98,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.delay
 import java.nio.ByteBuffer
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -207,10 +210,9 @@ fun ScanDlcScreen(
 
     if (showManualSheet) {
         ManualExpiryDateBottomSheet(
-            initialText = detectedLocalDate?.format(dateFormatter) ?: "",
+            initialDate = detectedLocalDate, // ✅ LocalDate direct
             onDismiss = {
                 showManualSheet = false
-                // ✅ si aucune date, on relance le scan ; sinon on garde freeze
                 if (detectedDateMs == null) frozen = false
             },
             onConfirm = { ld ->
@@ -223,6 +225,7 @@ fun ScanDlcScreen(
             }
         )
     }
+
 
 
     DisposableEffect(previewView, lifecycleOwner) {
@@ -695,27 +698,35 @@ private fun ExpiryRoiOverlay(
 }
 
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ManualExpiryDateBottomSheet(
-    initialText: String,
+    initialDate: LocalDate?,
     onDismiss: () -> Unit,
     onConfirm: (LocalDate) -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val zone = remember { ZoneId.systemDefault() }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
 
-    var text by remember { mutableStateOf(initialText) }
-    val normalized = remember(text) { normalizeDateInput(text) }
-    LaunchedEffect(normalized) {
-        if (normalized != text) text = normalized
+    val initialMillis = remember(initialDate) {
+        initialDate
+            ?.atStartOfDay(zone)
+            ?.toInstant()
+            ?.toEpochMilli()
     }
 
-    val parse = remember(normalized) { parseFlexibleDate(normalized) }
+    val state = rememberDatePickerState(
+        initialSelectedDateMillis = initialMillis
+    )
+
+    val selected: LocalDate? = state.selectedDateMillis?.let { ms ->
+        Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()
+    }
+
+    val warning = selected?.takeIf { it.isBefore(LocalDate.now()) }?.let { "Déjà expiré ?" }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState
+        onDismissRequest = onDismiss
     ) {
         Column(
             modifier = Modifier
@@ -723,34 +734,24 @@ private fun ManualExpiryDateBottomSheet(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Saisie manuelle", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
-                "Entre une date au format JJ/MM/AA ou JJ/MM/AAAA. " +
-                        "Exemples: 12-02-26, 12/02/2026, 120226, 3/2/26.",
+                text = "Saisie manuelle",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Text(
+                text = selected?.let { "Date sélectionnée : ${it.format(dateFormatter)}" }
+                    ?: "Sélectionne une date",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
             )
 
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                singleLine = true,
-                placeholder = { Text("JJ/MM/AAAA") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                supportingText = {
-                    when {
-                        parse.error != null -> Text(parse.error)
-                        parse.date != null -> Text("Interprété : ${parse.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}")
-                        else -> Text(" ")
-                    }
-                },
-                isError = parse.error != null,
-                modifier = Modifier.fillMaxWidth()
-            )
+            DatePicker(state = state)
 
-            if (parse.warning != null) {
+            if (warning != null) {
                 Text(
-                    text = parse.warning,
+                    text = warning,
                     color = MaterialTheme.colorScheme.tertiary,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
@@ -766,8 +767,8 @@ private fun ManualExpiryDateBottomSheet(
                 TextButton(onClick = onDismiss) { Text("Annuler") }
 
                 Button(
-                    onClick = { parse.date?.let(onConfirm) },
-                    enabled = parse.date != null
+                    onClick = { selected?.let(onConfirm) },
+                    enabled = selected != null
                 ) {
                     Text("Valider")
                 }
@@ -775,6 +776,7 @@ private fun ManualExpiryDateBottomSheet(
         }
     }
 }
+
 
 private data class DateParseResult(
     val date: LocalDate? = null,
