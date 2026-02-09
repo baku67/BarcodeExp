@@ -514,18 +514,10 @@ fun FridgePage(
                     .padding(16.dp)
             ) {
 
-                // Pour calculer pinnage ou non du bac a legume
+                // ✅ VRAI “scrollable ou non” (stable) : si la liste est plus grande que l’écran,
+                // alors à n’importe quelle position, il y aura au moins un sens de scroll possible.
                 val canScroll by remember {
-                    derivedStateOf {
-                        val layout = listState.layoutInfo
-                        if (layout.visibleItemsInfo.isEmpty()) return@derivedStateOf false
-
-                        val lastVisible = layout.visibleItemsInfo.last()
-                        val viewportEnd = layout.viewportEndOffset
-
-                        // Si le dernier item dépasse le viewport → scroll possible
-                        lastVisible.offset + lastVisible.size > viewportEnd
-                    }
+                    derivedStateOf { listState.canScrollForward || listState.canScrollBackward }
                 }
 
                 when (selectedViewMode) {
