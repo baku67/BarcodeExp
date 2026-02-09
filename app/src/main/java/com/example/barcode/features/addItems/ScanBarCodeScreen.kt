@@ -7,10 +7,17 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,24 +26,36 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,8 +66,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -56,53 +87,56 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import coil.compose.AsyncImagePainter
+import coil.compose.rememberAsyncImagePainter
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.barcode.R
-import com.example.barcode.domain.models.ProductInfo
+import com.example.barcode.core.OpenFoodFactsStore
 import com.example.barcode.data.remote.fetchProductInfo
+import com.example.barcode.domain.models.ProductInfo
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.example.barcode.core.OpenFoodFactsStore
-import androidx.compose.material3.Icon
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import coil.compose.AsyncImagePainter
-import coil.compose.rememberAsyncImagePainter
 
-// Composable pour scanner un code-barres et récupérer le nom du produit
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
 fun ScanBarCodeScreen(
     onValidated: ((product: ProductInfo, barcode: String) -> Unit)? = null
 ) {
     val ctx = LocalContext.current
-    val haptics = LocalHapticFeedback.current // pour vibartions
-    val primary = MaterialTheme.colorScheme.primary
-    var previewView by remember { mutableStateOf<PreviewView?>(null) }
-    var scannedCode by remember { mutableStateOf("") }
-    var lastScanned by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
-    val fetchCount by remember(ctx) { OpenFoodFactsStore.countFlow(ctx) }.collectAsState(initial = 0)
-    var rateLimitMsg by remember { mutableStateOf<String?>(null) }
-    var lastApiCallAt by remember { mutableStateOf(0L) } // Debouncing
-    var productInfo by remember { mutableStateOf<ProductInfo?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val haptics = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+
+    // Camera
+    var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var boundPreview by remember { mutableStateOf<Preview?>(null) }
     var boundAnalysis by remember { mutableStateOf<ImageAnalysis?>(null) }
-
-    // Flash
     var boundCamera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
+
+    // Scan states
+    var scannedCode by remember { mutableStateOf("") }
+    var lastScanned by remember { mutableStateOf("") }
+    var lastApiCallAt by remember { mutableStateOf(0L) }
+    var scanLocked by remember { mutableStateOf(false) }
+    var isFetching by remember { mutableStateOf(false) }
+    var productInfo by remember { mutableStateOf<ProductInfo?>(null) }
+
+    // UI states
     var torchOn by remember { mutableStateOf(false) }
+    var showHelp by remember { mutableStateOf(false) }
+    var rateLimitMsg by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    var scanLocked by remember { mutableStateOf(false) } // Verrou pour bloquer detection lorsqu'un produit a été trouvé
+    // (debug) compteur de requêtes
+    val fetchCount by remember(ctx) { OpenFoodFactsStore.countFlow(ctx) }.collectAsState(initial = 0)
 
+    // Bind camera once previewView is ready
     previewView?.let { view ->
         DisposableEffect(view, lifecycleOwner) {
             val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
@@ -111,46 +145,57 @@ fun ScanBarCodeScreen(
 
             val listener = Runnable {
                 val cameraProvider = cameraProviderFuture.get()
-                // Preview
+
                 val preview = Preview.Builder().build().also { it.setSurfaceProvider(view.surfaceProvider) }
-                // Analyse
                 val analysis = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build().also { ia ->
                         ia.setAnalyzer(executor) { imageProxy ->
 
-                            if (scanLocked) { imageProxy.close(); return@setAnalyzer } // Si verrou actif (produit trouvé) return
+                            if (scanLocked || isFetching) {
+                                imageProxy.close()
+                                return@setAnalyzer
+                            }
 
                             imageProxy.image?.let { mediaImage ->
-                                val inputImg = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+                                val inputImg = InputImage.fromMediaImage(
+                                    mediaImage,
+                                    imageProxy.imageInfo.rotationDegrees
+                                )
                                 scanner.process(inputImg)
                                     .addOnSuccessListener { barcodes ->
+                                        if (scanLocked || isFetching) return@addOnSuccessListener
 
-                                        if (scanLocked) return@addOnSuccessListener    // ⬅️ ignore résultat si verrou activé entre-temps
-
-                                        // Prend le premier code non-nul
                                         val first = barcodes.firstOrNull { it.rawValue != null }?.rawValue
                                         if (first != null && first != lastScanned) {
+                                            val now = System.currentTimeMillis()
+                                            if (now - lastApiCallAt < 1000) return@addOnSuccessListener // anti spam
+                                            lastApiCallAt = now
 
                                             lastScanned = first
                                             scannedCode = first
 
-                                            val now = System.currentTimeMillis()
-                                            if (now - lastApiCallAt < 1000) return@addOnSuccessListener  // bloque si < 1s
-                                            lastApiCallAt = now
+                                            // 🔒 lock immédiat
+                                            scanLocked = true
+                                            isFetching = true
 
                                             scope.launch {
                                                 OpenFoodFactsStore.increment(ctx)
                                                 val res = fetchProductInfo(first)
                                                 rateLimitMsg = if (res.rateLimited) (res.message ?: "Rate limit atteint") else null
-                                                productInfo = res.product
 
                                                 if (res.product != null) {
+                                                    productInfo = res.product
                                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    scanLocked = true // 🔒 toujours verrouiller après succès
+                                                } else {
+                                                    // ⚠️ pas trouvé / erreur -> re-scan possible après petit délai
+                                                    delay(650)
+                                                    lastScanned = ""
+                                                    scannedCode = ""
+                                                    scanLocked = false
                                                 }
+                                                isFetching = false
                                             }
-
                                         }
                                     }
                                     .addOnFailureListener { e -> Log.e("BARCODE", "Erreur scan", e) }
@@ -158,283 +203,488 @@ fun ScanBarCodeScreen(
                             } ?: imageProxy.close()
                         }
                     }
+
                 val camera = cameraProvider.bindToLifecycle(
                     lifecycleOwner,
                     CameraSelector.DEFAULT_BACK_CAMERA,
                     preview,
                     analysis
                 )
+
                 boundCamera = camera
                 boundPreview = preview
                 boundAnalysis = analysis
 
-                // (optionnel) si tu veux refléter l’état système du flash :
-                val torchLiveData = camera.cameraInfo.torchState
-                torchLiveData.observe(lifecycleOwner) { state ->
+                camera.cameraInfo.torchState.observe(lifecycleOwner) { state ->
                     torchOn = (state == androidx.camera.core.TorchState.ON)
                 }
             }
+
             cameraProviderFuture.addListener(listener, executor)
+
             onDispose {
                 if (cameraProviderFuture.isDone) {
                     val provider = cameraProviderFuture.get()
                     val toUnbind = listOfNotNull(boundAnalysis, boundPreview).toTypedArray()
-                    if (toUnbind.isNotEmpty()) provider.unbind(*toUnbind)   // ✅ unbind local
+                    if (toUnbind.isNotEmpty()) provider.unbind(*toUnbind)
                     boundAnalysis = null
                     boundPreview = null
+                    boundCamera = null
                 }
             }
         }
     }
 
-    // Un seul grand Box "relatif" pour pouvoir positionner en absolu
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
+    // Snackbar rate limit
+    LaunchedEffect(rateLimitMsg) {
+        val msg = rateLimitMsg ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(msg)
+        rateLimitMsg = null
+    }
+
+    // Flash feedback quand produit trouvé
+    var captureFlash by remember { mutableStateOf(false) }
+    val flashAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (captureFlash) 0.16f else 0f,
+        animationSpec = tween(durationMillis = 90, easing = LinearEasing),
+        label = "flashAlpha"
+    )
+    LaunchedEffect(productInfo) {
+        if (productInfo != null) {
+            captureFlash = true
+            delay(90)
+            captureFlash = false
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // ✅ Camera preview
+        AndroidView(
+            factory = { c -> PreviewView(c).also { previewView = it } },
+            modifier = Modifier.fillMaxSize(),
+            onRelease = { previewView = null }
+        )
+
+        // ✅ Overlay flash court (feedback “capture”)
+        if (flashAlpha > 0.001f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = flashAlpha))
+            )
+        }
+
+        // ✅ UI scan (mask + cutout + coins 1px + scan-line + hint)
+        if (productInfo == null) {
+            CameraScanOverlay(
+                modifier = Modifier.fillMaxSize(),
+                isFetching = isFetching,
+                fetchCount = fetchCount,
+                showDebugCount = false
+            )
+        }
+
+        // ✅ Top controls (flash + help)
+        CameraTopControls(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(12.dp),
+            torchOn = torchOn,
+            onToggleTorch = {
+                boundCamera?.cameraControl?.enableTorch(!torchOn)
+                torchOn = !torchOn
+            },
+            onHelp = { showHelp = true }
+        )
+
+        // ✅ Résultat en bas
+        if (productInfo != null) {
+            ResultCard(
+                modifier = Modifier.align(Alignment.BottomCenter),
+                productInfo = productInfo!!,
+                onRetry = {
+                    lastScanned = ""
+                    scannedCode = ""
+                    productInfo = null
+                    scanLocked = false
+                    isFetching = false
+                },
+                onValidate = { onValidated?.invoke(productInfo!!, scannedCode) }
+            )
+        }
+
+        // ✅ Snackbars
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 8.dp)
+        ) {
+            SnackbarHost(hostState = snackbarHostState)
+        }
+    }
+
+    if (showHelp) {
+        AlertDialog(
+            onDismissRequest = { showHelp = false },
+            confirmButton = {
+                Button(onClick = { showHelp = false }) { Text("OK") }
+            },
+            title = { Text("Aide scan") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("• Aligne le code-barres dans le cadre.")
+                    Text("• Éloigne ou rapproche légèrement si ça ne détecte pas.")
+                    Text("• Active le flash si la lumière est faible.")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun CameraTopControls(
+    modifier: Modifier = Modifier,
+    torchOn: Boolean,
+    onToggleTorch: () -> Unit,
+    onHelp: () -> Unit
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(Modifier.fillMaxSize()) {
-
-            /* ---------- TODO Compteur de requetes (compteur stored) à retirer ---------- */
-            Text("API: $fetchCount")
-
-            /* ---------- Erreur "rate limit" ---------- */
-            if (rateLimitMsg != null) {
-                Text(
-                    text = rateLimitMsg!!,
-                    color = Color(0xFFD32F2F),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                )
+        Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.35f)) {
+            IconButton(onClick = onHelp) {
+                Icon(imageVector = Icons.Default.Info, contentDescription = "Aide", tint = Color.White)
             }
+        }
 
-            Box(modifier = Modifier.fillMaxSize()) {
-
-                /* ---------- Camera ---------- */
-                AndroidView(
-                    factory = { c -> PreviewView(c).also {
-                        previewView = it
-                    } },
-                    modifier = Modifier.fillMaxSize(),
-                    onRelease = { previewView = null }
+        Surface(shape = CircleShape, color = Color.Black.copy(alpha = 0.35f)) {
+            IconButton(onClick = onToggleTorch) {
+                Icon(
+                    imageVector = if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                    contentDescription = "Flash",
+                    tint = Color.White
                 )
-
-                // Btn toggle Flash overlay
-/*                FloatingActionButton(
-                    onClick = {
-                        boundCamera?.cameraControl?.enableTorch(!torchOn)
-                        torchOn = !torchOn
-                    },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp),
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = Color.White,
-                    shape = CircleShape
-                ) {
-                    Icon(
-                        imageVector = if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
-                        contentDescription = if (torchOn) "Flash ON" else "Flash OFF"
-                    )
-                }*/
-
-
-                /* ---------- État « pas de données » (todo: composant dédié, props icon ou Lottie) ---------- */
-                if (productInfo == null) {
-                    /* Charge la composition Lottie une seule fois */
-                    val composition by rememberLottieComposition(
-                        LottieCompositionSpec.RawRes(R.raw.barcode_scanner)   // ton fichier .json dans res/raw
-                    )
-                    /* Anime-la en boucle infinie */
-                    val progress by animateLottieCompositionAsState(
-                        composition = composition,
-                        iterations = LottieConstants.IterateForever
-                    )
-
-
-                    // ✅ Overlay plein écran sur le viewport caméra (Lottie centrée)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Color.Black.copy(alpha = 0.35f) // conteneur gris (ajuste l'alpha si besoin)
-                            )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(horizontal = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            LottieAnimation(
-                                composition = composition,
-                                progress = progress,
-                                modifier = Modifier
-                                    .size(200.dp)
-                                    .alpha(0.55f)
-                            )
-
-                            Spacer(Modifier.height(10.dp))
-
-                            Text(
-                                text = "Survolez un code-barre pour ajouter un produit",
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontSize = 16.sp,
-                                fontStyle = FontStyle.Italic,
-                                color = Color.White,
-                                modifier = Modifier.alpha(0.85f)
-                            )
-                        }
-                    }
-                }
-
-
-                /* ---------- Carte de résultat (todo: composant dédié générique mais props de config d'affichage) ---------- */
-                else {
-                    Card(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f)
-                        ),
-                        elevation = CardDefaults.cardElevation(4.dp)
-                    ) {
-                        // --- Bloc haut : image + infos (mêmes spacing que ScanDlc) ---
-                        Row(
-                            modifier = Modifier
-                                .padding(12.dp)
-                                .fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val imgUrl = productInfo!!.imageUrl
-
-                            if (imgUrl.isNotEmpty()) {
-                                val shape = RoundedCornerShape(12.dp)
-                                val painter = rememberAsyncImagePainter(imgUrl)
-                                val state = painter.state
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(56.dp)
-                                        .clip(shape)
-                                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Image(
-                                        painter = painter,
-                                        contentDescription = null,
-                                        modifier = Modifier.matchParentSize(),
-                                        contentScale = ContentScale.Fit
-                                    )
-
-                                    if (state is AsyncImagePainter.State.Loading) {
-                                        CircularProgressIndicator(
-                                            strokeWidth = 2.dp,
-                                            modifier = Modifier.size(18.dp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-                                        )
-                                    }
-
-                                    if (state is AsyncImagePainter.State.Error) {
-                                        Text("🧴", fontSize = 20.sp)
-                                    }
-                                }
-
-                                Spacer(Modifier.width(12.dp))
-                            }
-
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    text = productInfo!!.name,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                if (productInfo!!.brand.isNotEmpty()) {
-                                    Text(
-                                        text = productInfo!!.brand,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
-                                    )
-                                }
-
-                                // nutriscore (Si on le met, adapter avec nutrisocre dans BottomSheet ItemsContent)
-/*                                if (productInfo!!.nutriScore.isNotEmpty()) {
-                                    Text(
-                                        text = "Nutri-Score : ${productInfo!!.nutriScore.uppercase()}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
-                                    )
-                                }*/
-                            }
-                        }
-
-                        // Petite séparation légère (plus soft que ton Divider noir)
-                        Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-
-                        // --- Bloc boutons : on garde tes actions, mais coins alignés sur 16dp ---
-                        Row(
-                            modifier = Modifier
-                                .height(52.dp)
-                                .fillMaxWidth()
-                        ) {
-                            Button(
-                                onClick = {
-                                    lastScanned = ""
-                                    scannedCode = ""
-                                    productInfo = null
-                                    scanLocked = false
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                                shape = RoundedCornerShape(bottomStart = 16.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                border = ButtonDefaults.outlinedButtonBorder.copy(
-                                    brush = androidx.compose.ui.graphics.SolidColor(
-                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)
-                                    )
-                                )
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text("Re-try", fontWeight = FontWeight.SemiBold)
-                            }
-
-
-                            Button(
-                                onClick = { productInfo?.let { p -> onValidated?.invoke(p, scannedCode) } },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                shape = RoundedCornerShape(bottomEnd = 16.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text("Valider", fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-
-                }
             }
         }
     }
+}
 
+@Composable
+private fun CameraScanOverlay(
+    modifier: Modifier = Modifier,
+    isFetching: Boolean,
+    fetchCount: Int,
+    showDebugCount: Boolean
+) {
+    val windowWidthFraction = 0.94f   // ✅ plus large
+    val windowAspect = 1.9f           // ✅ plus haute (car height = width / aspect)
+    val cornerRadius = 22.dp
+
+    val bracketLen = 34.dp            // ✅ coins plus visibles
+    val bracketInset = 10.dp
+    val scanLineInset = 14.dp
+
+    val overlayColor = Color.Black.copy(alpha = 0.42f) // ✅ dimming moins agressif => moins "fake"
+
+    val bracketColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f)
+
+    val onePx = with(LocalDensity.current) { 1f.toDp() } // ✅ 1px exact
+    val bracketStroke = onePx
+
+    val transition = rememberInfiniteTransition(label = "scanLine")
+    val scanT by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1450, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scanT"
+    )
+
+    BoxWithConstraints(modifier = modifier) {
+        val density = LocalDensity.current
+        val windowW = maxWidth * windowWidthFraction
+        val windowH = windowW / windowAspect
+        val windowShape = RoundedCornerShape(cornerRadius)
+
+        // ✅ Mask + cutout + coins + scanline (1 seul Canvas = perf)
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        ) {
+            val w = size.width * windowWidthFraction
+            val h = w / windowAspect
+            val left = (size.width - w) / 2f
+            val top = (size.height - h) / 2f
+            val rect = Rect(left, top, left + w, top + h)
+
+            // overlay sombre
+            drawRect(color = overlayColor)
+
+            // cutout (fenêtre transparente)
+            val r = with(density) { cornerRadius.toPx() }
+            drawRoundRect(
+                color = Color.Transparent,
+                topLeft = rect.topLeft,
+                size = rect.size,
+                cornerRadius = CornerRadius(r, r),
+                blendMode = BlendMode.Clear
+            )
+
+            // scan line
+            val scanY = rect.top + rect.height * scanT
+            val scanInsetPx = with(density) { scanLineInset.toPx() }
+            drawLine(
+                color = bracketColor.copy(alpha = 0.55f),
+                start = Offset(rect.left + scanInsetPx, scanY),
+                end = Offset(rect.right - scanInsetPx, scanY),
+                strokeWidth = with(density) { onePx.toPx() },
+                cap = StrokeCap.Round
+            )
+
+            // corner brackets (fenêtre)
+            val sw = with(density) { bracketStroke.toPx() }
+            val len = with(density) { bracketLen.toPx() }
+            val inset = with(density) { bracketInset.toPx() }
+
+            // top-left
+            drawLine(bracketColor, Offset(rect.left + inset, rect.top + inset), Offset(rect.left + inset + len, rect.top + inset), sw, cap = StrokeCap.Round)
+            drawLine(bracketColor, Offset(rect.left + inset, rect.top + inset), Offset(rect.left + inset, rect.top + inset + len), sw, cap = StrokeCap.Round)
+            // top-right
+            drawLine(bracketColor, Offset(rect.right - inset - len, rect.top + inset), Offset(rect.right - inset, rect.top + inset), sw, cap = StrokeCap.Round)
+            drawLine(bracketColor, Offset(rect.right - inset, rect.top + inset), Offset(rect.right - inset, rect.top + inset + len), sw, cap = StrokeCap.Round)
+            // bottom-left
+            drawLine(bracketColor, Offset(rect.left + inset, rect.bottom - inset), Offset(rect.left + inset + len, rect.bottom - inset), sw, cap = StrokeCap.Round)
+            drawLine(bracketColor, Offset(rect.left + inset, rect.bottom - inset - len), Offset(rect.left + inset, rect.bottom - inset), sw, cap = StrokeCap.Round)
+            // bottom-right
+            drawLine(bracketColor, Offset(rect.right - inset - len, rect.bottom - inset), Offset(rect.right - inset, rect.bottom - inset), sw, cap = StrokeCap.Round)
+            drawLine(bracketColor, Offset(rect.right - inset, rect.bottom - inset - len), Offset(rect.right - inset, rect.bottom - inset), sw, cap = StrokeCap.Round)
+
+            // (bonus) coins “viewport” discrets : effet caméra
+            val vColor = Color.White.copy(alpha = 0.16f)
+            val vInset = with(density) { 18.dp.toPx() }
+            val vLen = with(density) { 34.dp.toPx() }
+            val vSw = with(density) { onePx.toPx() }
+
+            // top-left
+            drawLine(vColor, Offset(vInset, vInset), Offset(vInset + vLen, vInset), vSw, cap = StrokeCap.Round)
+            drawLine(vColor, Offset(vInset, vInset), Offset(vInset, vInset + vLen), vSw, cap = StrokeCap.Round)
+            // top-right
+            drawLine(vColor, Offset(size.width - vInset - vLen, vInset), Offset(size.width - vInset, vInset), vSw, cap = StrokeCap.Round)
+            drawLine(vColor, Offset(size.width - vInset, vInset), Offset(size.width - vInset, vInset + vLen), vSw, cap = StrokeCap.Round)
+            // bottom-left
+            drawLine(vColor, Offset(vInset, size.height - vInset), Offset(vInset + vLen, size.height - vInset), vSw, cap = StrokeCap.Round)
+            drawLine(vColor, Offset(vInset, size.height - vInset - vLen), Offset(vInset, size.height - vInset), vSw, cap = StrokeCap.Round)
+            // bottom-right
+            drawLine(vColor, Offset(size.width - vInset - vLen, size.height - vInset), Offset(size.width - vInset, size.height - vInset), vSw, cap = StrokeCap.Round)
+            drawLine(vColor, Offset(size.width - vInset, size.height - vInset - vLen), Offset(size.width - vInset, size.height - vInset), vSw, cap = StrokeCap.Round)
+        }
+
+        // ✅ Lottie centrée dans la fenêtre (discrète)
+        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.barcode_scanner))
+        val progress by animateLottieCompositionAsState(
+            composition = composition,
+            iterations = LottieConstants.IterateForever
+        )
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .width(windowW)
+                .height(windowH)
+                .clip(windowShape)
+        ) {
+            LottieAnimation(
+                composition = composition,
+                progress = progress,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(200.dp)
+                    .alpha(if (isFetching) 0.10f else 0.18f)
+            )
+        }
+
+        // ✅ Hint + état fetching
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = windowH / 2 + 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = if (isFetching) "Recherche du produit…" else "Cherche un code-barres",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 15.sp,
+                fontStyle = FontStyle.Italic,
+                color = Color.White.copy(alpha = 0.92f),
+                modifier = Modifier.padding(horizontal = 22.dp)
+            )
+
+            if (isFetching) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Scan en cours",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            if (showDebugCount) {
+                Text(
+                    text = "API: $fetchCount",
+                    color = Color.White.copy(alpha = 0.55f),
+                    fontSize = 12.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ResultCard(
+    modifier: Modifier = Modifier,
+    productInfo: ProductInfo,
+    onRetry: () -> Unit,
+    onValidate: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f)
+        ),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val imgUrl = productInfo.imageUrl
+
+            if (imgUrl.isNotEmpty()) {
+                val shape = RoundedCornerShape(12.dp)
+                val painter = rememberAsyncImagePainter(imgUrl)
+                val state = painter.state
+
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(shape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painter,
+                        contentDescription = null,
+                        modifier = Modifier.matchParentSize(),
+                        contentScale = ContentScale.Fit
+                    )
+
+                    if (state is AsyncImagePainter.State.Loading) {
+                        CircularProgressIndicator(
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                        )
+                    }
+
+                    if (state is AsyncImagePainter.State.Error) {
+                        Text("🧴", fontSize = 20.sp)
+                    }
+                }
+
+                Spacer(Modifier.width(12.dp))
+            }
+
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = productInfo.name,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (productInfo.brand.isNotEmpty()) {
+                    Text(
+                        text = productInfo.brand,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
+                    )
+                }
+            }
+        }
+
+        Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+
+        Row(
+            modifier = Modifier
+                .height(52.dp)
+                .fillMaxWidth()
+        ) {
+            Button(
+                onClick = onRetry,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                shape = RoundedCornerShape(bottomStart = 16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                border = ButtonDefaults.outlinedButtonBorder.copy(
+                    brush = androidx.compose.ui.graphics.SolidColor(
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)
+                    )
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Re-try", fontWeight = FontWeight.SemiBold)
+            }
+
+            Button(
+                onClick = onValidate,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(bottomEnd = 16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Valider", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
 }
