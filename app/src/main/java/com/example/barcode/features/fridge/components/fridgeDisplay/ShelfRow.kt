@@ -65,7 +65,7 @@ fun ShelfRow(
         2 -> ShelfPreset.MID
         3 -> ShelfPreset.BOTTOM1
         4 -> ShelfPreset.BOTTOM2
-        else -> ShelfPreset.MID
+        else -> ShelfPreset.BOTTOM2 // ✅ étagères supplémentaires = la plus profonde BOTTOM2
     }
     val spec = shelfSpec(preset)
 
