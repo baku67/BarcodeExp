@@ -516,16 +516,16 @@ fun FridgePage(
             ) {
 
 
-// ✅ VRAI “scrollable ou non”
+                // ✅ VRAI “scrollable ou non”
                 val canScroll by remember {
                     derivedStateOf { listState.canScrollForward || listState.canScrollBackward }
                 }
 
-// ✅ Bac à légumes “fixe” uniquement si liste courte + mode Fridge + pas en multi-select
+                // ✅ Bac à légumes “fixe” uniquement si liste courte + mode Fridge + pas en multi-select
                 val showPinnedVegDrawer =
                     selectedViewMode == ViewMode.Fridge && !selectionMode && !canScroll
 
-// ✅ Hauteur réservée en bas (évite que la LazyColumn change de hauteur d’un coup)
+                // ✅ Hauteur réservée en bas (évite que la LazyColumn change de hauteur d’un coup)
                 val dockHeightTarget = when {
                     selectionMode -> 132.dp
                     showPinnedVegDrawer -> vegDrawerHeight + 10.dp + 48.dp + 10.dp
@@ -676,26 +676,31 @@ fun FridgePage(
                     ) {
 
                         if (selectionMode) {
+                            // ✅ Annuler bien lisible (et on enlève le compteur qui pollue + se voit mal)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 8.dp),
+                                    .padding(bottom = 10.dp),
+                                horizontalArrangement = Arrangement.End,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "${selectedIds.size} sélectionné(s)",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-
-                                Spacer(Modifier.weight(1f))
-
-                                TextButton(onClick = { exitSelection() }) {
+                                OutlinedButton(
+                                    onClick = { exitSelection() },
+                                    modifier = Modifier.height(40.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                ) {
                                     Icon(Icons.Filled.Close, contentDescription = null)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("Annuler")
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Annuler", fontWeight = FontWeight.SemiBold)
                                 }
                             }
+
 
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -724,7 +729,7 @@ fun FridgePage(
                                         Text("Recette", fontWeight = FontWeight.SemiBold)
                                     }
 
-                                    OutlinedButton(
+                                    Button(
                                         onClick = {
                                             removeItems(selectedIds)
                                             exitSelection()
@@ -733,14 +738,14 @@ fun FridgePage(
                                             .weight(1f)
                                             .height(48.dp),
                                         shape = RoundedCornerShape(14.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.tertiary
-                                        ),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f))
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                        )
                                     ) {
                                         Icon(Icons.Filled.Delete, contentDescription = null)
                                         Spacer(Modifier.width(8.dp))
-                                        Text("Retirer", fontWeight = FontWeight.SemiBold)
+                                        Text("Retirer (${selectedIds.size})", fontWeight = FontWeight.SemiBold)
                                     }
                                 }
                             }
