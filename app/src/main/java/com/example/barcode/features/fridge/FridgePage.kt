@@ -1,5 +1,6 @@
 package com.example.barcode.features.fridge
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -514,271 +515,271 @@ fun FridgePage(
                     .padding(16.dp)
             ) {
 
-                // ✅ VRAI “scrollable ou non” (stable) : si la liste est plus grande que l’écran,
-                // alors à n’importe quelle position, il y aura au moins un sens de scroll possible.
+
+// ✅ VRAI “scrollable ou non”
                 val canScroll by remember {
                     derivedStateOf { listState.canScrollForward || listState.canScrollBackward }
                 }
 
-                when (selectedViewMode) {
+// ✅ Bac à légumes “fixe” uniquement si liste courte + mode Fridge + pas en multi-select
+                val showPinnedVegDrawer =
+                    selectedViewMode == ViewMode.Fridge && !selectionMode && !canScroll
 
-                    // LIST
-                    ViewMode.List -> {
-                        if (emptyCenterLabel != null) {
-                            // ✅ Pas d'étagères en mode LISTE : on centre le message sur l'aire de contenu
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = emptyCenterLabel,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = ghostOpacity) // ✅ même "ghost" que Fridge
-                                )
-                            }
-                        } else {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                items(sorted, key = { it.id }) { it ->
-                                    val isSelected = selectionMode && selectedIds.contains(it.id)
+// ✅ Hauteur réservée en bas (évite que la LazyColumn change de hauteur d’un coup)
+                val dockHeightTarget = when {
+                    selectionMode -> 132.dp
+                    showPinnedVegDrawer -> vegDrawerHeight + 10.dp + 48.dp + 10.dp
+                    else -> 48.dp + 10.dp
+                }
 
-                                    val rowAlpha by animateFloatAsState(
-                                        targetValue = if (selectionMode && !isSelected) 0.45f else 1f,
-                                        animationSpec = tween(durationMillis = 180),
-                                        label = "listMultiSelectAlpha"
+                val dockHeight by animateDpAsState(
+                    targetValue = dockHeightTarget,
+                    animationSpec = tween(durationMillis = 180),
+                    label = "dockHeight"
+                )
+
+                Box(Modifier.fillMaxSize()) {
+
+                    // =========================
+                    // CONTENT (LISTE / FRIDGE)
+                    // =========================
+                    when (selectedViewMode) {
+
+                        ViewMode.List -> {
+                            if (emptyCenterLabel != null) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = emptyCenterLabel,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = ghostOpacity)
                                     )
+                                }
+                            } else {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    contentPadding = PaddingValues(bottom = dockHeight + 12.dp)
+                                ) {
+                                    items(sorted, key = { it.id }) { it ->
+                                        val isSelected = selectionMode && selectedIds.contains(it.id)
 
-                                    Box(modifier = Modifier.alpha(rowAlpha)) {
-                                        ItemListCard(
-                                            name = it.name ?: "(sans nom)",
-                                            brand = it.brand,
-                                            expiry = it.expiryDate,
-                                            imageUrl = it.imageUrl,
-                                            selected = isSelected,
-                                            selectionMode = selectionMode,
-                                            onClick = {
-                                                if (selectionMode) toggleSelect(it.id) else sheetItemEntity = it
-                                            },
-                                            onLongPress = {
-                                                if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id)
-                                            },
-                                            onDelete = { vm.deleteItem(it.id) }
+                                        val rowAlpha by animateFloatAsState(
+                                            targetValue = if (selectionMode && !isSelected) 0.45f else 1f,
+                                            animationSpec = tween(durationMillis = 180),
+                                            label = "listMultiSelectAlpha"
                                         )
-                                    }
-                                }
 
-                                item { Spacer(Modifier.height(4.dp)) }
-                            }
-                        }
-                    }
-
-                    // FRIDGE DESIGN
-                    ViewMode.Fridge -> {
-                        // ✅ Même si sorted est vide, shelves contient au moins 5 rangées → affichage “éteint”
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
-                            contentPadding = PaddingValues(
-                                bottom = if (!canScroll) 8.dp else 0.dp
-                            )
-                        ) {
-                            itemsIndexed(shelves) { index, shelfItems ->
-
-                                // ✅ espace supplémentaire AVANT certaines rangées
-                                val extraTop = when (index) {
-                                    1 -> 5.dp
-                                    2 -> 10.dp
-                                    3 -> 10.dp
-                                    4 -> 10.dp
-                                    else -> 6.dp
-                                }
-
-                                if (extraTop > 0.dp) {
-                                    Spacer(Modifier.height(extraTop))
-                                }
-
-                                val lastOccupiedIndex = shelves.indexOfLast { it.isNotEmpty() }
-                                val nextAfterLastOccupiedIndex =
-                                    (lastOccupiedIndex + 1).takeIf { lastOccupiedIndex >= 0 && it < shelves.size }
-
-                                val shelfOpacity = when {
-                                    shelfItems.isNotEmpty() -> 1f
-                                    index == 2 && emptyCenterLabel != null -> emptyShelfOpacityWithLabel
-                                    nextAfterLastOccupiedIndex != null && index == nextAfterLastOccupiedIndex -> nextAfterLastOccupiedOpacity
-                                    else -> emptyShelfOpacity
-                                }
-
-                                ShelfRow(
-                                    index = index,
-                                    itemEntities = shelfItems,
-                                    selectionMode = selectionMode,
-                                    selectedIds = selectedIds,
-                                    onClickItem = { item ->
-                                        if (selectionMode) toggleSelect(item.id) else sheetItemEntity = item
-                                    },
-                                    onLongPressItem = { item ->
-                                        if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id)
-                                    },
-                                    dimAlpha = dimAlpha,
-                                    selectedSheetId = sheetItemEntity?.id,
-                                    emptyOpacity = shelfOpacity,
-                                    emptyCenterLabel = if (index == 2) emptyCenterLabel else null // message "liste vide" ou "sync" sur etagere 5 par exemple
-                                )
-                            }
-
-                            // ✅ Bac DANS le scroll si la liste est longue
-                            if (canScroll && !selectionMode) {
-                                item {
-                                    VegetableDrawerCube3D(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 6.dp),
-                                        height = vegDrawerHeight,
-                                        depth = 16.dp,
-                                        dimAlpha = dimAlpha,
-                                        isGhost = vegDrawerEmpty
-                                    ) {
-                                        if (vegDrawerEmpty) {
-                                            Text(
-                                                text = "Bac à légumes vide",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                        Box(modifier = Modifier.alpha(rowAlpha)) {
+                                            ItemListCard(
+                                                name = it.name ?: "(sans nom)",
+                                                brand = it.brand,
+                                                expiry = it.expiryDate,
+                                                imageUrl = it.imageUrl,
+                                                selected = isSelected,
+                                                selectionMode = selectionMode,
+                                                onClick = { if (selectionMode) toggleSelect(it.id) else sheetItemEntity = it },
+                                                onLongPress = { if (!selectionMode) enterSelectionWith(it.id) else toggleSelect(it.id) },
+                                                onDelete = { vm.deleteItem(it.id) }
                                             )
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                }
 
-                Spacer(Modifier.height(8.dp))
-
-                if (selectionMode) {
-                    // ✅ mini ligne au-dessus : compteur + Annuler (secondaire)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${selectedIds.size} sélectionné(s)",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-
-                        Spacer(Modifier.weight(1f))
-
-                        TextButton(onClick = { exitSelection() }) {
-                            Icon(Icons.Filled.Close, contentDescription = null)
-                            Spacer(Modifier.width(6.dp))
-                            Text("Annuler")
-                        }
-                    }
-
-                    // ✅ action bar flottante “premium”
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        shape = RoundedCornerShape(18.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-
-                            // 🧠 Chercher recette
-                            Button(
-                                onClick = {
-                                    SnackbarBus.show("Bientôt: recherche de recette avec les ingrédients sélectionnés.")
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(14.dp)
-                            ) {
-                                Icon(Icons.Filled.Add, contentDescription = null) // TODO: icône "restaurant"
-                                Spacer(Modifier.width(8.dp))
-                                Text("Recette", fontWeight = FontWeight.SemiBold)
-                            }
-
-                            // 🗑 Supprimer
-                            OutlinedButton(
-                                onClick = {
-                                    removeItems(selectedIds)
-                                    exitSelection()
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.tertiary
-                                ),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f))
-                            ) {
-                                Icon(Icons.Filled.Delete, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Retirer", fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-                }
-
-                if (!selectionMode) {
-
-                    val showPinnedVegDrawer =
-                        selectedViewMode == ViewMode.Fridge &&
-                                !selectionMode &&
-                                !canScroll
-
-                    // ✅ Bac à légumes FIXE uniquement en DESIGN
-                    if (showPinnedVegDrawer) {
-                        VegetableDrawerCube3D(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 6.dp),
-                            height = vegDrawerHeight,
-                            depth = 16.dp,
-                            dimAlpha = dimAlpha,
-                            isGhost = vegDrawerEmpty
-                        ) {
-                            if (vegDrawerEmpty) {
-                                Text(
-                                    text = "Bac à légumes vide",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                        ViewMode.Fridge -> {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(14.dp),
+                                contentPadding = PaddingValues(
+                                    bottom = (if (!canScroll) 8.dp else 0.dp) + dockHeight + 12.dp
                                 )
+                            ) {
+                                itemsIndexed(shelves) { index, shelfItems ->
+
+                                    val extraTop = when (index) {
+                                        1 -> 5.dp
+                                        2 -> 10.dp
+                                        3 -> 10.dp
+                                        4 -> 10.dp
+                                        else -> 6.dp
+                                    }
+                                    if (extraTop > 0.dp) Spacer(Modifier.height(extraTop))
+
+                                    val lastOccupiedIndex = shelves.indexOfLast { it.isNotEmpty() }
+                                    val nextAfterLastOccupiedIndex =
+                                        (lastOccupiedIndex + 1).takeIf { lastOccupiedIndex >= 0 && it < shelves.size }
+
+                                    val shelfOpacity = when {
+                                        shelfItems.isNotEmpty() -> 1f
+                                        index == 2 && emptyCenterLabel != null -> emptyShelfOpacityWithLabel
+                                        nextAfterLastOccupiedIndex != null && index == nextAfterLastOccupiedIndex -> nextAfterLastOccupiedOpacity
+                                        else -> emptyShelfOpacity
+                                    }
+
+                                    ShelfRow(
+                                        index = index,
+                                        itemEntities = shelfItems,
+                                        selectionMode = selectionMode,
+                                        selectedIds = selectedIds,
+                                        onClickItem = { item -> if (selectionMode) toggleSelect(item.id) else sheetItemEntity = item },
+                                        onLongPressItem = { item -> if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id) },
+                                        dimAlpha = dimAlpha,
+                                        selectedSheetId = sheetItemEntity?.id,
+                                        emptyOpacity = shelfOpacity,
+                                        emptyCenterLabel = if (index == 2) emptyCenterLabel else null
+                                    )
+                                }
+
+                                // ✅ IMPORTANT : ne retire pas l’item du LazyColumn quand on active le multi-select
+                                if (canScroll) {
+                                    item(key = "vegDrawer") {
+                                        if (!selectionMode) {
+                                            VegetableDrawerCube3D(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 6.dp),
+                                                height = vegDrawerHeight,
+                                                depth = 16.dp,
+                                                dimAlpha = dimAlpha,
+                                                isGhost = vegDrawerEmpty
+                                            ) {
+                                                if (vegDrawerEmpty) {
+                                                    Text(
+                                                        text = "Bac à légumes vide",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            Spacer(Modifier.height(vegDrawerHeight))
+                                        }
+                                    }
+                                }
                             }
                         }
-
-                        Spacer(Modifier.height(10.dp))
                     }
 
-                    Button(
-                        onClick = onAddItem,
+                    // =========================
+                    // DOCK (BOTTOM OVERLAY)
+                    // =========================
+                    Column(
                         modifier = Modifier
+                            .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .height(48.dp)
                     ) {
-                        Icon(Icons.Filled.Add, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Ajouter un produit")
+
+                        if (selectionMode) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${selectedIds.size} sélectionné(s)",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                Spacer(Modifier.weight(1f))
+
+                                TextButton(onClick = { exitSelection() }) {
+                                    Icon(Icons.Filled.Close, contentDescription = null)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Annuler")
+                                }
+                            }
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                shape = RoundedCornerShape(18.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            SnackbarBus.show("Bientôt: recherche de recette avec les ingrédients sélectionnés.")
+                                        },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(48.dp),
+                                        shape = RoundedCornerShape(14.dp)
+                                    ) {
+                                        Icon(Icons.Filled.Add, contentDescription = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Recette", fontWeight = FontWeight.SemiBold)
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            removeItems(selectedIds)
+                                            exitSelection()
+                                        },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(48.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.tertiary
+                                        ),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f))
+                                    ) {
+                                        Icon(Icons.Filled.Delete, contentDescription = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Retirer", fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+                        } else {
+                            if (showPinnedVegDrawer) {
+                                VegetableDrawerCube3D(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 6.dp),
+                                    height = vegDrawerHeight,
+                                    depth = 16.dp,
+                                    dimAlpha = dimAlpha,
+                                    isGhost = vegDrawerEmpty
+                                ) {
+                                    if (vegDrawerEmpty) {
+                                        Text(
+                                            text = "Bac à légumes vide",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(10.dp))
+                            }
+
+                            Button(
+                                onClick = onAddItem,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Ajouter un produit")
+                            }
+                        }
                     }
                 }
+
             }
         }
     }
