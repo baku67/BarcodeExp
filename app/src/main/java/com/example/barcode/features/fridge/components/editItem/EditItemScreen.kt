@@ -162,7 +162,8 @@ fun EditItemScreen(
                             painter = painter,
                             contentDescription = "Image produit",
                             modifier = Modifier.matchParentSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Fit,
+                            alignment = Alignment.Center
                         )
 
                         if (isImageLoading) {

@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.barcode.features.addItems.AddItemViewModel
 import com.example.barcode.features.addItems.ScanBarCodeStepScreen
-import com.example.barcode.features.addItems.DetailsStepScreen
+import com.example.barcode.features.addItems.ConfirmStepScreen
 import com.example.barcode.features.addItems.ScanDlcStepScreen
 import com.example.barcode.features.auth.LoginScreen
 import com.example.barcode.features.addItems.ItemsViewModel
@@ -256,7 +256,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                     val itemsVm: ItemsViewModel = viewModel(homeEntry)
 
-                                    DetailsStepScreen(
+                                    ConfirmStepScreen(
                                         draft = draft,
                                         onConfirm = { name, brand, expiry ->
                                             addVm.setDetails(name, brand)
@@ -395,7 +395,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                     val itemsVm: ItemsViewModel = viewModel(homeEntry)
 
-                                    DetailsStepScreen(
+                                    ConfirmStepScreen(
                                         draft = draft,
                                         onConfirm = { name, brand, expiry ->
                                             addVm.setDetails(name, brand)

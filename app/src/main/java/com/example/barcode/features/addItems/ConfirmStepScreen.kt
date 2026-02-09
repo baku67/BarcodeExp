@@ -33,17 +33,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
-import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
-import coil.compose.AsyncImagePainter.State.Empty.painter
-import coil.compose.SubcomposeAsyncImage
-import coil.compose.SubcomposeAsyncImageContent
 import coil.compose.rememberAsyncImagePainter
 import com.example.barcode.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailsStepScreen(
+fun ConfirmStepScreen(
     draft: AddItemDraft,
     onConfirm: (name: String?, brand: String?, expiry: Long?) -> Unit,
     onBack: () -> Unit,
@@ -109,7 +105,8 @@ fun DetailsStepScreen(
                             modifier = Modifier
                                 .matchParentSize()
                                 .clickable(enabled = canCycleImage && !isImageLoading) { onCycleImage() },
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Fit,
+                            alignment = Alignment.Center
                         )
 
                         // ✅ Loader overlay

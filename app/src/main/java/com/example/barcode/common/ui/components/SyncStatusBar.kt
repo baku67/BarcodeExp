@@ -238,7 +238,7 @@ private fun SyncingRow() {
             .height(BarHeight)
             .padding(horizontal = BarPaddingH),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Start
+        horizontalArrangement = Arrangement.Center
     ) {
         Icon(
             imageVector = Icons.Outlined.Sync,
