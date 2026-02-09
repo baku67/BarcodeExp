@@ -1,5 +1,6 @@
 package com.example.barcode.features.addItems
 
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
@@ -102,6 +103,10 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.nio.ByteBuffer
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import android.util.Size
 
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
@@ -112,6 +117,11 @@ fun ScanBarCodeScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val haptics = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
+
+    // ✅ ROI commun (overlay + tentative scan ROI)
+    val roiWidthFraction = 0.94f
+    val roiAspect = 1.9f
+    val roiCornerRadius = 22.dp
 
     // Camera
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
@@ -140,42 +150,61 @@ fun ScanBarCodeScreen(
     previewView?.let { view ->
         DisposableEffect(view, lifecycleOwner) {
             val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-            val executor = ContextCompat.getMainExecutor(ctx)
+            val mainExecutor = ContextCompat.getMainExecutor(ctx)
+            val analysisExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
             val scanner = BarcodeScanning.getClient()
+
+            // ✅ Buffer RGBA réutilisable (ROI strict quand dispo)
+            val rgbaBuffer = RgbaFrameBuffer()
+
 
             val listener = Runnable {
                 val cameraProvider = cameraProviderFuture.get()
 
                 val preview = Preview.Builder().build().also { it.setSurfaceProvider(view.surfaceProvider) }
-                val analysis = ImageAnalysis.Builder()
+
+                val analysisBuilder = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                    .build().also { ia ->
-                        ia.setAnalyzer(executor) { imageProxy ->
+                    .setTargetResolution(Size(1280, 720))
+
+                // ✅ Tente RGBA_8888 -> ROI strict possible
+                analysisBuilder.tryEnableRgba8888Output()
+
+                val analysis = analysisBuilder
+                    .build()
+                    .also { ia ->
+                        ia.setAnalyzer(analysisExecutor) { imageProxy ->
 
                             if (scanLocked || isFetching) {
                                 imageProxy.close()
                                 return@setAnalyzer
                             }
 
-                            imageProxy.image?.let { mediaImage ->
-                                val inputImg = InputImage.fromMediaImage(
-                                    mediaImage,
-                                    imageProxy.imageInfo.rotationDegrees
+                            val rotation = imageProxy.imageInfo.rotationDegrees
+
+                            // ✅ Branche ROI strict si RGBA dispo
+                            val bmp: Bitmap? = rgbaBuffer.toBitmapOrNull(imageProxy)
+                            if (bmp != null) {
+                                val inputImg = bmp.cropCenterForRoi(
+                                    rotationDegrees = rotation,
+                                    roiWidthFraction = roiWidthFraction,
+                                    roiAspect = roiAspect
                                 )
+
                                 scanner.process(inputImg)
-                                    .addOnSuccessListener { barcodes ->
+                                    .addOnSuccessListener(mainExecutor) { barcodes ->
                                         if (scanLocked || isFetching) return@addOnSuccessListener
 
                                         val first = barcodes.firstOrNull { it.rawValue != null }?.rawValue
                                         if (first != null && first != lastScanned) {
                                             val now = System.currentTimeMillis()
-                                            if (now - lastApiCallAt < 1000) return@addOnSuccessListener // anti spam
+                                            if (now - lastApiCallAt < 1000) return@addOnSuccessListener
                                             lastApiCallAt = now
 
                                             lastScanned = first
                                             scannedCode = first
 
-                                            // 🔒 lock immédiat
                                             scanLocked = true
                                             isFetching = true
 
@@ -188,7 +217,6 @@ fun ScanBarCodeScreen(
                                                     productInfo = res.product
                                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                                 } else {
-                                                    // ⚠️ pas trouvé / erreur -> re-scan possible après petit délai
                                                     delay(650)
                                                     lastScanned = ""
                                                     scannedCode = ""
@@ -198,11 +226,67 @@ fun ScanBarCodeScreen(
                                             }
                                         }
                                     }
-                                    .addOnFailureListener { e -> Log.e("BARCODE", "Erreur scan", e) }
-                                    .addOnCompleteListener { imageProxy.close() }
-                            } ?: imageProxy.close()
+                                    .addOnFailureListener(mainExecutor) { e ->
+                                        Log.e("BARCODE", "Erreur scan", e)
+                                    }
+                                    .addOnCompleteListener(mainExecutor) {
+                                        imageProxy.close()
+                                    }
+
+                                return@setAnalyzer
+                            }
+
+                            // ⚠️ Fallback full viewport (ROI non strict) si RGBA indispo
+                            val mediaImage = imageProxy.image ?: run {
+                                imageProxy.close()
+                                return@setAnalyzer
+                            }
+
+                            val inputImg = InputImage.fromMediaImage(mediaImage, rotation)
+
+                            scanner.process(inputImg)
+                                .addOnSuccessListener(mainExecutor) { barcodes ->
+                                    if (scanLocked || isFetching) return@addOnSuccessListener
+
+                                    val first = barcodes.firstOrNull { it.rawValue != null }?.rawValue
+                                    if (first != null && first != lastScanned) {
+                                        val now = System.currentTimeMillis()
+                                        if (now - lastApiCallAt < 1000) return@addOnSuccessListener
+                                        lastApiCallAt = now
+
+                                        lastScanned = first
+                                        scannedCode = first
+
+                                        scanLocked = true
+                                        isFetching = true
+
+                                        scope.launch {
+                                            OpenFoodFactsStore.increment(ctx)
+                                            val res = fetchProductInfo(first)
+                                            rateLimitMsg = if (res.rateLimited) (res.message ?: "Rate limit atteint") else null
+
+                                            if (res.product != null) {
+                                                productInfo = res.product
+                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            } else {
+                                                delay(650)
+                                                lastScanned = ""
+                                                scannedCode = ""
+                                                scanLocked = false
+                                            }
+                                            isFetching = false
+                                        }
+                                    }
+                                }
+                                .addOnFailureListener(mainExecutor) { e ->
+                                    Log.e("BARCODE", "Erreur scan", e)
+                                }
+                                .addOnCompleteListener(mainExecutor) {
+                                    imageProxy.close()
+                                }
                         }
                     }
+
 
                 val camera = cameraProvider.bindToLifecycle(
                     lifecycleOwner,
@@ -220,7 +304,7 @@ fun ScanBarCodeScreen(
                 }
             }
 
-            cameraProviderFuture.addListener(listener, executor)
+            cameraProviderFuture.addListener(listener, mainExecutor)
 
             onDispose {
                 if (cameraProviderFuture.isDone) {
@@ -231,6 +315,7 @@ fun ScanBarCodeScreen(
                     boundPreview = null
                     boundCamera = null
                 }
+                try { analysisExecutor.shutdown() } catch (_: Exception) {}
             }
         }
     }
@@ -280,7 +365,10 @@ fun ScanBarCodeScreen(
                 modifier = Modifier.fillMaxSize(),
                 isFetching = isFetching,
                 fetchCount = fetchCount,
-                showDebugCount = false
+                showDebugCount = false,
+                roiWidthFraction = roiWidthFraction,
+                roiAspect = roiAspect,
+                roiCornerRadius = roiCornerRadius
             )
         }
 
@@ -377,11 +465,14 @@ private fun CameraScanOverlay(
     modifier: Modifier = Modifier,
     isFetching: Boolean,
     fetchCount: Int,
-    showDebugCount: Boolean
+    showDebugCount: Boolean,
+    roiWidthFraction: Float,
+    roiAspect: Float,
+    roiCornerRadius: androidx.compose.ui.unit.Dp
 ) {
-    val windowWidthFraction = 0.94f   // ✅ plus large
-    val windowAspect = 1.9f           // ✅ plus haute (car height = width / aspect)
-    val cornerRadius = 22.dp
+    val windowWidthFraction = roiWidthFraction
+    val windowAspect = roiAspect
+    val cornerRadius = roiCornerRadius
 
     val bracketLen = 34.dp            // ✅ coins plus visibles
     val bracketInset = 10.dp
@@ -686,5 +777,45 @@ private fun ResultCard(
                 Text("Valider", fontWeight = FontWeight.SemiBold)
             }
         }
+    }
+}
+
+
+
+// ---------- ROI helpers (RGBA strict + fallback full viewport) ----------
+
+private fun Bitmap.cropCenterForRoi(
+    rotationDegrees: Int,
+    roiWidthFraction: Float,
+    roiAspect: Float
+): InputImage {
+    val uprightW = if (rotationDegrees == 90 || rotationDegrees == 270) this.height else this.width
+    val roiW = (uprightW * roiWidthFraction).toInt().coerceAtLeast(1)
+    val roiH = (roiW / roiAspect).toInt().coerceAtLeast(1)
+
+    val cropW = if (rotationDegrees == 90 || rotationDegrees == 270) roiH else roiW
+    val cropH = if (rotationDegrees == 90 || rotationDegrees == 270) roiW else roiH
+
+    val left = ((this.width - cropW) / 2).coerceAtLeast(0)
+    val top = ((this.height - cropH) / 2).coerceAtLeast(0)
+    val safeW = cropW.coerceAtMost(this.width - left)
+    val safeH = cropH.coerceAtMost(this.height - top)
+
+    val cropped = Bitmap.createBitmap(this, left, top, safeW, safeH)
+    return InputImage.fromBitmap(cropped, rotationDegrees)
+}
+
+private fun ImageAnalysis.Builder.tryEnableRgba8888Output() {
+    try {
+        val builderCls = this::class.java
+        val imageAnalysisCls = ImageAnalysis::class.java
+
+        val setOutputImageFormat = builderCls.getMethod("setOutputImageFormat", Int::class.javaPrimitiveType)
+        val rgbaField = imageAnalysisCls.getField("OUTPUT_IMAGE_FORMAT_RGBA_8888")
+        val rgbaValue = rgbaField.getInt(null)
+
+        setOutputImageFormat.invoke(this, rgbaValue)
+    } catch (_: Throwable) {
+        // CameraX trop ancien / device incompatible -> fallback full viewport
     }
 }

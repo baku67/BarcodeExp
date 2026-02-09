@@ -633,7 +633,7 @@ private fun ExpiryRoiOverlay(
 
 // ---------- ROI helpers (RGBA strict) ----------
 
-private class RgbaFrameBuffer {
+class RgbaFrameBuffer {
     private var packed: ByteArray = ByteArray(0)
     private var rowTmp: ByteArray = ByteArray(0)
     private var byteBuffer: ByteBuffer? = null
