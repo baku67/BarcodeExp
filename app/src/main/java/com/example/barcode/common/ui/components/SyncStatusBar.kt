@@ -1,5 +1,6 @@
 package com.example.barcode.common.ui.components
 
+import android.text.format.DateUtils
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -22,6 +23,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Sync
@@ -32,7 +35,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -44,8 +51,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.barcode.sync.SyncUiState
 import androidx.compose.ui.util.lerp
+import kotlinx.coroutines.delay
 
-private val BarHeight = 34.dp              // ✅ moins épais (avant 44.dp)
+private val BarHeight =28.dp              // ✅ moins épais (avant 44.dp)
 private const val RotateDurationMs = 1800  // ✅ rotation plus lente (avant 900)
 
 @Composable
@@ -54,8 +62,6 @@ fun SyncStatusBar(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val visible = state !is SyncUiState.Idle
-
     // ✅ Barre grisâtre
     val bg = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f) // ✅ surface + légère transparence
 
@@ -67,36 +73,139 @@ fun SyncStatusBar(
             Color.Black.copy(alpha = 0.08f)  // light theme → bordure légèrement marquée
 
 
-    AnimatedVisibility(
-        visible = visible,
-        modifier = modifier.fillMaxWidth(),
-        enter = expandVertically() + fadeIn(),
-        exit = shrinkVertically() + fadeOut()
-    ) {
-        Column(Modifier.fillMaxWidth()) {
-            Surface(
-                color = bg,
-                shape = RoundedCornerShape(0.dp),
-                tonalElevation = 0.dp,
-                shadowElevation = 0.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                when (state) {
-                    SyncUiState.Syncing -> SyncingRow()
-                    SyncUiState.Offline -> OfflineRow()
-                    is SyncUiState.Error -> ErrorRow(onRetry = onRetry)
-                    else -> Unit
-                }
+    Column(modifier.fillMaxWidth()) {
+        Surface(
+            color = bg,
+            shape = RoundedCornerShape(0.dp),
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            when (state) {
+                is SyncUiState.UpToDate -> UpToDateRow(state.lastSuccessAt)
+                SyncUiState.Syncing -> SyncingRow() // tu peux garder ton glow/rotate ici
+                SyncUiState.Offline -> OfflineRow()
+                SyncUiState.AuthRequired -> AuthRequiredRow()
+                is SyncUiState.Error -> ErrorRow(onRetry = onRetry)
             }
-
-            // ✅ vrai border bottom
-            HorizontalDivider(
-                thickness = 1.dp,
-                color = bottomBorder
-            )
         }
+
+        HorizontalDivider(thickness = 1.dp, color = bottomBorder)
     }
 }
+
+
+
+
+@Composable
+private fun UpToDateRow(lastSuccessAt: Long?) {
+    // tick pour mettre à jour "il y a X min"
+    var tick by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000)
+            tick++
+        }
+    }
+
+    val now = System.currentTimeMillis()
+
+    val (icon, iconTint, label) = when {
+        lastSuccessAt == null -> {
+            Triple(
+                Icons.Outlined.AccessTime,
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                "Dernière sync : jamais"
+            )
+        }
+
+        (now - lastSuccessAt) < 60_000L -> {
+            Triple(
+                Icons.Outlined.CheckCircle,
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
+                "Synchronisé : maintenant"
+            )
+        }
+
+        else -> {
+            val rel = DateUtils.getRelativeTimeSpanString(
+                lastSuccessAt,
+                now,
+                DateUtils.MINUTE_IN_MILLIS
+            ).toString()
+
+            val isRecent = (now - lastSuccessAt) < 10 * 60_000L
+
+            if (isRecent) {
+                Triple(
+                    Icons.Outlined.CheckCircle,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+                    "À jour — dernière sync : $rel"
+                )
+            } else {
+                Triple(
+                    Icons.Outlined.AccessTime,
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                    "Dernière sync : $rel"
+                )
+            }
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(BarHeight)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(14.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.80f),
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+
+
+
+@Composable
+private fun AuthRequiredRow() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(BarHeight)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Session expirée — Reconnexion nécessaire",
+            color = MaterialTheme.colorScheme.error.copy(alpha = 0.90f),
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+
+
+
+
+
+
 
 @Composable
 private fun SyncingRow() {

@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.barcode.core.network.ApiClient
-import com.example.barcode.core.session.SessionManager
+import com.example.barcode.core.SessionManager
 import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.entities.PendingOperation
@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 class SyncWorker(
     ctx: Context,
@@ -135,7 +134,14 @@ class SyncWorker(
 
         // 4) PULL : récupérer l'état serveur et upsert local (Room) par clientId
         try {
+
             val pull = api.getItems("Bearer $token")
+
+            if (pull.code() == 401) {
+                SyncPreferences(applicationContext).markAuthRequired()
+                return Result.success()
+            }
+
             if (!pull.isSuccessful) {
                 val err = pull.errorBody()?.string()
                 android.util.Log.e("SyncWorker", "pull failed code=${pull.code()} body=$err")
@@ -185,6 +191,9 @@ class SyncWorker(
 
                 dao.upsert(entity)
             }
+
+            // ✅ ICI seulement : on considère la sync “successful”
+            SyncPreferences(applicationContext).markSyncSuccessNow()
 
         } catch (e: Exception) {
             // Pull qui échoue : on ne casse pas tout, on garde juste le local

@@ -1,4 +1,4 @@
-package com.example.barcode.core.session
+package com.example.barcode.core
 
 import android.content.Context
 import com.example.barcode.domain.models.FrigoLayout

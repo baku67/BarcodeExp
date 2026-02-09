@@ -28,7 +28,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.barcode.R
 import com.example.barcode.features.auth.AuthRepository
-import com.example.barcode.core.session.SessionManager
+import com.example.barcode.core.SessionManager
 import androidx.compose.runtime.getValue
 
 

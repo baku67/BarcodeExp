@@ -39,7 +39,7 @@ import com.example.barcode.common.ui.navigation.MainTabsScreen
 import com.example.barcode.features.bootstrap.TimelineIntroScreen
 import com.example.barcode.features.auth.AuthRepository
 import com.example.barcode.features.auth.AuthViewModel
-import com.example.barcode.core.session.SessionManager
+import com.example.barcode.core.SessionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import com.example.barcode.common.bus.SnackbarBus

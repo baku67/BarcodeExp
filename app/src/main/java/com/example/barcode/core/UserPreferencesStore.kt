@@ -1,18 +1,17 @@
-package com.example.barcode.core.session
+package com.example.barcode.core
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.example.barcode.core.session.sessionDataStore
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-
 private val PREF_THEME = stringPreferencesKey("pref_theme")
+
 private val PREF_LANG = stringPreferencesKey("pref_lang")
 private val PREF_FRIGO_LAYOUT = stringPreferencesKey("pref_frigo_layout")
 private val PREF_UPDATED_AT = longPreferencesKey("pref_updated_at")

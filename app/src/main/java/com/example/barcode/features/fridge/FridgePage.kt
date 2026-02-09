@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -33,8 +35,8 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.LocalAppTopBarState
-import com.example.barcode.core.session.AppMode
-import com.example.barcode.core.session.SessionManager
+import com.example.barcode.core.AppMode
+import com.example.barcode.core.SessionManager
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.UserPreferences
@@ -89,6 +91,31 @@ fun FridgePage(
             WorkInfo.State.BLOCKED -> true
             else -> false
         }
+    }
+
+    // ✅ Pull-to-refresh state (pour avoir l'icône qui descend pendant le geste)
+    val pullState = rememberPullToRefreshState()
+
+// ✅ "On a déclenché un refresh" (masque l'icône dès que l'utilisateur relâche)
+    var pullRefreshRequested by remember { mutableStateOf(false) }
+
+// ✅ L’état de refresh réellement utilisé par le pull-to-refresh UI
+    val isRefreshing = pullRefreshRequested || isSyncing
+
+// ✅ Barre fine : anti-flicker (n'apparaît que si ça dure un peu)
+    var showTopProgress by remember { mutableStateOf(false) }
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            delay(250) // ✅ délai UX
+            showTopProgress = true
+        } else {
+            showTopProgress = false
+        }
+    }
+
+// ✅ Quand la sync se termine, on reset le flag pull
+    LaunchedEffect(isSyncing) {
+        if (!isSyncing) pullRefreshRequested = false
     }
 
     val mode = session.appMode.collectAsState(initial = AppMode.AUTH).value
@@ -412,7 +439,7 @@ fun FridgePage(
     Box(Modifier.fillMaxSize()) {
 
         // Barre de chargement top
-        if (isSyncing) {
+        if (showTopProgress) {
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -424,12 +451,30 @@ fun FridgePage(
         }
 
         PullToRefreshBox(
-            isRefreshing = isSyncing,
+            state = pullState,
+            isRefreshing = isRefreshing,
+
+            // ✅ Icône pendant le geste uniquement (pas pendant le refresh)
+            indicator = {
+                if (!isRefreshing) {
+                    PullToRefreshDefaults.Indicator(
+                        state = pullState,
+                        isRefreshing = false, // ✅ force "mode drag" (pas de spinner)
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                }
+            },
+
             onRefresh = {
                 if (isSyncing) return@PullToRefreshBox
+
+                // ✅ dès que l'utilisateur relâche, on masque l'icône (et on passera à la barre)
+                pullRefreshRequested = true
+
                 scope.launch {
                     if (mode != AppMode.AUTH || token.isNullOrBlank()) {
                         SnackbarBus.show("Connecte-toi pour synchroniser.")
+                        pullRefreshRequested = false // ✅ reset si pas possible
                         return@launch
                     }
                     refreshItems()

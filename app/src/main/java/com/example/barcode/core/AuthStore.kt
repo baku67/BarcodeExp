@@ -1,4 +1,4 @@
-package com.example.barcode.core.session
+package com.example.barcode.core
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -7,7 +7,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.barcode.domain.models.UserProfile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import com.example.barcode.core.session.sessionDataStore
 
 
 private val TOKEN_KEY = stringPreferencesKey("token")

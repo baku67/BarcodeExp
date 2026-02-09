@@ -34,7 +34,7 @@ fun AppContentWithBars(
     navController: NavHostController,
     selectedRoute: String,
     onTabClick: (String) -> Unit,
-    syncState: SyncUiState = SyncUiState.Idle,     // pour etat SyncStatusBar
+    syncState: SyncUiState,     // pour etat SyncStatusBar
     onSyncRetry: () -> Unit = {},                  // pour etat SyncStatusBar
     content: @Composable (PaddingValues, snackbarHostState: SnackbarHostState) -> Unit
 ) {

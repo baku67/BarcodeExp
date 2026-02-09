@@ -3,6 +3,7 @@ package com.example.barcode.features.addItems
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.barcode.core.SessionManager
 import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.LocalItemRepository
@@ -22,7 +23,7 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
     // La UI collecte ce Flow (Compose: collectAsState)
     val items: Flow<List<ItemEntity>> = repo.observeItems()
 
-    private val session by lazy { com.example.barcode.core.session.SessionManager(app) }
+    private val session by lazy { SessionManager(app) }
 
     fun addItem(
         barcode: String?,
