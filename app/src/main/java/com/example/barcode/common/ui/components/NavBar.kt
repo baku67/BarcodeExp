@@ -37,6 +37,7 @@ fun NavBar(
     activeRoute: String? = null,
     containerColor: Color = Color.Transparent,
     onItemClick: ((NavBarItem) -> Unit)? = null, // si fourni, on ne navigate pas ici
+    onItemReselect: ((NavBarItem) -> Unit)? = null, // re-clique sur l’onglet actif
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val destination = navBackStackEntry?.destination
@@ -93,7 +94,10 @@ fun NavBar(
                     selected = selected,
                     alwaysShowLabel = false, // label seulement quand selected
                     onClick = {
-                        if (selected) return@NavigationBarItem
+                        if (selected) {
+                            onItemReselect?.invoke(item)
+                            return@NavigationBarItem
+                        }
 
                         // ✅ Mode "pager": AppScaffoldWithBars gère le click
                         if (onItemClick != null) {

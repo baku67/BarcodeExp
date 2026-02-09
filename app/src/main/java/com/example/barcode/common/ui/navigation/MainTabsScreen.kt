@@ -15,9 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
@@ -35,6 +38,7 @@ import com.example.barcode.sync.SyncScheduler
 import com.example.barcode.sync.SyncUiState
 import kotlinx.coroutines.launch
 
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
@@ -42,6 +46,9 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
     val tabs = listOf("home", "listeCourses", "items", "recipes", "settings")
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
+
+    // ✅ Re-clique sur l’onglet actif = scroll-to-top (token incrémental)
+    var itemsReselectToken by rememberSaveable { mutableStateOf(0) }
 
     fun goToTab(route: String) {
         val idx = tabs.indexOf(route)
@@ -89,6 +96,9 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
         navController = navController,
         selectedRoute = selectedRoute,
         onTabClick = { route -> goToTab(route) },
+        onTabReselect = { route ->
+            if (route == "items") itemsReselectToken++
+        },
         syncState = barSyncState, // ✅ TESTs (remplacer par SyncUiState.Syncing ou autre enum pour forcer)
         onSyncRetry = { SyncScheduler.enqueueSync(context) }
     ) { innerPadding, snackbarHostState  ->
@@ -127,7 +137,8 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
                             launchSingleTop = true
                         }
                     },
-                    isActive = isActive
+                    isActive = isActive,
+                    scrollToTopToken = itemsReselectToken
                 )
 
                 "recipes" -> RecipesContent(
