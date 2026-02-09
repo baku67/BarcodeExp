@@ -20,6 +20,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,12 +28,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CheckCircle
@@ -43,10 +46,15 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -73,6 +81,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -87,6 +96,9 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.delay
 import java.nio.ByteBuffer
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -108,10 +120,15 @@ fun ScanDlcScreen(
     val roiWidthFraction = 0.94f
     val roiAspect = 2.8f
     val roiCornerRadius = 18.dp
+    val roiCenterYFraction = 0.40f // ✅ 0.50 = centre, 0.40 = plus haut
 
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     var detectedDate by remember { mutableStateOf("") }
     var detectedDateMs by remember { mutableStateOf<Long?>(null) }
+    var detectedLocalDate by remember { mutableStateOf<LocalDate?>(null) } // ✅ source interne
+    var showManualSheet by remember { mutableStateOf(false) }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
+
     var lastDetectedDate by remember { mutableStateOf("") }
     var frozen by remember { mutableStateOf(false) }
     var isProcessing by remember { mutableStateOf(false) }
@@ -148,10 +165,12 @@ fun ScanDlcScreen(
         else -> null
     }
 
-    fun parseToEpochMs(day: String, month: String, year: Int): Long? = try {
-        val ld = java.time.LocalDate.of(year, month.toInt(), day.toInt())
-        ld.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+    fun parseToLocalDate(day: String, month: String, year: Int): LocalDate? = try {
+        LocalDate.of(year, month.toInt(), day.toInt())
     } catch (_: Exception) { null }
+
+    fun localDateToEpochMs(ld: LocalDate): Long =
+        ld.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
     val content: @Composable (Modifier) -> Unit = { mod ->
         ScanDlcContent(
@@ -172,7 +191,9 @@ fun ScanDlcScreen(
             isProcessing = isProcessing,
             frozen = frozen,
             analyzeStartedAt = lastAnalyzeStartedAt, // ✅ AJOUT
-            analyzingHoldMs = analyzingHoldMs        // ✅ AJOUT
+            analyzingHoldMs = analyzingHoldMs,        // ✅ AJOUT
+            onOpenManualEntry = { showManualSheet = true },
+            roiCenterYFraction = roiCenterYFraction,
         )
     }
 
@@ -183,6 +204,26 @@ fun ScanDlcScreen(
     } else {
         content(modifier.fillMaxSize())
     }
+
+    if (showManualSheet) {
+        ManualExpiryDateBottomSheet(
+            initialText = detectedLocalDate?.format(dateFormatter) ?: "",
+            onDismiss = {
+                showManualSheet = false
+                // ✅ si aucune date, on relance le scan ; sinon on garde freeze
+                if (detectedDateMs == null) frozen = false
+            },
+            onConfirm = { ld ->
+                detectedLocalDate = ld
+                detectedDate = ld.format(dateFormatter)
+                detectedDateMs = localDateToEpochMs(ld)
+                lastDetectedDate = detectedDate
+                frozen = true
+                showManualSheet = false
+            }
+        )
+    }
+
 
     DisposableEffect(previewView, lifecycleOwner) {
         val view = previewView ?: return@DisposableEffect onDispose { }
@@ -232,10 +273,11 @@ fun ScanDlcScreen(
                             // ✅ ROI strict si RGBA dispo
                             val bmp = rgbaBuffer.toBitmapOrNull(imageProxy)
                             if (bmp != null) {
-                                val input = bmp.cropCenterForRoi(
+                                val input = bmp.cropForRoi(
                                     rotationDegrees = rotation,
                                     roiWidthFraction = roiWidthFraction,
-                                    roiAspect = roiAspect
+                                    roiAspect = roiAspect,
+                                    roiCenterYFraction = roiCenterYFraction
                                 )
 
                                 val startedAt = System.currentTimeMillis()
@@ -252,10 +294,12 @@ fun ScanDlcScreen(
                                             val normalized = "$d$sep$mo$sep$y"
                                             if (normalized == lastDetectedDate) return@addOnSuccessListener
 
-                                            val ms = parseToEpochMs(d, mo, y)
-                                            detectedDate = normalized
-                                            detectedDateMs = ms
-                                            if (ms != null) { lastDetectedDate = normalized; frozen = true }
+                                            val ld = parseToLocalDate(d, mo, y) ?: return@addOnSuccessListener
+                                            detectedLocalDate = ld
+                                            detectedDate = ld.format(dateFormatter)
+                                            detectedDateMs = localDateToEpochMs(ld)
+                                            lastDetectedDate = detectedDate
+                                            frozen = true
                                         }
                                     }
                                     .addOnFailureListener(mainExecutor) { e ->
@@ -288,10 +332,12 @@ fun ScanDlcScreen(
                                         val normalized = "$d$sep$mo$sep$y"
                                         if (normalized == lastDetectedDate) return@addOnSuccessListener
 
-                                        val ms = parseToEpochMs(d, mo, y)
-                                        detectedDate = normalized
-                                        detectedDateMs = ms
-                                        if (ms != null) { lastDetectedDate = normalized; frozen = true }
+                                        val ld = parseToLocalDate(d, mo, y) ?: return@addOnSuccessListener
+                                        detectedLocalDate = ld
+                                        detectedDate = ld.format(dateFormatter)
+                                        detectedDateMs = localDateToEpochMs(ld)
+                                        lastDetectedDate = detectedDate
+                                        frozen = true
                                     }
                                 }
                                 .addOnFailureListener(mainExecutor) { e ->
@@ -360,10 +406,12 @@ private fun ScanDlcContent(
     roiWidthFraction: Float,
     roiAspect: Float,
     roiCornerRadius: Dp,
+    roiCenterYFraction: Float, // ✅ AJOUT
     isProcessing: Boolean,
     frozen: Boolean,
     analyzeStartedAt: Long,
-    analyzingHoldMs: Long
+    analyzingHoldMs: Long,
+    onOpenManualEntry: () -> Unit,
 )
  {
     Box(modifier = modifier) {
@@ -380,6 +428,7 @@ private fun ScanDlcContent(
             roiWidthFraction = roiWidthFraction,
             roiAspect = roiAspect,
             cornerRadius = roiCornerRadius,
+            roiCenterYFraction = roiCenterYFraction, // ✅ AJOUT
             isProcessing = isProcessing,
             frozen = frozen,
             hasResult = detectedDateMs != null && detectedDate.isNotBlank(),
@@ -448,6 +497,17 @@ private fun ScanDlcContent(
                 }
             }
 
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = { onOpenManualEntry() }) {
+                    Text(if (detectedDateMs == null) "Saisir manuellement" else "Modifier")
+                }
+            }
+
             Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
 
             Row(modifier = Modifier.height(52.dp).fillMaxWidth()) {
@@ -484,41 +544,22 @@ private fun ScanDlcContent(
     }
 }
 
+
 @Composable
 private fun ExpiryRoiOverlay(
     modifier: Modifier = Modifier,
     roiWidthFraction: Float,
     roiAspect: Float,
     cornerRadius: Dp,
+    roiCenterYFraction: Float, // ✅ doit exister
     isProcessing: Boolean,
     frozen: Boolean,
     hasResult: Boolean,
     analyzeStartedAt: Long,
     analyzingHoldMs: Long
 ) {
-    var uiAnalyzing by remember { mutableStateOf(false) }
-
-    LaunchedEffect(isProcessing, hasResult, analyzeStartedAt) {
-        if (hasResult) {
-            uiAnalyzing = false
-            return@LaunchedEffect
-        }
-
-        if (isProcessing) {
-            uiAnalyzing = true
-            return@LaunchedEffect
-        }
-
-        // isProcessing == false && pas de résultat -> on garde "Analyse..." un petit temps
-        if (analyzeStartedAt != 0L) {
-            delay(analyzingHoldMs)
-            if (!isProcessing && !hasResult) uiAnalyzing = false
-        } else {
-            uiAnalyzing = false
-        }
-    }
-
-    val showAnalyzing = uiAnalyzing
+    val now = System.currentTimeMillis()
+    val showAnalyzing = isProcessing || (!hasResult && (now - analyzeStartedAt) < analyzingHoldMs)
 
     val onePx = with(LocalDensity.current) { 1f.toDp() }
     val overlayColor = Color.Black.copy(alpha = 0.42f)
@@ -526,6 +567,7 @@ private fun ExpiryRoiOverlay(
     val cornerLen = 30.dp
     val cornerInset = 10.dp
     val scanInset = 14.dp
+    val safePad = 16.dp
 
     val transition = rememberInfiniteTransition(label = "expiryScanLine")
     val t by transition.animateFloat(
@@ -538,21 +580,37 @@ private fun ExpiryRoiOverlay(
         label = "t"
     )
 
-    Box(modifier = modifier) {
+    BoxWithConstraints(modifier = modifier) {
+        val density = LocalDensity.current
+
+        // ✅ ROI en Dp (1 seule source de vérité)
+        val roiW = maxWidth * roiWidthFraction
+        val roiH = roiW / roiAspect
+        val left = (maxWidth - roiW) / 2f
+
+        val centerY = maxHeight * roiCenterYFraction
+        val topUnclamped = centerY - (roiH / 2f)
+        val top = topUnclamped.coerceIn(
+            safePad,
+            (maxHeight - safePad - roiH).coerceAtLeast(safePad)
+        )
+
+        // ✅ Canvas : on dessine avec EXACTEMENT la même géométrie
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
         ) {
-            val w = size.width * roiWidthFraction
-            val h = w / roiAspect
-            val left = (size.width - w) / 2f
-            val top = (size.height - h) / 2f
-            val rect = Rect(left, top, left + w, top + h)
+            val leftPx = with(density) { left.toPx() }
+            val topPx = with(density) { top.toPx() }
+            val wPx = with(density) { roiW.toPx() }
+            val hPx = with(density) { roiH.toPx() }
+
+            val rect = Rect(leftPx, topPx, leftPx + wPx, topPx + hPx)
 
             drawRect(overlayColor)
 
-            val r = cornerRadius.toPx()
+            val r = with(density) { cornerRadius.toPx() }
             drawRoundRect(
                 color = Color.Transparent,
                 topLeft = rect.topLeft,
@@ -563,73 +621,250 @@ private fun ExpiryRoiOverlay(
 
             if (!frozen) {
                 val y = rect.top + rect.height * t
-                val insetPx = scanInset.toPx()
+                val insetPx = with(density) { scanInset.toPx() }
                 drawLine(
                     color = bracketColor.copy(alpha = if (showAnalyzing) 0.55f else 0.35f),
                     start = Offset(rect.left + insetPx, y),
                     end = Offset(rect.right - insetPx, y),
-                    strokeWidth = onePx.toPx(),
+                    strokeWidth = with(density) { onePx.toPx() },
                     cap = StrokeCap.Round
                 )
             }
 
-            val sw = onePx.toPx()
-            val len = cornerLen.toPx()
-            val inset = cornerInset.toPx()
+            val sw = with(density) { onePx.toPx() }
+            val len = with(density) { cornerLen.toPx() }
+            val inset = with(density) { cornerInset.toPx() }
 
+            // top-left
             drawLine(bracketColor, Offset(rect.left + inset, rect.top + inset), Offset(rect.left + inset + len, rect.top + inset), sw, cap = StrokeCap.Round)
             drawLine(bracketColor, Offset(rect.left + inset, rect.top + inset), Offset(rect.left + inset, rect.top + inset + len), sw, cap = StrokeCap.Round)
-
+            // top-right
             drawLine(bracketColor, Offset(rect.right - inset - len, rect.top + inset), Offset(rect.right - inset, rect.top + inset), sw, cap = StrokeCap.Round)
             drawLine(bracketColor, Offset(rect.right - inset, rect.top + inset), Offset(rect.right - inset, rect.top + inset + len), sw, cap = StrokeCap.Round)
-
+            // bottom-left
             drawLine(bracketColor, Offset(rect.left + inset, rect.bottom - inset), Offset(rect.left + inset + len, rect.bottom - inset), sw, cap = StrokeCap.Round)
             drawLine(bracketColor, Offset(rect.left + inset, rect.bottom - inset - len), Offset(rect.left + inset, rect.bottom - inset), sw, cap = StrokeCap.Round)
-
+            // bottom-right
             drawLine(bracketColor, Offset(rect.right - inset - len, rect.bottom - inset), Offset(rect.right - inset, rect.bottom - inset), sw, cap = StrokeCap.Round)
             drawLine(bracketColor, Offset(rect.right - inset, rect.bottom - inset - len), Offset(rect.right - inset, rect.bottom - inset), sw, cap = StrokeCap.Round)
         }
 
+        // ✅ UI (Analyse/Place la date) centrée DANS le ROI (plus sur tout l'écran)
+        Box(
+            modifier = Modifier
+                .offset(x = left, y = top)
+                .size(roiW, roiH)
+        ) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.18f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .widthIn(min = 220.dp)
+                ) {
+                    Text(
+                        text = when {
+                            hasResult -> "Date détectée ✅"
+                            showAnalyzing -> "Analyse…"
+                            else -> "Place la date (DD/MM/YY) dans le cadre"
+                        },
+                        color = Color.White.copy(alpha = 0.92f),
+                        fontStyle = FontStyle.Italic,
+                        textAlign = TextAlign.Center,
+                        fontSize = 15.sp,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .alpha(if (showAnalyzing && !hasResult) 1f else 0f),
+                    strokeWidth = 2.dp
+                )
+            }
+        }
+    }
+}
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ManualExpiryDateBottomSheet(
+    initialText: String,
+    onDismiss: () -> Unit,
+    onConfirm: (LocalDate) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    var text by remember { mutableStateOf(initialText) }
+    val normalized = remember(text) { normalizeDateInput(text) }
+    LaunchedEffect(normalized) {
+        if (normalized != text) text = normalized
+    }
+
+    val parse = remember(normalized) { parseFlexibleDate(normalized) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
         Column(
             modifier = Modifier
-                .align(Alignment.Center)
-                .padding(horizontal = 18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // ✅ Pill stable (hauteur fixe)
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.Black.copy(alpha = 0.18f))
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .widthIn(min = 220.dp) // ✅ stabilise la largeur (évite “pompage” du texte)
-            ) {
+            Text("Saisie manuelle", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Entre une date au format JJ/MM/AA ou JJ/MM/AAAA. " +
+                        "Exemples: 12-02-26, 12/02/2026, 120226, 3/2/26.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
+            )
+
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                placeholder = { Text("JJ/MM/AAAA") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                supportingText = {
+                    when {
+                        parse.error != null -> Text(parse.error)
+                        parse.date != null -> Text("Interprété : ${parse.date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}")
+                        else -> Text(" ")
+                    }
+                },
+                isError = parse.error != null,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (parse.warning != null) {
                 Text(
-                    text = when {
-                        hasResult -> "Date détectée ✅"
-                        showAnalyzing -> "Analyse…"
-                        else -> "Place la date (DD/MM/YY) dans le cadre"
-                    },
-                    color = Color.White.copy(alpha = 0.92f),
-                    fontStyle = FontStyle.Italic,
-                    textAlign = TextAlign.Center,
-                    fontSize = 15.sp,
-                    modifier = Modifier.align(Alignment.Center)
+                    text = parse.warning,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
                 )
             }
 
-            // ✅ Loader TOUJOURS présent -> pas de re-layout
-            CircularProgressIndicator(
+            Row(
                 modifier = Modifier
-                    .size(20.dp)
-                    .alpha(if (showAnalyzing && !hasResult) 1f else 0f),
-                strokeWidth = 2.dp
-            )
-        }
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)
+            ) {
+                TextButton(onClick = onDismiss) { Text("Annuler") }
 
+                Button(
+                    onClick = { parse.date?.let(onConfirm) },
+                    enabled = parse.date != null
+                ) {
+                    Text("Valider")
+                }
+            }
+        }
     }
 }
+
+private data class DateParseResult(
+    val date: LocalDate? = null,
+    val error: String? = null,
+    val warning: String? = null
+)
+
+private fun normalizeDateInput(raw: String): String {
+    val trimmed = raw.trim()
+        .replace(Regex("[\\-\\.\\s]"), "/")
+        .replace(Regex("[^0-9/]"), "")
+        .replace(Regex("/+"), "/")
+
+    if (trimmed.contains("/")) {
+        val parts = trimmed.split("/").filter { it.isNotEmpty() }
+        if (parts.isEmpty()) return ""
+
+        val dRaw = parts.getOrNull(0).orEmpty().take(2)
+        val mRaw = parts.getOrNull(1).orEmpty().take(2)
+        val yRaw = parts.getOrNull(2).orEmpty().take(4)
+
+        val d = if (parts.size >= 2) dRaw.padStart(2, '0') else dRaw
+        val m = if (parts.size >= 3) mRaw.padStart(2, '0') else mRaw
+        val y = yRaw
+
+        return buildString {
+            append(d)
+            if (parts.size >= 2) {
+                append("/")
+                append(mRaw) // on laisse l'utilisateur finir, padding complet sera fait au parse
+            }
+            if (parts.size >= 3) {
+                append("/")
+                append(y)
+            }
+        }.replace(Regex("/+"), "/")
+    }
+
+    val digits = trimmed.filter { it.isDigit() }.take(8)
+    val dd = digits.take(2)
+    val mm = digits.drop(2).take(2)
+    val yy = digits.drop(4)
+
+    return when {
+        digits.length <= 2 -> dd
+        digits.length <= 4 -> "$dd/$mm"
+        digits.length <= 6 -> "$dd/$mm/$yy"     // ddMMyy -> dd/MM/yy
+        else -> "$dd/$mm/$yy"                   // ddMMyyyy -> dd/MM/yyyy
+    }
+}
+
+private fun parseFlexibleDate(input: String): DateParseResult {
+    val parts = input.split("/").filter { it.isNotBlank() }
+    if (parts.size < 3) return DateParseResult() // pas d'erreur tant que c'est incomplet
+
+    val dStr = parts[0]
+    val mStr = parts[1]
+    val yStr = parts[2]
+
+    // Incomplet -> pas d'erreur (évite l'agressivité)
+    if (dStr.length !in 1..2 || mStr.length !in 1..2 || yStr.length !in 2..4) return DateParseResult()
+    if (yStr.length == 3 || yStr.length == 1) return DateParseResult()
+
+    val d = dStr.toIntOrNull() ?: return DateParseResult(error = "Jour invalide")
+    val m = mStr.toIntOrNull() ?: return DateParseResult(error = "Mois invalide")
+    val y = yStr.toIntOrNull() ?: return DateParseResult(error = "Année invalide")
+
+    val year = when (yStr.length) {
+        2 -> 2000 + y
+        4 -> y
+        else -> return DateParseResult()
+    }
+
+    // Option stricte (comme ton OCR) : garde une fenêtre réaliste
+    if (year !in 2020..2050) {
+        return DateParseResult(error = "Année hors plage (2020–2050). Mets 4 chiffres si besoin.")
+    }
+
+    val ld = try {
+        LocalDate.of(year, m, d)
+    } catch (_: Exception) {
+        return DateParseResult(error = "Date impossible (ex: 31/02)")
+    }
+
+    val warning = if (ld.isBefore(LocalDate.now())) "Déjà expiré ?" else null
+    return DateParseResult(date = ld, warning = warning)
+}
+
+
+
 
 // ---------- ROI helpers (RGBA strict) ----------
 
@@ -685,26 +920,67 @@ class RgbaFrameBuffer {
     }
 }
 
-private fun Bitmap.cropCenterForRoi(
+
+private fun Bitmap.cropForRoi(
     rotationDegrees: Int,
     roiWidthFraction: Float,
-    roiAspect: Float
+    roiAspect: Float,
+    roiCenterYFraction: Float
 ): InputImage {
-    val uprightW = if (rotationDegrees == 90 || rotationDegrees == 270) this.height else this.width
+    val rawW = this.width
+    val rawH = this.height
+
+    // Dimensions une fois "upright" (après rotationDegrees)
+    val uprightW = if (rotationDegrees == 90 || rotationDegrees == 270) rawH else rawW
+    val uprightH = if (rotationDegrees == 90 || rotationDegrees == 270) rawW else rawH
+
     val roiW = (uprightW * roiWidthFraction).toInt().coerceAtLeast(1)
     val roiH = (roiW / roiAspect).toInt().coerceAtLeast(1)
 
-    val cropW = if (rotationDegrees == 90 || rotationDegrees == 270) roiH else roiW
-    val cropH = if (rotationDegrees == 90 || rotationDegrees == 270) roiW else roiH
+    val centerXu = uprightW / 2f
+    val centerYu = (uprightH * roiCenterYFraction).coerceIn(0f, uprightH.toFloat())
 
-    val left = ((this.width - cropW) / 2).coerceAtLeast(0)
-    val top = ((this.height - cropH) / 2).coerceAtLeast(0)
-    val safeW = cropW.coerceAtMost(this.width - left)
-    val safeH = cropH.coerceAtMost(this.height - top)
+    val leftU = (centerXu - roiW / 2f).toInt().coerceIn(0, (uprightW - roiW).coerceAtLeast(0))
+    val topU = (centerYu - roiH / 2f).toInt().coerceIn(0, (uprightH - roiH).coerceAtLeast(0))
 
-    val cropped = Bitmap.createBitmap(this, left, top, safeW, safeH)
+    // Map rect "upright" -> rect "raw" (sans faire tourner le bitmap)
+    val (leftR, topR, wR, hR) = when (rotationDegrees) {
+        0 -> Quad(leftU, topU, roiW, roiH)
+        180 -> Quad(rawW - (leftU + roiW), rawH - (topU + roiH), roiW, roiH)
+        90 -> {
+            // rotation clockwise 90 pour être upright
+            // rawX = uprightY, rawY = rawH - (uprightX + width)
+            Quad(
+                leftR = topU,
+                topR = rawH - (leftU + roiW),
+                wR = roiH,
+                hR = roiW
+            )
+        }
+        270 -> {
+            // rotation clockwise 270 pour être upright
+            // rawX = rawW - (uprightY + height), rawY = uprightX
+            Quad(
+                leftR = rawW - (topU + roiH),
+                topR = leftU,
+                wR = roiH,
+                hR = roiW
+            )
+        }
+        else -> Quad(leftU, topU, roiW, roiH)
+    }
+
+    val safeLeft = leftR.coerceIn(0, (rawW - 1).coerceAtLeast(0))
+    val safeTop = topR.coerceIn(0, (rawH - 1).coerceAtLeast(0))
+    val safeW = wR.coerceIn(1, rawW - safeLeft)
+    val safeH = hR.coerceIn(1, rawH - safeTop)
+
+    val cropped = Bitmap.createBitmap(this, safeLeft, safeTop, safeW, safeH)
     return InputImage.fromBitmap(cropped, rotationDegrees)
 }
+
+private data class Quad(val leftR: Int, val topR: Int, val wR: Int, val hR: Int)
+
 
 private fun ImageAnalysis.Builder.tryEnableRgba8888Output() {
     try {
