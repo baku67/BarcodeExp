@@ -169,7 +169,7 @@ fun ScanBarCodeScreen(
                     .setTargetResolution(Size(1280, 720))
 
                 // ✅ Tente RGBA_8888 -> ROI strict possible
-                analysisBuilder.tryEnableRgba8888Output()
+                analysisBuilder.tryEnableRgba8888Output() // Commenter pour tester fallback FullView
 
                 val analysis = analysisBuilder
                     .build()

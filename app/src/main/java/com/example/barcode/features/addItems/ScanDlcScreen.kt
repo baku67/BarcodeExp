@@ -212,7 +212,7 @@ fun ScanDlcScreen(
                     .setTargetResolution(Size(1280, 720))
 
                 // ✅ Tente RGBA_8888 (CameraX récent) => ROI strict + perf
-                analysisBuilder.tryEnableRgba8888Output()
+                analysisBuilder.tryEnableRgba8888Output() // Commenter pour tester fallback FullView
 
                 val analysis = analysisBuilder.build().also { ia ->
                     ia.setAnalyzer(analysisExecutor) { imageProxy ->
