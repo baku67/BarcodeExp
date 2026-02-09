@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,11 +50,16 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.barcode.sync.SyncUiState
 import androidx.compose.ui.util.lerp
+import com.example.barcode.sync.SyncUiState
 import kotlinx.coroutines.delay
 
-private val BarHeight =28.dp              // ✅ moins épais (avant 44.dp)
+// ✅ Plus discret / moins invasif
+private val BarHeight = 24.dp
+private val BarPaddingH = 12.dp
+private const val BarBgAlpha = 0.84f
+private val DividerThickness = 0.5.dp
+
 private const val RotateDurationMs = 1800  // ✅ rotation plus lente (avant 900)
 
 @Composable
@@ -62,18 +68,15 @@ fun SyncStatusBar(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // ✅ Barre grisâtre
-    val bg = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f) // ✅ surface + légère transparence
+    val bg = MaterialTheme.colorScheme.surface.copy(alpha = BarBgAlpha)
 
-    // ✅ Bordure bottom un peu plus claire
     val bottomBorder =
         if (MaterialTheme.colorScheme.surface.luminance() < 0.5f)
-            Color.White.copy(alpha = 0.10f)  // dark theme → bordure plus claire
+            Color.White.copy(alpha = 0.07f)
         else
-            Color.Black.copy(alpha = 0.08f)  // light theme → bordure légèrement marquée
+            Color.Black.copy(alpha = 0.06f)
 
-
-    Column(modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Surface(
             color = bg,
             shape = RoundedCornerShape(0.dp),
@@ -83,23 +86,19 @@ fun SyncStatusBar(
         ) {
             when (state) {
                 is SyncUiState.UpToDate -> UpToDateRow(state.lastSuccessAt)
-                SyncUiState.Syncing -> SyncingRow() // tu peux garder ton glow/rotate ici
+                SyncUiState.Syncing -> SyncingRow()
                 SyncUiState.Offline -> OfflineRow()
                 SyncUiState.AuthRequired -> AuthRequiredRow()
                 is SyncUiState.Error -> ErrorRow(onRetry = onRetry)
             }
         }
 
-        HorizontalDivider(thickness = 1.dp, color = bottomBorder)
+        HorizontalDivider(thickness = DividerThickness, color = bottomBorder)
     }
 }
 
-
-
-
 @Composable
 private fun UpToDateRow(lastSuccessAt: Long?) {
-    // tick pour mettre à jour "il y a X min"
     var tick by remember { mutableStateOf(0) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -156,7 +155,7 @@ private fun UpToDateRow(lastSuccessAt: Long?) {
         modifier = Modifier
             .fillMaxWidth()
             .height(BarHeight)
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = BarPaddingH),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
@@ -164,12 +163,12 @@ private fun UpToDateRow(lastSuccessAt: Long?) {
             imageVector = icon,
             contentDescription = null,
             tint = iconTint,
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(13.dp)
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(6.dp))
         Text(
             text = label,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.80f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
             style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -177,43 +176,32 @@ private fun UpToDateRow(lastSuccessAt: Long?) {
     }
 }
 
-
-
-
 @Composable
 private fun AuthRequiredRow() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(BarHeight)
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = BarPaddingH),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
         Text(
             text = "Session expirée — Reconnexion nécessaire",
-            color = MaterialTheme.colorScheme.error.copy(alpha = 0.90f),
-            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+            style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
 }
 
-
-
-
-
-
-
-
 @Composable
 private fun SyncingRow() {
-    val accent = MaterialTheme.colorScheme.primary
+    val accent = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
 
     val infinite = rememberInfiniteTransition(label = "sync-anim")
 
-    // ✅ rotation icône
     val rotation by infinite.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
@@ -224,23 +212,19 @@ private fun SyncingRow() {
         label = "rotation"
     )
 
-    // ✅ glow lent (0 → 1 → 0)
     val glowT by infinite.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1800, easing = LinearEasing), // ✅ plus rapide (avant 3200)
+            animation = tween(durationMillis = 1800, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "glow"
     )
 
-    // Opacité un peu plus perceptible (mais pas “disco”)
-    val textAlpha = lerp(0.60f, 1.00f, glowT) // ✅ plus de différence (avant ~0.75→1.00)
-
-    // Glow shadow (léger)
-    val shadowAlpha = lerp(0.10f, 0.40f, glowT) // ✅ plus visible
-    val blur = lerp(2f, 16f, glowT)             // ✅ glow plus perceptible
+    val textAlpha = lerp(0.55f, 0.88f, glowT) // ✅ plus doux / moins flashy
+    val shadowAlpha = lerp(0.04f, 0.16f, glowT) // ✅ glow plus subtil
+    val blur = lerp(1f, 8f, glowT)             // ✅ blur réduit
 
     val glowShadow = Shadow(
         color = accent.copy(alpha = shadowAlpha),
@@ -252,7 +236,7 @@ private fun SyncingRow() {
         modifier = Modifier
             .fillMaxWidth()
             .height(BarHeight)
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = BarPaddingH),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start
     ) {
@@ -261,17 +245,16 @@ private fun SyncingRow() {
             contentDescription = null,
             tint = accent,
             modifier = Modifier
-                .size(18.dp)
+                .size(16.dp)
                 .graphicsLayer { rotationZ = rotation }
         )
 
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
 
-        // ✅ Texte animé : alpha + glow
         Text(
             text = "Synchronisation en cours…",
             color = accent.copy(alpha = textAlpha),
-            style = MaterialTheme.typography.labelMedium.copy(
+            style = MaterialTheme.typography.labelSmall.copy(
                 shadow = Shadow(
                     color = accent.copy(alpha = shadowAlpha),
                     offset = Offset(0f, 0f),
@@ -284,28 +267,26 @@ private fun SyncingRow() {
     }
 }
 
-
-
 @Composable
 private fun OfflineRow() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(BarHeight)
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = BarPaddingH),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = Icons.Outlined.CloudOff,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-            modifier = Modifier.size(18.dp)
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+            modifier = Modifier.size(16.dp)
         )
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
         Text(
             text = "Hors connexion",
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+            style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -328,19 +309,27 @@ private fun ErrorRow(onRetry: () -> Unit) {
             imageVector = Icons.Outlined.ErrorOutline,
             contentDescription = null,
             tint = err,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(16.dp)
         )
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
         Text(
             text = "Erreur de synchronisation",
             color = err,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.weight(1f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        TextButton(onClick = onRetry) {
-            Text("Réessayer", color = MaterialTheme.colorScheme.primary)
+        TextButton(
+            onClick = onRetry,
+            modifier = Modifier.height(BarHeight),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+        ) {
+            Text(
+                text = "Réessayer",
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.90f),
+                style = MaterialTheme.typography.labelSmall
+            )
         }
     }
 }
