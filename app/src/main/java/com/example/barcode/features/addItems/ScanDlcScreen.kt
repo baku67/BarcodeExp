@@ -146,8 +146,14 @@ fun ScanDlcScreen(
     var boundPreview by remember { mutableStateOf<Preview?>(null) }
     var boundAnalysis by remember { mutableStateOf<ImageAnalysis?>(null) }
 
+
     val dateRegex = remember {
-        Regex("""\b(0[1-9]|[12][0-9]|3[01])\s*([\-\/\. ])\s*(0[1-9]|1[0-2])\s*\2\s*(202\d|203\d|204\d|2050|2[0-9]|3[0-9]|4[0-9]|50)\b""")
+        // ** old value:
+        // Regex("""\b(0[1-9]|[12][0-9]|3[01])\s*([\-\/\. ])\s*(0[1-9]|1[0-2])\s*\2\s*(202\d|203\d|204\d|2099|2[0-9]|3[0-9]|4[0-9]|99)\b""")
+        // ** Matching DD/MM sans année (+ ajout manuel année actuelle après)
+        Regex(
+            """\b(0[1-9]|[12][0-9]|3[01])\s*([\-\/\. ])\s*(0[1-9]|1[0-2])(?:\s*\2\s*((?:202\d|203\d|204\d|2050|2[0-9]|3[0-9]|4[0-9]|50))|(?!\s*\2\s*(?:202\d|203\d|204\d|2050|2[0-9]|3[0-9]|4[0-9]|50)))\b"""
+        )
     }
 
     val onRetry = {
@@ -162,11 +168,17 @@ fun ScanDlcScreen(
 
     val onValidate: () -> Unit = { detectedDateMs?.let { onValidated?.invoke(it) } }
 
-    fun normalizeYear(twoOrFour: String): Int? = when (twoOrFour.length) {
-        2 -> (2000 + twoOrFour.toInt()).takeIf { it in 2020..2050 }
-        4 -> twoOrFour.toInt().takeIf { it in 2020..2050 }
-        else -> null
+    fun normalizeYear(twoOrFour: String?): Int? {
+        // ✅ Si pas d’année => on assume l’année actuelle
+        if (twoOrFour.isNullOrBlank()) return LocalDate.now().year
+
+        return when (twoOrFour.length) {
+            2 -> (2000 + twoOrFour.toInt()).takeIf { it in 2020..2050 }
+            4 -> twoOrFour.toInt().takeIf { it in 2020..2050 }
+            else -> null
+        }
     }
+
 
     fun parseToLocalDate(day: String, month: String, year: Int): LocalDate? = try {
         LocalDate.of(year, month.toInt(), day.toInt())
@@ -293,15 +305,20 @@ fun ScanDlcScreen(
                                     .addOnSuccessListener(mainExecutor) { visionText ->
                                         dateRegex.find(visionText.text)?.let { m ->
                                             val (d, sep, mo, yRaw) = m.destructured
+
+                                            // ✅ yRaw peut être vide => année actuelle
                                             val y = normalizeYear(yRaw) ?: return@addOnSuccessListener
-                                            val normalized = "$d$sep$mo$sep$y"
-                                            if (normalized == lastDetectedDate) return@addOnSuccessListener
 
                                             val ld = parseToLocalDate(d, mo, y) ?: return@addOnSuccessListener
+                                            val normalizedUi = ld.format(dateFormatter)
+
+                                            // ✅ dédoublonnage cohérent (peu importe le séparateur détecté)
+                                            if (normalizedUi == lastDetectedDate) return@addOnSuccessListener
+
                                             detectedLocalDate = ld
-                                            detectedDate = ld.format(dateFormatter)
+                                            detectedDate = normalizedUi
                                             detectedDateMs = localDateToEpochMs(ld)
-                                            lastDetectedDate = detectedDate
+                                            lastDetectedDate = normalizedUi
                                             frozen = true
                                         }
                                     }
@@ -331,15 +348,20 @@ fun ScanDlcScreen(
                                 .addOnSuccessListener(mainExecutor) { visionText ->
                                     dateRegex.find(visionText.text)?.let { m ->
                                         val (d, sep, mo, yRaw) = m.destructured
+
+                                        // ✅ yRaw peut être vide => année actuelle
                                         val y = normalizeYear(yRaw) ?: return@addOnSuccessListener
-                                        val normalized = "$d$sep$mo$sep$y"
-                                        if (normalized == lastDetectedDate) return@addOnSuccessListener
 
                                         val ld = parseToLocalDate(d, mo, y) ?: return@addOnSuccessListener
+                                        val normalizedUi = ld.format(dateFormatter)
+
+                                        // ✅ dédoublonnage cohérent (peu importe le séparateur détecté)
+                                        if (normalizedUi == lastDetectedDate) return@addOnSuccessListener
+
                                         detectedLocalDate = ld
-                                        detectedDate = ld.format(dateFormatter)
+                                        detectedDate = normalizedUi
                                         detectedDateMs = localDateToEpochMs(ld)
-                                        lastDetectedDate = detectedDate
+                                        lastDetectedDate = normalizedUi
                                         frozen = true
                                     }
                                 }
@@ -676,7 +698,7 @@ private fun ExpiryRoiOverlay(
                         text = when {
                             hasResult -> "Date détectée ✅"
                             showAnalyzing -> "Analyse…"
-                            else -> "Place la date (DD/MM/YY) dans le cadre"
+                            else -> "Place la date imprimée dans le cadre"
                         },
                         color = Color.White.copy(alpha = 0.92f),
                         fontStyle = FontStyle.Italic,
@@ -776,96 +798,6 @@ private fun ManualExpiryDateBottomSheet(
         }
     }
 }
-
-
-private data class DateParseResult(
-    val date: LocalDate? = null,
-    val error: String? = null,
-    val warning: String? = null
-)
-
-private fun normalizeDateInput(raw: String): String {
-    val trimmed = raw.trim()
-        .replace(Regex("[\\-\\.\\s]"), "/")
-        .replace(Regex("[^0-9/]"), "")
-        .replace(Regex("/+"), "/")
-
-    if (trimmed.contains("/")) {
-        val parts = trimmed.split("/").filter { it.isNotEmpty() }
-        if (parts.isEmpty()) return ""
-
-        val dRaw = parts.getOrNull(0).orEmpty().take(2)
-        val mRaw = parts.getOrNull(1).orEmpty().take(2)
-        val yRaw = parts.getOrNull(2).orEmpty().take(4)
-
-        val d = if (parts.size >= 2) dRaw.padStart(2, '0') else dRaw
-        val m = if (parts.size >= 3) mRaw.padStart(2, '0') else mRaw
-        val y = yRaw
-
-        return buildString {
-            append(d)
-            if (parts.size >= 2) {
-                append("/")
-                append(mRaw) // on laisse l'utilisateur finir, padding complet sera fait au parse
-            }
-            if (parts.size >= 3) {
-                append("/")
-                append(y)
-            }
-        }.replace(Regex("/+"), "/")
-    }
-
-    val digits = trimmed.filter { it.isDigit() }.take(8)
-    val dd = digits.take(2)
-    val mm = digits.drop(2).take(2)
-    val yy = digits.drop(4)
-
-    return when {
-        digits.length <= 2 -> dd
-        digits.length <= 4 -> "$dd/$mm"
-        digits.length <= 6 -> "$dd/$mm/$yy"     // ddMMyy -> dd/MM/yy
-        else -> "$dd/$mm/$yy"                   // ddMMyyyy -> dd/MM/yyyy
-    }
-}
-
-private fun parseFlexibleDate(input: String): DateParseResult {
-    val parts = input.split("/").filter { it.isNotBlank() }
-    if (parts.size < 3) return DateParseResult() // pas d'erreur tant que c'est incomplet
-
-    val dStr = parts[0]
-    val mStr = parts[1]
-    val yStr = parts[2]
-
-    // Incomplet -> pas d'erreur (évite l'agressivité)
-    if (dStr.length !in 1..2 || mStr.length !in 1..2 || yStr.length !in 2..4) return DateParseResult()
-    if (yStr.length == 3 || yStr.length == 1) return DateParseResult()
-
-    val d = dStr.toIntOrNull() ?: return DateParseResult(error = "Jour invalide")
-    val m = mStr.toIntOrNull() ?: return DateParseResult(error = "Mois invalide")
-    val y = yStr.toIntOrNull() ?: return DateParseResult(error = "Année invalide")
-
-    val year = when (yStr.length) {
-        2 -> 2000 + y
-        4 -> y
-        else -> return DateParseResult()
-    }
-
-    // Option stricte (comme ton OCR) : garde une fenêtre réaliste
-    if (year !in 2020..2050) {
-        return DateParseResult(error = "Année hors plage (2020–2050). Mets 4 chiffres si besoin.")
-    }
-
-    val ld = try {
-        LocalDate.of(year, m, d)
-    } catch (_: Exception) {
-        return DateParseResult(error = "Date impossible (ex: 31/02)")
-    }
-
-    val warning = if (ld.isBefore(LocalDate.now())) "Déjà expiré ?" else null
-    return DateParseResult(date = ld, warning = warning)
-}
-
-
 
 
 // ---------- ROI helpers (RGBA strict) ----------
