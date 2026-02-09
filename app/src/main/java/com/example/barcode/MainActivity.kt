@@ -107,15 +107,29 @@ class MainActivity : ComponentActivity() {
                         LaunchedEffect(Unit) {
                             authVm.events.collect { event ->
                                 when (event) {
+
+                                    // ✅ Login/Register : sync OK + sortir du graph auth
                                     AuthViewModel.AuthEvent.GoHome -> {
-                                        SyncScheduler.enqueueSync(appContext) // ✅ Sync Items
+                                        SyncScheduler.enqueueSync(appContext)
                                         navController.navigate("tabs") {
+                                            popUpTo("auth") { inclusive = true }
                                             launchSingleTop = true
                                         }
                                     }
+
+                                    // ✅ Mode LOCAL : pas de sync + sortir du graph auth
+                                    AuthViewModel.AuthEvent.GoHomeLocal -> {
+                                        navController.navigate("tabs") {
+                                            popUpTo("auth") { inclusive = true }
+                                            launchSingleTop = true
+                                        }
+                                    }
+
+                                    else -> Unit
                                 }
                             }
                         }
+
 
                         // Définition des routes
                         NavHost(

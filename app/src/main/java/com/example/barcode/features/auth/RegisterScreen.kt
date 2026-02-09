@@ -31,13 +31,15 @@ fun RegisterScreen(
     var password by rememberSaveable { mutableStateOf("") }
     var confirmPassword by rememberSaveable { mutableStateOf("") }
 
-    // Auto-login après register
+// Auto-login après register
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                AuthViewModel.AuthEvent.GoHome -> {
+                AuthViewModel.AuthEvent.GoHome,
+                AuthViewModel.AuthEvent.GoHomeLocal -> {
                     navController.navigate("tabs") {
-                        popUpTo("auth/register") { inclusive = true }
+                        // ⚠️ mieux que popUpTo("auth/register") : ça vire tout le flow auth
+                        popUpTo("auth") { inclusive = true }
                         launchSingleTop = true
                     }
                 }

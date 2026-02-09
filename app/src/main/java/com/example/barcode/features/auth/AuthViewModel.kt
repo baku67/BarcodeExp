@@ -47,6 +47,7 @@ class AuthViewModel(
     // Pour auth auto après register
     sealed interface AuthEvent {
         data object GoHome : AuthEvent
+        data object GoHomeLocal : AuthEvent   // ✅ NEW
     }
     private val _events = Channel<AuthEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
@@ -182,10 +183,14 @@ class AuthViewModel(
 
     fun onUseLocalMode() {
         viewModelScope.launch {
-            session.setAppMode(AppMode.LOCAL)
-            session.clear() // au cas où un ancien token traîne
+            // ✅ mieux que clear(): ça nettoie aussi userId/email/isVerified + force AppMode.LOCAL
+            session.logout()
+
+            // ✅ déclenche la sortie du flow auth (LoginScreen va naviguer)
+            _events.trySend(AuthEvent.GoHomeLocal)
         }
     }
+
 
 
 

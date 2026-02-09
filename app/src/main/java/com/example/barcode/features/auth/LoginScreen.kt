@@ -45,20 +45,22 @@ fun LoginScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
+
                 AuthViewModel.AuthEvent.GoHome -> {
-                    // Si tu veux garder ton "savePassword" avant de quitter :
+                    // ✅ Conserver ton savePassword uniquement après un vrai login
                     if (!loginFromPasswordManager && activity != null) {
                         savePassword(activity, email.trim(), password)
                     }
-
-                    navController.navigate("tabs") {
-                        popUpTo("auth") { inclusive = true }
-                        launchSingleTop = true
-                    }
+                    // ✅ Navigation gérée dans MainActivity
                 }
+
+                AuthViewModel.AuthEvent.GoHomeLocal -> Unit
+
+                else -> Unit
             }
         }
     }
+
 
     // *** Focus tracking (pour credentials bottom sheet)
     val emailIS = remember { MutableInteractionSource() }
