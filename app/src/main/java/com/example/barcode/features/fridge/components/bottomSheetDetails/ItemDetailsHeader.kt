@@ -1,5 +1,6 @@
 package com.example.barcode.features.fridge.components.bottomSheetDetails
 
+import android.os.Build
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,18 +24,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.example.barcode.R
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.features.fridge.formatRelativeDaysCompact
@@ -110,6 +118,23 @@ fun ItemDetailsHeader(
 
     Box(Modifier.fillMaxWidth()) {
 
+
+        val context = LocalContext.current
+        val imageUrl = itemEntity.imageUrl?.takeIf { it.isNotBlank() }
+
+        val imageRequest = remember(imageUrl) {
+            ImageRequest.Builder(context)
+                .data(imageUrl)
+                .crossfade(true)
+                .build()
+        }
+
+        val blurBg = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Modifier.blur(26.dp)
+        } else {
+            Modifier // pas de blur réel < Android 12
+        }
+
         // ✅ Contenu header normal
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -126,16 +151,53 @@ fun ItemDetailsHeader(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (!itemEntity.imageUrl.isNullOrBlank()) {
+                if (imageUrl != null) {
+                    val bgPainter = rememberAsyncImagePainter(imageRequest)
+                    val fgPainter = rememberAsyncImagePainter(imageRequest)
+
+                    // 1) Fond flou (scale pour éviter les bords “sales” après blur + clip)
                     Image(
-                        painter = rememberAsyncImagePainter(itemEntity.imageUrl),
+                        painter = bgPainter,
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
+                        modifier = Modifier
+                            .matchParentSize()
+                            .graphicsLayer {
+                                scaleX = 1.55f
+                                scaleY = 1.55f
+                                alpha = 0.55f
+                            }
+                            .then(blurBg),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // 2) Overlay “frosted / premium” (donne du contraste même sans blur sur < 31)
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.35f)
+                                    )
+                                )
+                            )
+                    )
+
+                    // 3) Premier plan (image nette, un peu de padding pour laisser respirer le fond)
+                    Image(
+                        painter = fgPainter,
+                        contentDescription = "Image produit",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(6.dp),
+                        contentScale = ContentScale.Fit,
+                        alignment = Alignment.Center
                     )
                 } else {
                     Text("🧺", fontSize = 22.sp)
                 }
+
             }
 
             Spacer(Modifier.width(12.dp))

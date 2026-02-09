@@ -166,11 +166,20 @@ fun FridgePage(
     var viewerImages by remember { mutableStateOf<List<ViewerImage>?>(null) }
     var viewerStartIndex by remember { mutableStateOf(0) }
 
-    // Tri croissant : expirés + plus proches en haut, plus lointaines en bas
-    val sorted = remember(list) {
+    // ✅ Tri :
+    // 1) date d'expiration (au JOUR près)
+    // 2) date d'ajout (les derniers ajoutés en dernier)
+    val zoneId = remember { ZoneId.systemDefault() }
+
+    val sorted = remember(list, zoneId) {
         list.sortedWith(
-            compareBy<ItemEntity> { it.expiryDate ?: Long.MAX_VALUE }
-                .thenBy { (it.name ?: "").lowercase() }
+            compareBy<ItemEntity> {
+                it.expiryDate
+                    ?.let { ms -> Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate() } // ✅ ignore l'heure
+                    ?: LocalDate.MAX
+            }
+                .thenBy { it.addedAt ?: Long.MAX_VALUE } // ⚠️ remplace createdAt par TON champ "date d'ajout"
+                .thenBy { (it.name ?: "").lowercase() }  // (optionnel) pour un ordre stable
         )
     }
 
