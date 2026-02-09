@@ -50,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -158,6 +159,16 @@ fun EditItemScreen(
                     val isImageLoading = painter.state is AsyncImagePainter.State.Loading
 
                     if (imageUrl.isNotBlank()) {
+
+                        // 1) Fond : crop + blur
+                        Image(
+                            painter = painter,
+                            contentDescription = null,
+                            modifier = Modifier.matchParentSize().blur(22.dp),
+                            contentScale = ContentScale.Crop,
+                            alpha = 0.25f
+                        )
+                        // 2) Premier plan : image entière
                         Image(
                             painter = painter,
                             contentDescription = "Image produit",

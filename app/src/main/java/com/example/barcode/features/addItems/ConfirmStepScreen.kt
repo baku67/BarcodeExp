@@ -25,6 +25,7 @@ import java.time.temporal.ChronoUnit
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -99,6 +100,18 @@ fun ConfirmStepScreen(
 
                     if (!url.isNullOrBlank()) {
 
+                        // Flou artistique
+                        Image(
+                            painter = painter,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .matchParentSize()
+                                .blur(22.dp)
+                                .alpha(0.25f),
+                            contentScale = ContentScale.Crop,
+                            alignment = Alignment.Center
+                        )
+                        // ✅ Premier plan (image entière) + clic
                         Image(
                             painter = painter,
                             contentDescription = "Image produit",
