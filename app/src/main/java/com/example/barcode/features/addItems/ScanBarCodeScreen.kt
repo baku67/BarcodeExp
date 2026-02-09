@@ -252,36 +252,41 @@ fun ScanBarCodeScreen(
                     )
 
 
-                    Column(
+                    // ✅ Overlay plein écran sur le viewport caméra (Lottie centrée)
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
+                            .fillMaxSize()
                             .background(
-                                Color.White.copy(alpha = .4f),
-                                shape = RoundedCornerShape(16.dp)
+                                Color.Black.copy(alpha = 0.35f) // conteneur gris (ajuste l'alpha si besoin)
                             )
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
-                        // CircularProgressIndicator(color = Color.White) // Spinner
-                        LottieAnimation(
-                            composition = composition,
-                            progress = progress,
-                            modifier = Modifier.size(200.dp).alpha(0.55f)
-                        )
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(horizontal = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                progress = progress,
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .alpha(0.55f)
+                            )
 
-                        Text(
-                            text = "Survolez un code-barre pour ajouter un produit",
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontSize = 16.sp,
-                            fontStyle = FontStyle.Italic,
-                            color = Color.Black,
-                            modifier = Modifier.fillMaxWidth().alpha(0.6f)
-                        )
+                            Spacer(Modifier.height(10.dp))
+
+                            Text(
+                                text = "Survolez un code-barre pour ajouter un produit",
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = 16.sp,
+                                fontStyle = FontStyle.Italic,
+                                color = Color.White,
+                                modifier = Modifier.alpha(0.85f)
+                            )
+                        }
                     }
                 }
 
