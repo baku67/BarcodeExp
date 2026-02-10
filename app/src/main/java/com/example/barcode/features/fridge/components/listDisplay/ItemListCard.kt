@@ -34,8 +34,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CornerBasedShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -63,6 +69,14 @@ public fun ItemListCard(
         else -> 0
     }
 
+    val cardBorder = when {
+        selected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        expiry == null -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        expiry != null && isSoon(expiry) -> BorderStroke(1.dp, Color.Yellow)
+        expiry != null && isExpired(expiry) -> BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary)
+        else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    }
+
     Box {
         Card(
             modifier = Modifier.Companion.combinedClickable(
@@ -76,17 +90,7 @@ public fun ItemListCard(
                 else surface
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-            border = when {
-                selected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                expiry == null -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                expiry != null && isSoon(expiry) -> BorderStroke(1.dp, Color.Companion.Yellow)
-                expiry != null && isExpired(expiry) -> BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.tertiary
-                )
-
-                else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            }
+            border = null
         ) {
             Row(
                 Modifier.Companion
@@ -144,22 +148,36 @@ public fun ItemListCard(
             }
         }
 
-        if (effectiveNotesCount > 0) {
-            // ✅ Carré collé au coin, et le coin haut-droit est arrondi par le clip de la Card
+            if (effectiveNotesCount > 0) {
+                    val density = LocalDensity.current
+                    val badgeSize = 18.dp
+                    val badgeSizePx = with(density) { badgeSize.toPx() }
+
+                    // radius topEnd de la Card, mais évalué à l’échelle du badge (gère aussi les %)
+                    val topEndRadiusPx = (cardShape as? CornerBasedShape)
+                        ?.topEnd
+                                ?.toPx(Size(badgeSizePx, badgeSizePx), density)
+                        ?: with(density) { 10.dp.toPx() }
+
+                    val topEndRadiusDp = with(density) { topEndRadiusPx.toDp() }
+
+                    NotesCornerCountBadge(
+                            count = effectiveNotesCount,
+                            badgeSize = badgeSize,
+                            topEndRadius = topEndRadiusDp,     // ✅ coin haut-droit “comme la Card”
+                            bottomStartRadius = 6.dp,          // ✅ ton radius bas-gauche
+                            modifier = Modifier.align(Alignment.TopEnd)
+                                )
+                }
+
+            // ✅ border de la Card DESSINÉ AU-DESSUS de tout (badge inclus) => plus de triangle gris
             Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(cardShape)
-            ) {
-                NotesCornerCountBadge(
-                    count = effectiveNotesCount,
-                    modifier = Modifier.align(Alignment.TopEnd)
-                )
-            }
-        }
+                    modifier = Modifier
+                                .matchParentSize()
+                                .border(cardBorder, cardShape)
+            )
     }
 }
-
 
 
 
@@ -167,34 +185,37 @@ public fun ItemListCard(
 @Composable
 private fun NotesCornerCountBadge(
     count: Int,
+    badgeSize: Dp,
+    topEndRadius: Dp,
+    bottomStartRadius: Dp,
     modifier: Modifier = Modifier,
 ) {
     val baseColor = Color(0xFF1976D2)
     val foldColor = Color.White.copy(alpha = 0.18f)
     val lineColor = Color.White.copy(alpha = 0.30f)
 
-    val display = when {
-            count > 9 -> "9+"
-            else -> count.toString()
-        }
+    val display = if (count > 9) "9+" else count.toString()
+
+    val badgeShape = RoundedCornerShape(
+        topStart = 0.dp,
+        topEnd = topEndRadius,          // ✅ épouse la Card
+        bottomEnd = 0.dp,
+        bottomStart = bottomStartRadius // ✅ demandé
+    )
 
     Box(
-            modifier = modifier.size(18.dp),
-            contentAlignment = Alignment.Center
+        modifier = modifier
+            .size(badgeSize)
+            .clip(badgeShape)
+            .background(baseColor)
+            .border(0.7.dp, lineColor, badgeShape),
+        contentAlignment = Alignment.Center
     ) {
-        // carré (le radius topEnd vient du clip(cardShape) au-dessus)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(baseColor)
-                .border(0.7.dp, lineColor)
-        )
-
-        // petit "pli" interne (effet dog-ear sans changer la forme carrée)
         Canvas(Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
+            val w = this.size.width
+            val h = this.size.height
 
+            // pli interne (sans changer la forme carrée)
             val foldPath = Path().apply {
                 moveTo(w, 0f)
                 lineTo(w, h * 0.60f)
