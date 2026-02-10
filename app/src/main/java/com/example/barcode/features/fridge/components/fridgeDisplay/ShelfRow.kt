@@ -47,6 +47,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Canvas
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -232,9 +233,17 @@ fun ShelfRow(
 
                                 // ✅ NEW
                                 topRightOverlayOnImage = if (noteCount > 0) {
-                                    { NotesDogEarIndicator(showPenIcon = true) }
-                                    // { NotesDogEarIndicator(showPenIcon = false) } // si tu veux sans icône
+                                    {
+                                        NotesDogEarIndicator(
+                                            modifier = Modifier
+                                                // ✅ fait dépasser un peu à l'extérieur (droite + haut)
+                                                .offset(x = 2.dp, y = -2.dp)
+                                                .zIndex(5f),
+                                            showPenIcon = true
+                                        )
+                                    }
                                 } else null
+
                             )
 
                         }
@@ -331,11 +340,11 @@ private fun NotesDogEarIndicator(
 
         if (showPenIcon) {
             Icon(
-                imageVector = Icons.Outlined.Edit,
+                imageVector = Icons.Outlined.StickyNote2,
                 contentDescription = "Notes",
                 tint = Color(0xFF1F1F1F).copy(alpha = 0.78f),
                 modifier = Modifier
-                    .offset(x = 1.dp, y = (-1).dp)
+                    .offset(x = 3.dp, y = (-3).dp)
                     .size(10.dp)
             )
         }
