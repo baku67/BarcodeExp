@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material3.Button
@@ -60,7 +61,7 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.common.ui.theme.ItemNote
 import com.example.barcode.data.local.entities.ItemNoteEntity
 
-private const val NOTE_MAX_LEN = 150
+private const val NOTE_MAX_LEN = 100
 private val BadgeBlue = Color(0xFF1976D2)
 
 @Composable
@@ -111,7 +112,7 @@ fun NotesCollapsibleSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(enabled = notes.isNotEmpty()) { expanded = !expanded }
+                .clickable { expanded = !expanded }
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -147,11 +148,20 @@ fun NotesCollapsibleSection(
             Spacer(Modifier.weight(1f))
 
             // ✅ chevron uniquement si > 0 + coloré
-            if (notes.isNotEmpty()) {
+            Spacer(Modifier.weight(1f))
+
+            if (notes.isEmpty()) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Ajouter une note",
+                    tint = labelTint, // ✅ pas de couleur accent
+                    modifier = Modifier.size(20.dp)
+                )
+            } else {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = accentTint,
+                    tint = accentTint, // ✅ coloré quand > 0
                     modifier = Modifier
                         .size(20.dp)
                         .rotate(chevronRotation)
@@ -179,9 +189,9 @@ fun NotesCollapsibleSection(
 
                 if (notes.isEmpty()) {
                     Text(
-                        text = "Astuce : “ouvert hier”, “à finir rapidement”, “ne pas congeler”…",
+                        text = "Exemple : “ouvert hier”, “à finir rapidement”...",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
                     )
                 } else {
                     NotesWrapLeft(
