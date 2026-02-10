@@ -576,6 +576,7 @@ fun FridgePage(
                                 ) {
                                     items(sorted, key = { it.id }) { it ->
                                         val isSelected = selectionMode && selectedIds.contains(it.id)
+                                        val noteCount = notesCounts[it.id] ?: 0
 
                                         val rowAlpha by animateFloatAsState(
                                             targetValue = if (selectionMode && !isSelected) 0.45f else 1f,
@@ -589,6 +590,7 @@ fun FridgePage(
                                                 brand = it.brand,
                                                 expiry = it.expiryDate,
                                                 imageUrl = it.imageUrl,
+                                                notesCount = noteCount,
                                                 selected = isSelected,
                                                 selectionMode = selectionMode,
                                                 onClick = { if (selectionMode) toggleSelect(it.id) else sheetItemEntity = it },
