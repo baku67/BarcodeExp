@@ -11,23 +11,51 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.barcode.data.local.entities.ItemNoteEntity
+
+private const val NOTE_MAX_LEN = 100 // Pareil que sur le serveur, pas de raison d'avoir des notes plus longues (et ça évite les abus)
+private val BadgeBlue = Color(0xFF1976D2)
 
 @Composable
 fun NotesCollapsibleSection(
@@ -39,9 +67,15 @@ fun NotesCollapsibleSection(
     var expanded by rememberSaveable { mutableStateOf(false) }
     var draft by rememberSaveable { mutableStateOf("") }
 
-    val shape = RoundedCornerShape(16.dp)
+    val submit: () -> Unit = {
+        val text = draft.trim().take(NOTE_MAX_LEN)
+        if (text.isNotBlank()) {
+            onAddNote(text)
+            draft = ""
+        }
+    }
 
-    val BadgeBlue = Color(0xFF1976D2)
+    val containerShape = RoundedCornerShape(16.dp)
 
     val headerTint by animateColorAsState(
         targetValue = if (notes.isNotEmpty()) BadgeBlue
@@ -51,12 +85,12 @@ fun NotesCollapsibleSection(
 
     Column(
         modifier = modifier
-            .clip(shape)
+            .clip(containerShape)
             .background(MaterialTheme.colorScheme.surface)
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f),
-                shape = shape
+                shape = containerShape
             )
             .animateContentSize()
     ) {
@@ -94,30 +128,12 @@ fun NotesCollapsibleSection(
                     .padding(bottom = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = draft,
-                        onValueChange = { if (it.length <= 800) draft = it },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        placeholder = { Text("Ajouter une note…") }
-                    )
-                    Button(
-                        onClick = {
-                            val text = draft.trim()
-                            if (text.isNotBlank()) {
-                                onAddNote(text)
-                                draft = ""
-                            }
-                        }
-                    ) {
-                        Text("Ajouter")
-                    }
-                }
+                // ✅ Input discret + bouton à droite
+                AddNoteRow(
+                    draft = draft,
+                    onDraftChange = { draft = it.take(NOTE_MAX_LEN) },
+                    onSubmit = submit
+                )
 
                 if (notes.isEmpty()) {
                     Text(
@@ -126,7 +142,7 @@ fun NotesCollapsibleSection(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
                     )
                 } else {
-                    NotesGrid(notes = notes, onDeleteNote = onDeleteNote)
+                    NotesFlow(notes = notes, onDeleteNote = onDeleteNote)
                 }
             }
         }
@@ -134,32 +150,91 @@ fun NotesCollapsibleSection(
 }
 
 @Composable
-private fun NotesGrid(
+private fun AddNoteRow(
+    draft: String,
+    onDraftChange: (String) -> Unit,
+    onSubmit: () -> Unit
+) {
+    var focused by remember { mutableStateOf(false) }
+
+    val inputShape = RoundedCornerShape(12.dp)
+    val borderColor =
+        if (focused) BadgeBlue.copy(alpha = 0.55f)
+        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 44.dp)
+                .clip(inputShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f))
+                .border(1.dp, borderColor, inputShape)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            if (draft.isBlank()) {
+                Text(
+                    text = "Ecrire quelque chose...",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.70f)
+                )
+            }
+
+            BasicTextField(
+                value = draft,
+                onValueChange = onDraftChange,
+                singleLine = true,
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { focused = it.isFocused }
+            )
+        }
+
+        Button(
+            onClick = onSubmit,
+            enabled = draft.isNotBlank()
+        ) {
+            Text("Ajouter")
+        }
+    }
+
+    // ✅ Compteur discret (utile, et évite les “pourquoi ça coupe ?”)
+    Text(
+        text = "${draft.length}/$NOTE_MAX_LEN",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+        modifier = Modifier.padding(start = 2.dp)
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun NotesFlow(
     notes: List<ItemNoteEntity>,
     onDeleteNote: (String) -> Unit,
-    columns: Int = 2,
     modifier: Modifier = Modifier
 ) {
-    val rows = remember(notes, columns) { notes.chunked(columns.coerceAtLeast(1)) }
-
-    Column(
+    FlowRow(
         modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        rows.forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                row.forEach { note ->
-                    NotePostIt(
-                        note = note,
-                        onDelete = { onDeleteNote(note.id) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                if (row.size < columns) Spacer(Modifier.weight(1f))
-            }
+        notes.forEach { note ->
+            NotePostIt(
+                note = note,
+                onDelete = { onDeleteNote(note.id) },
+                modifier = Modifier.widthIn(max = 280.dp)
+            )
         }
     }
 }
@@ -175,7 +250,9 @@ private fun NotePostIt(
 
     val bg = Color(0xFFFFF4B0).copy(alpha = 0.96f)
     val border = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-    val shape = RoundedCornerShape(14.dp)
+
+    // ✅ moins arrondi
+    val shape = RoundedCornerShape(8.dp)
 
     Box(
         modifier = modifier
@@ -183,18 +260,19 @@ private fun NotePostIt(
             .clip(shape)
             .background(bg)
             .border(1.dp, border, shape)
-            .padding(10.dp)
+            .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
         IconButton(
             onClick = onDelete,
             modifier = Modifier
-                .size(28.dp)
+                .size(22.dp)
                 .align(Alignment.TopEnd)
         ) {
             Icon(
                 imageVector = Icons.Filled.Close,
                 contentDescription = "Supprimer",
-                tint = Color(0xFF1F1F1F).copy(alpha = 0.65f)
+                tint = Color(0xFF1F1F1F).copy(alpha = 0.65f),
+                modifier = Modifier.size(16.dp)
             )
         }
 
@@ -203,9 +281,7 @@ private fun NotePostIt(
             style = MaterialTheme.typography.bodyMedium,
             color = Color(0xFF1F1F1F),
             fontWeight = FontWeight.Medium,
-            modifier = Modifier
-                .padding(end = 28.dp)
-                .align(Alignment.CenterStart)
+            modifier = Modifier.padding(end = 24.dp) // réserve le bouton X
         )
     }
 }
