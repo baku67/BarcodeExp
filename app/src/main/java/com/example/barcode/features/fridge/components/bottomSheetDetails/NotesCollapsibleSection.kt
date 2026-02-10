@@ -1,6 +1,7 @@
 package com.example.barcode.features.fridge.components.bottomSheetDetails
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -40,6 +41,14 @@ fun NotesCollapsibleSection(
 
     val shape = RoundedCornerShape(16.dp)
 
+    val BadgeBlue = Color(0xFF1976D2)
+
+    val headerTint by animateColorAsState(
+        targetValue = if (notes.isNotEmpty()) BadgeBlue
+        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+        label = "notesHeaderTint"
+    )
+
     Column(
         modifier = modifier
             .clip(shape)
@@ -60,9 +69,8 @@ fun NotesCollapsibleSection(
         ) {
             Text(
                 text = "Notes (${notes.size})",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                fontWeight = FontWeight.SemiBold,
+                color = headerTint
             )
 
             Spacer(Modifier.weight(1f))
