@@ -227,15 +227,15 @@ fun ShelfRow(
                                 showImageBorder = isVisuallySelected,
                                 imageBorderColor = selectionBorderColor,
                                 imageBorderWidth = 2.dp,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
+
+                                // ✅ NEW
+                                topRightOverlayOnImage = if (noteCount > 0) {
+                                    { NotesDogEarIndicator(showPenIcon = true) }
+                                    // { NotesDogEarIndicator(showPenIcon = false) } // si tu veux sans icône
+                                } else null
                             )
 
-                            if (noteCount > 0) {
-                                NotesDogEarIndicator(
-                                    modifier = Modifier.align(Alignment.TopEnd),
-                                    // showPenIcon = false // ✅ si tu veux SANS icône
-                                )
-                            }
                         }
                     }
                 }

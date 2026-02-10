@@ -51,7 +51,9 @@ fun ItemThumbnail(
     dimAlpha: Float = 0f, // ✅ NEW : assombrissement uniquement sur l'image
     showImageBorder: Boolean = false,                 // ✅ NEW
     imageBorderColor: Color = MaterialTheme.colorScheme.primary, // ✅ NEW
-    imageBorderWidth: Dp = 2.dp                       // ✅ NEW
+    imageBorderWidth: Dp = 2.dp,                       // ✅ NEW
+    topRightOverlayOnImage: (@Composable () -> Unit)? = null,
+    topRightOverlaySize: Dp = 16.dp,
 ) {
     val shape = RoundedCornerShape(3.dp)
 
@@ -222,6 +224,24 @@ fun ItemThumbnail(
                 }
 
 
+                // ✅ overlay calé sur le coin HAUT-DROIT de l'image rendue (Fit)
+                if (topRightOverlayOnImage != null) {
+                        val density = LocalDensity.current.density
+                        val inset = 1.dp
+
+                        Box(
+                                modifier = Modifier.Companion
+                                            .align(Alignment.Companion.TopStart)
+                                            .offset(
+                                                x = ((dx + dw) / density).dp - topRightOverlaySize - inset,
+                                        y = (dy / density).dp + inset
+                                            )
+                        ) {
+                                topRightOverlayOnImage()
+                            }
+                    }
+
+
             }
 
 
@@ -229,4 +249,27 @@ fun ItemThumbnail(
             Text("🧴", fontSize = 20.sp)
         }
     }
+}
+
+
+
+private data class FittedRectPx(
+    val left: Float,
+    val top: Float,
+    val width: Float,
+    val height: Float
+)
+
+private fun fittedRectForFit(
+    boxW: Float,
+    boxH: Float,
+    imgW: Float,
+    imgH: Float
+): FittedRectPx {
+    val scale = minOf(boxW / imgW, boxH / imgH)
+    val w = imgW * scale
+    val h = imgH * scale
+    val left = (boxW - w) / 2f
+    val top = (boxH - h) / 2f
+    return FittedRectPx(left, top, w, h)
 }
