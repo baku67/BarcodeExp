@@ -9,12 +9,15 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.dao.ItemDao
+import com.example.barcode.data.local.dao.ItemNoteDao
+import com.example.barcode.data.local.entities.ItemNoteEntity
 
 @TypeConverters(RoomConverters::class)
-@Database(entities = [ItemEntity::class], version = 7, exportSchema = true)
+@Database(entities = [ItemEntity::class, ItemNoteEntity::class], version = 8, exportSchema = true)
 abstract class AppDb : RoomDatabase() {
 
     abstract fun itemDao(): ItemDao
+    abstract fun itemNoteDao(): ItemNoteDao
 
     companion object {
 
@@ -68,7 +71,7 @@ abstract class AppDb : RoomDatabase() {
         }
 
 
-        // Migration 6 -> 7 : remplacement syncStatus par pendingOperation + syncState
+        // remplacement syncStatus par pendingOperation + syncState
         // + ajout lastSyncError / failedAt
         private val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -142,6 +145,37 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
+
+        // Ajout ItemNote
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+            CREATE TABLE IF NOT EXISTS item_notes (
+                id TEXT NOT NULL PRIMARY KEY,
+                itemId TEXT NOT NULL,
+                body TEXT NOT NULL,
+                createdAt INTEGER NOT NULL DEFAULT 0,
+                deletedAt INTEGER,
+                pendingOperation TEXT NOT NULL DEFAULT 'NONE',
+                syncState TEXT NOT NULL DEFAULT 'OK',
+                lastSyncError TEXT,
+                failedAt INTEGER,
+                updatedAt INTEGER NOT NULL DEFAULT 0,
+                serverUpdatedAt INTEGER
+            )
+            """.trimIndent()
+                )
+
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_item_notes_itemId ON item_notes(itemId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_item_notes_deletedAt ON item_notes(deletedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_item_notes_pendingOperation ON item_notes(pendingOperation)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_item_notes_syncState ON item_notes(syncState)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_item_notes_serverUpdatedAt ON item_notes(serverUpdatedAt)")
+            }
+        }
+
+
         private fun columnExists(db: SupportSQLiteDatabase, table: String, column: String): Boolean {
             db.query("PRAGMA table_info($table)").use { cursor ->
                 val nameIndex = cursor.getColumnIndex("name")
@@ -172,6 +206,7 @@ abstract class AppDb : RoomDatabase() {
                     .addMigrations(MIGRATION_4_5)
                     .addMigrations(MIGRATION_5_6)
                     .addMigrations(MIGRATION_6_7)
+                    .addMigrations(MIGRATION_7_8)
 
                     // Toujours à la fin
                     .build().also { INSTANCE = it }

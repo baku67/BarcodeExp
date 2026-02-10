@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.barcode.data.local.entities.ItemEntity
+import com.example.barcode.data.local.entities.ItemNoteEntity
 import com.example.barcode.features.fridge.isExpired
 import com.example.barcode.features.fridge.isSoon
 
@@ -46,7 +47,9 @@ import com.example.barcode.features.fridge.isSoon
 @Composable
 public fun ItemDetailsBottomSheet(
     itemEntity: ItemEntity,
-    notes: List<String> = emptyList(),
+    notes: List<ItemNoteEntity> = emptyList(),
+    onAddNote: (String) -> Unit = {},
+    onDeleteNote: (String) -> Unit = {},
     onClose: () -> Unit,
     onOpenViewer: (List<ViewerImage>, Int) -> Unit,
     onEdit: (ItemEntity) -> Unit = {},
@@ -124,6 +127,8 @@ public fun ItemDetailsBottomSheet(
 
                 NotesCollapsibleSection(
                     notes = notes,
+                    onAddNote = onAddNote,
+                    onDeleteNote = onDeleteNote,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

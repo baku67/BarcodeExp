@@ -7,10 +7,13 @@ import com.example.barcode.core.network.ApiClient
 import com.example.barcode.core.SessionManager
 import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
+import com.example.barcode.data.local.entities.ItemNoteEntity
 import com.example.barcode.data.local.entities.PendingOperation
 import com.example.barcode.data.local.entities.SyncState
+import com.example.barcode.features.addItems.data.remote.api.ItemNotesApi
 import com.example.barcode.features.addItems.data.remote.api.ItemsApi
 import com.example.barcode.features.addItems.data.remote.dto.ItemCreateDto
+import com.example.barcode.features.addItems.data.remote.dto.ItemNoteCreateDto
 import com.example.barcode.util.sanitizeNutriScore
 import kotlinx.coroutines.flow.first
 import java.time.Instant
@@ -32,8 +35,14 @@ class SyncWorker(
         val token = session.token.first().orEmpty()
         if (token.isBlank()) return Result.success()
 
-        val dao = AppDb.get(applicationContext).itemDao()
-        val api = ApiClient.createApi(ItemsApi::class.java)
+        val db = AppDb.get(applicationContext)
+        val itemDao = db.itemDao()
+        val noteDao = db.itemNoteDao()
+
+        val itemsApi = ApiClient.createApi(ItemsApi::class.java)
+        val notesApi = ApiClient.createApi(ItemNotesApi::class.java)
+
+
         val prefs = SyncPreferences(applicationContext)
 
         // ✅ watermark serveur stocké en local (epoch ms)
@@ -42,27 +51,72 @@ class SyncWorker(
 
         var newWatermarkMs = sinceMs
 
-        // 1) PUSH DELETE
-        val pendingDeletes = dao.getPending(PendingOperation.DELETE)
+
+        // 0) PUSH ItemNtes DELETE
+        val pendingNoteDeletes = noteDao.getPending(PendingOperation.DELETE)
+        pendingNoteDeletes.forEach { note ->
+            try {
+                val res = notesApi.deleteNote(
+                    authorization = "Bearer $token",
+                    clientId = note.id
+                )
+
+                if (res.isSuccessful || res.code() == 404) {
+                    noteDao.hardDelete(note.id)
+                } else {
+                    noteDao.markFailed(note.id, error = "note delete failed code=${res.code()}")
+                }
+            } catch (e: Exception) {
+                noteDao.markFailed(note.id, error = "note delete exception=${e.message}")
+            }
+        }
+
+        // 0bis) PUSH itemNotes CREATE
+        val pendingNoteCreates = noteDao.getPending(PendingOperation.CREATE)
+        pendingNoteCreates.forEach { note ->
+            try {
+                val res = notesApi.createNote(
+                    authorization = "Bearer $token",
+                    itemClientId = note.itemId,
+                    body = ItemNoteCreateDto(
+                        clientId = note.id,
+                        body = note.body
+                    )
+                )
+
+                if (res.isSuccessful) {
+                    noteDao.clearPending(note.id)
+                } else {
+                    noteDao.markFailed(note.id, error = "note create failed code=${res.code()}")
+                }
+            } catch (e: Exception) {
+                noteDao.markFailed(note.id, error = "note create exception=${e.message}")
+            }
+        }
+
+
+
+        // 1) PUSH items DELETE
+        val pendingDeletes = itemDao.getPending(PendingOperation.DELETE)
         pendingDeletes.forEach { item ->
             try {
-                val res = api.deleteItemByClientId(
+                val res = itemsApi.deleteItemByClientId(
                     authorization = "Bearer $token",
                     clientId = item.id
                 )
 
                 if (res.isSuccessful || res.code() == 404) {
-                    dao.hardDelete(item.id)
+                    itemDao.hardDelete(item.id)
                 } else {
-                    dao.markFailed(item.id, error = "delete failed code=${res.code()}")
+                    itemDao.markFailed(item.id, error = "delete failed code=${res.code()}")
                 }
             } catch (e: Exception) {
-                dao.markFailed(item.id, error = "delete exception=${e.message}")
+                itemDao.markFailed(item.id, error = "delete exception=${e.message}")
             }
         }
 
-        // 2) PUSH CREATE
-        val pendingCreates = dao.getPending(PendingOperation.CREATE)
+        // 2) PUSH items CREATE
+        val pendingCreates = itemDao.getPending(PendingOperation.CREATE)
         pendingCreates.forEach { item ->
             try {
                 val dto = ItemCreateDto(
@@ -78,21 +132,21 @@ class SyncWorker(
                     addMode = item.addMode,
                 )
 
-                val res = api.createItem(
+                val res = itemsApi.createItem(
                     authorization = "Bearer $token",
                     body = dto
                 )
 
-                if (res.isSuccessful) dao.clearPending(item.id)
-                else dao.markFailed(item.id, error = "create failed code=${res.code()}")
+                if (res.isSuccessful) itemDao.clearPending(item.id)
+                else itemDao.markFailed(item.id, error = "create failed code=${res.code()}")
 
             } catch (e: Exception) {
-                dao.markFailed(item.id, error = "create exception=${e.message}")
+                itemDao.markFailed(item.id, error = "create exception=${e.message}")
             }
         }
 
-        // 3) PUSH UPDATE (upsert)
-        val pendingUpdates = dao.getPending(PendingOperation.UPDATE)
+        // 3) PUSH items UPDATE (upsert)
+        val pendingUpdates = itemDao.getPending(PendingOperation.UPDATE)
         pendingUpdates.forEach { item ->
             try {
                 val dto = ItemCreateDto(
@@ -108,22 +162,22 @@ class SyncWorker(
                     addMode = item.addMode,
                 )
 
-                val res = api.createItem(
+                val res = itemsApi.createItem(
                     authorization = "Bearer $token",
                     body = dto
                 )
 
-                if (res.isSuccessful) dao.clearPending(item.id)
-                else dao.markFailed(item.id, error = "update(upsert) failed code=${res.code()}")
+                if (res.isSuccessful) itemDao.clearPending(item.id)
+                else itemDao.markFailed(item.id, error = "update(upsert) failed code=${res.code()}")
 
             } catch (e: Exception) {
-                dao.markFailed(item.id, error = "update(upsert) exception=${e.message}")
+                itemDao.markFailed(item.id, error = "update(upsert) exception=${e.message}")
             }
         }
 
-        // 4) PULL UPSERTS (items actifs)
+        // 4) PULL items UPSERTS (items actifs)
         try {
-            val pullUpserts = api.getItems(
+            val pullUpserts = itemsApi.getItems(
                 authorization = "Bearer $token",
                 updatedSince = sinceIso
             )
@@ -144,7 +198,7 @@ class SyncWorker(
             remoteItems.forEach { dto ->
                 val clientId = dto.clientId
 
-                val local = dao.getById(clientId)
+                val local = itemDao.getById(clientId)
                 if (local != null && (local.pendingOperation != PendingOperation.NONE || local.syncState == SyncState.FAILED)) {
                     return@forEach
                 }
@@ -178,7 +232,7 @@ class SyncWorker(
                     deletedAt = serverDeletedAt
                 )
 
-                dao.upsert(entity)
+                itemDao.upsert(entity)
             }
 
         } catch (e: Exception) {
@@ -186,9 +240,9 @@ class SyncWorker(
             return Result.success()
         }
 
-        // 5) PULL DELETES (tombstones)
+        // 5) PULL items DELETES (tombstones)
         try {
-            val pullDeletes = api.getDeletedItems(
+            val pullDeletes = itemsApi.getDeletedItems(
                 authorization = "Bearer $token",
                 since = sinceIso
             )
@@ -211,19 +265,84 @@ class SyncWorker(
                 newWatermarkMs = max(newWatermarkMs, deletedAtMs)
 
                 // ✅ ne pas écraser les items locaux qui ont un pending/FAILED
-                val local = dao.getById(clientId)
+                val local = itemDao.getById(clientId)
                 if (local != null && (local.pendingOperation != PendingOperation.NONE || local.syncState == SyncState.FAILED)) {
                     return@forEach
                 }
 
                 // ✅ choix simple: purge locale (comme après un delete push)
-                dao.hardDelete(clientId)
+                itemDao.hardDelete(clientId)
             }
 
         } catch (e: Exception) {
             android.util.Log.e("SyncWorker", "pull deletes exception=${e.message}")
             return Result.success()
         }
+
+        // 6) PULL ItemNotes DELTA (créées/supprimées)
+        try {
+            val pullNotes = notesApi.getNotesDelta(
+                authorization = "Bearer $token",
+                since = sinceIso
+            )
+
+            if (pullNotes.code() == 401) {
+                prefs.markAuthRequired()
+                return Result.success()
+            }
+
+            if (!pullNotes.isSuccessful) {
+                val err = pullNotes.errorBody()?.string()
+                android.util.Log.e("SyncWorker", "pull notes failed code=${pullNotes.code()} body=$err")
+                return Result.success()
+            }
+
+            val body = pullNotes.body()
+            if (body != null) {
+                newWatermarkMs = max(newWatermarkMs, parseAtomToEpochMs(body.serverTime))
+
+                body.notes.forEach { dto ->
+                    val clientId = dto.clientId
+
+                    val local = noteDao.getById(clientId)
+                    if (local != null && (local.pendingOperation != PendingOperation.NONE || local.syncState == SyncState.FAILED)) {
+                        return@forEach
+                    }
+
+                    val serverUpdatedAt = parseAtomToEpochMs(dto.updatedAt)
+                    newWatermarkMs = max(newWatermarkMs, serverUpdatedAt)
+
+                    val serverDeletedAt = dto.deletedAt?.let { parseAtomToEpochMs(it) }
+                    if (serverDeletedAt != null) {
+                        newWatermarkMs = max(newWatermarkMs, serverDeletedAt)
+                        noteDao.hardDelete(clientId)
+                        return@forEach
+                    }
+
+                    val createdAt = dto.createdAt?.let { parseAtomToEpochMs(it) } ?: serverUpdatedAt
+
+                    noteDao.upsert(
+                        ItemNoteEntity(
+                            id = clientId,
+                            itemId = dto.itemClientId,
+                            body = dto.body,
+                            createdAt = createdAt,
+                            deletedAt = null,
+                            pendingOperation = PendingOperation.NONE,
+                            syncState = SyncState.OK,
+                            lastSyncError = null,
+                            failedAt = null,
+                            localUpdatedAt = System.currentTimeMillis(),
+                            serverUpdatedAt = serverUpdatedAt
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SyncWorker", "pull notes exception=${e.message}")
+            return Result.success()
+        }
+
 
         // ✅ Sync complète OK => on stocke un watermark serveur (pas now())
         prefs.markSyncSuccessAt(newWatermarkMs)

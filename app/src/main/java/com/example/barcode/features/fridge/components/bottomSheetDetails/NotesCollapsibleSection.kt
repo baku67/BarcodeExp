@@ -10,27 +10,15 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,13 +26,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.barcode.data.local.entities.ItemNoteEntity
 
 @Composable
 fun NotesCollapsibleSection(
-    notes: List<String>,
+    notes: List<ItemNoteEntity>,
+    onAddNote: (String) -> Unit,
+    onDeleteNote: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
+    var draft by rememberSaveable { mutableStateOf("") }
+
     val shape = RoundedCornerShape(16.dp)
 
     Column(
@@ -72,14 +65,6 @@ fun NotesCollapsibleSection(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(Modifier.width(8.dp))
-
-            Text(
-                text = if (notes.isEmpty()) "Aucune" else "Voir",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
-            )
-
             Spacer(Modifier.weight(1f))
 
             Icon(
@@ -101,14 +86,39 @@ fun NotesCollapsibleSection(
                     .padding(bottom = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = draft,
+                        onValueChange = { if (it.length <= 800) draft = it },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        placeholder = { Text("Ajouter une note…") }
+                    )
+                    Button(
+                        onClick = {
+                            val text = draft.trim()
+                            if (text.isNotBlank()) {
+                                onAddNote(text)
+                                draft = ""
+                            }
+                        }
+                    ) {
+                        Text("Ajouter")
+                    }
+                }
+
                 if (notes.isEmpty()) {
                     Text(
-                        text = "Ajoute une note pour retrouver une info (ex: ouvert le 03/02, à consommer vite, etc.)",
+                        text = "Astuce : “ouvert hier”, “à finir rapidement”, “ne pas congeler”…",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
                     )
                 } else {
-                    NotesGrid(notes = notes)
+                    NotesGrid(notes = notes, onDeleteNote = onDeleteNote)
                 }
             }
         }
@@ -117,7 +127,8 @@ fun NotesCollapsibleSection(
 
 @Composable
 private fun NotesGrid(
-    notes: List<String>,
+    notes: List<ItemNoteEntity>,
+    onDeleteNote: (String) -> Unit,
     columns: Int = 2,
     modifier: Modifier = Modifier
 ) {
@@ -134,7 +145,8 @@ private fun NotesGrid(
             ) {
                 row.forEach { note ->
                     NotePostIt(
-                        text = note,
+                        note = note,
+                        onDelete = { onDeleteNote(note.id) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -146,10 +158,11 @@ private fun NotesGrid(
 
 @Composable
 private fun NotePostIt(
-    text: String,
+    note: ItemNoteEntity,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Tilt déterministe (pas de random à chaque recomposition)
+    val text = note.body
     val tiltDeg = remember(text) { (((text.hashCode() % 9) - 4) * 0.55f).coerceIn(-3f, 3f) }
 
     val bg = Color(0xFFFFF4B0).copy(alpha = 0.96f)
@@ -162,13 +175,29 @@ private fun NotePostIt(
             .clip(shape)
             .background(bg)
             .border(1.dp, border, shape)
-            .padding(12.dp)
+            .padding(10.dp)
     ) {
+        IconButton(
+            onClick = onDelete,
+            modifier = Modifier
+                .size(28.dp)
+                .align(Alignment.TopEnd)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Supprimer",
+                tint = Color(0xFF1F1F1F).copy(alpha = 0.65f)
+            )
+        }
+
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
             color = Color(0xFF1F1F1F),
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .padding(end = 28.dp)
+                .align(Alignment.CenterStart)
         )
     }
 }

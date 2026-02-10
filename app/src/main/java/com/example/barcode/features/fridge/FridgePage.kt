@@ -334,6 +334,9 @@ fun FridgePage(
 
     // BottomSheet
     if (sheetItemEntity != null) {
+        val itemId = sheetItemEntity!!.id
+        val notes by vm.observeNotes(itemId).collectAsState(initial = emptyList())
+
         ModalBottomSheet(
             onDismissRequest = { closeSheet() },
             sheetState = sheetState,
@@ -341,6 +344,10 @@ fun FridgePage(
         ) {
             ItemDetailsBottomSheet(
                 itemEntity = sheetItemEntity!!,
+                notes = notes,
+                onAddNote = { text -> vm.addNote(itemId, text) },
+                onDeleteNote = { noteId -> vm.deleteNote(noteId) },
+
                 onClose = { closeSheet() },
                 onOpenViewer = { images, startIndex ->
                     viewerImages = images
@@ -366,6 +373,7 @@ fun FridgePage(
             )
         }
     }
+
 
     // --- Auto-load 1 seule fois quand l’onglet est réellement actif
     LaunchedEffect(isActive, mode, token) {

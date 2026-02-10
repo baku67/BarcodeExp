@@ -4,9 +4,11 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.barcode.core.SessionManager
+import com.example.barcode.data.LocalItemNoteRepository
 import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.LocalItemRepository
+import com.example.barcode.data.local.entities.ItemNoteEntity
 import com.example.barcode.data.local.entities.PendingOperation
 import com.example.barcode.sync.SyncScheduler
 import com.example.barcode.data.local.entities.SyncState
@@ -93,6 +95,31 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
         repo.delete(id) // ✅ devient un soft delete
 
         // ✅ Si authentifié, on push la suppression
+        if (session.isAuthenticated()) {
+            SyncScheduler.enqueueSync(getApplication())
+        }
+    }
+
+
+
+    // ITEM NOTES
+    private val notesRepo by lazy {
+        val dao = AppDb.get(app).itemNoteDao()
+        LocalItemNoteRepository(dao)
+    }
+
+    fun observeNotes(itemId: String): Flow<List<ItemNoteEntity>> =
+        notesRepo.observeNotes(itemId)
+
+    fun addNote(itemId: String, body: String) = viewModelScope.launch {
+        notesRepo.addNote(itemId, body)
+        if (session.isAuthenticated()) {
+            SyncScheduler.enqueueSync(getApplication())
+        }
+    }
+
+    fun deleteNote(noteId: String) = viewModelScope.launch {
+        notesRepo.deleteNote(noteId)
         if (session.isAuthenticated()) {
             SyncScheduler.enqueueSync(getApplication())
         }
