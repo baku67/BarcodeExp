@@ -13,6 +13,9 @@ import com.example.barcode.data.local.entities.PendingOperation
 import com.example.barcode.sync.SyncScheduler
 import com.example.barcode.data.local.entities.SyncState
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ItemsViewModel(app: Application) : AndroidViewModel(app) {
@@ -26,6 +29,11 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
     val items: Flow<List<ItemEntity>> = repo.observeItems()
 
     private val session by lazy { SessionManager(app) }
+
+    private val notesRepo by lazy {
+        val dao = AppDb.get(app).itemNoteDao()
+        LocalItemNoteRepository(dao)
+    }
 
     fun addItem(
         barcode: String?,
@@ -102,26 +110,21 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
 
 
 
-    // ITEM NOTES
-    private val notesRepo by lazy {
-        val dao = AppDb.get(app).itemNoteDao()
-        LocalItemNoteRepository(dao)
-    }
+    // ✅ 1 seule source de vérité pour les badges (map itemId -> count)
+    val notesCountByItemId: StateFlow<Map<String, Int>> =
+        notesRepo.observeCountsMap()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     fun observeNotes(itemId: String): Flow<List<ItemNoteEntity>> =
         notesRepo.observeNotes(itemId)
 
     fun addNote(itemId: String, body: String) = viewModelScope.launch {
         notesRepo.addNote(itemId, body)
-        if (session.isAuthenticated()) {
-            SyncScheduler.enqueueSync(getApplication())
-        }
+        if (session.isAuthenticated()) SyncScheduler.enqueueSync(getApplication())
     }
 
     fun deleteNote(noteId: String) = viewModelScope.launch {
         notesRepo.deleteNote(noteId)
-        if (session.isAuthenticated()) {
-            SyncScheduler.enqueueSync(getApplication())
-        }
+        if (session.isAuthenticated()) SyncScheduler.enqueueSync(getApplication())
     }
 }

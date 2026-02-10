@@ -50,6 +50,7 @@ import kotlinx.coroutines.launch
 fun ShelfRow(
     index: Int,
     itemEntities: List<ItemEntity>,
+    notesCountByItemId: Map<String, Int> = emptyMap(),
     selectionMode: Boolean,
     selectedIds: Set<String>,
     onClickItem: (ItemEntity) -> Unit,
@@ -146,7 +147,7 @@ fun ShelfRow(
 
                 var imageLoaded by remember(item.id) { mutableStateOf(false) }
 
-                val mt = MaterialTheme.colorScheme
+                val noteCount = notesCountByItemId[item.id] ?: 0
 
                 Box(
                     modifier = Modifier.Companion
@@ -172,44 +173,66 @@ fun ShelfRow(
                         label = "selectedScale"
                     )
 
-                    ItemThumbnail(
-                        imageUrl = item.imageUrl,
-                        alignBottom = true,
-                        cornerIcon = cornerIcon,
-                        cornerIconTint = glowColor,
-                        onImageLoaded = { imageLoaded = it },
-                        dimAlpha = when {
-                            isSheetSelected -> 0f
-                            dimForMultiSelect -> 0.55f
-                            else -> effectiveDim
-                        },
-                        showImageBorder = isVisuallySelected, // ✅ NEW
-                        imageBorderColor = selectionBorderColor,
-                        imageBorderWidth = 2.dp, // ✅ NEW
-                        modifier = Modifier.Companion
-                            .fillMaxSize()
-                            .alpha(
-                                when {
-                                    isSheetSelected -> 1f
-                                    selectionMode -> multiAlpha
-                                    else -> sheetOtherAlpha
-                                }
+
+
+                    val itemAlpha =
+                        when {
+                            isSheetSelected -> 1f
+                            selectionMode -> multiAlpha
+                            else -> sheetOtherAlpha
+                        }
+
+                    val wrapperModifier = Modifier
+                        .fillMaxSize()
+                        .alpha(itemAlpha)
+                        .zIndex(if (isSheetSelected) 2f else 0f)
+                        .graphicsLayer {
+                            scaleX = selectedScale
+                            scaleY = selectedScale
+                        }
+                        .giggleEvery(
+                            enabled = shouldGiggle && !isSheetSelected,
+                            intervalMs = 4_200L,
+                            initialDelayMs = 500L + itemIndex * 90L
+                        )
+                        .combinedClickable(
+                            onClick = { onClickItem(item) },
+                            onLongClick = { onLongPressItem(item) }
+                        )
+
+                    Box(
+                        modifier = Modifier.size(productSize),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        Box(modifier = wrapperModifier) {
+
+                            ItemThumbnail(
+                                imageUrl = item.imageUrl,
+                                alignBottom = true,
+                                cornerIcon = cornerIcon,
+                                cornerIconTint = glowColor,
+                                onImageLoaded = { imageLoaded = it },
+                                dimAlpha = when {
+                                    isSheetSelected -> 0f
+                                    dimForMultiSelect -> 0.55f
+                                    else -> effectiveDim
+                                },
+                                showImageBorder = isVisuallySelected,
+                                imageBorderColor = selectionBorderColor,
+                                imageBorderWidth = 2.dp,
+                                modifier = Modifier.fillMaxSize()
                             )
-                            .zIndex(if (isSheetSelected) 2f else 0f)
-                            .graphicsLayer {
-                                scaleX = selectedScale
-                                scaleY = selectedScale
+
+                            if (noteCount > 0) {
+                                NotesCountBadge(
+                                    count = noteCount,
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = (-3).dp, y = -3.dp)
+                                )
                             }
-                            .giggleEvery(
-                                enabled = shouldGiggle && !isSheetSelected, // évite 2 anims en même temps
-                                intervalMs = 4_200L,
-                                initialDelayMs = 500L + itemIndex * 90L
-                            )
-                            .combinedClickable(
-                                onClick = { onClickItem(item) },
-                                onLongClick = { onLongPressItem(item) }
-                            )
-                    )
+                        }
+                    }
                 }
             }
 
@@ -250,6 +273,29 @@ fun ShelfRow(
     }
 
 }
+
+
+@Composable
+private fun NotesCountBadge(
+    count: Int,
+    modifier: Modifier = Modifier
+) {
+    val text = if (count > 9) "9+" else count.toString()
+
+    Box(
+        modifier = modifier
+            .size(15.dp)
+            .background(Color(0xFF1976D2), RoundedCornerShape(999.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
 
 
 @Composable

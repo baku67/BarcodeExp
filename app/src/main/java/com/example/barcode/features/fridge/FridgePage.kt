@@ -75,6 +75,8 @@ fun FridgePage(
 ) {
     val list by vm.items.collectAsState(initial = emptyList())
 
+    val notesCounts by vm.notesCountByItemId.collectAsState(initial = emptyMap())
+
     // --- Session (comme RecipesContent)
     val appContext = LocalContext.current.applicationContext
     val session = remember { SessionManager(appContext) }
@@ -633,6 +635,7 @@ fun FridgePage(
                                     ShelfRow(
                                         index = index,
                                         itemEntities = shelfItems,
+                                        notesCountByItemId = notesCounts,
                                         selectionMode = selectionMode,
                                         selectedIds = selectedIds,
                                         onClickItem = { item -> if (selectionMode) toggleSelect(item.id) else sheetItemEntity = item },

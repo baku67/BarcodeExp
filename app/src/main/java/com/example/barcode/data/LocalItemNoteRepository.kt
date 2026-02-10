@@ -5,6 +5,7 @@ import com.example.barcode.data.local.entities.ItemNoteEntity
 import com.example.barcode.data.local.entities.PendingOperation
 import com.example.barcode.data.local.entities.SyncState
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class LocalItemNoteRepository(
     private val dao: ItemNoteDao
@@ -26,6 +27,7 @@ class LocalItemNoteRepository(
         )
     }
 
+
     suspend fun deleteNote(noteId: String) {
         val local = dao.getById(noteId) ?: return
 
@@ -37,4 +39,11 @@ class LocalItemNoteRepository(
 
         dao.markDeleted(noteId)
     }
+
+
+
+    fun observeCountsMap(): Flow<Map<String, Int>> =
+        dao.observeCountsByItemId()
+            .map { rows -> rows.associate { it.itemId to it.count } }
+
 }

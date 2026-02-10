@@ -84,4 +84,20 @@ interface ItemNoteDao {
         failedAt: Long = System.currentTimeMillis(),
         updatedAt: Long = System.currentTimeMillis()
     )
+
+
+
+    data class ItemNotesCountRow(
+        val itemId: String,
+        val count: Int
+    )
+
+    @Query("""
+    SELECT itemId AS itemId, COUNT(*) AS count
+    FROM item_notes
+    WHERE deletedAt IS NULL
+    GROUP BY itemId
+    """)
+        fun observeCountsByItemId(): Flow<List<ItemNotesCountRow>>
+
 }
