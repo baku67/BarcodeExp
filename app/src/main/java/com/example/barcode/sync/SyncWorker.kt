@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.max
+
 
 class SyncWorker(
     ctx: Context,
@@ -25,7 +27,6 @@ class SyncWorker(
     override suspend fun doWork(): Result {
         val session = SessionManager(applicationContext)
 
-        // Pas connecté => rien à faire
         if (!session.isAuthenticated()) return Result.success()
 
         val token = session.token.first().orEmpty()
@@ -33,13 +34,16 @@ class SyncWorker(
 
         val dao = AppDb.get(applicationContext).itemDao()
         val api = ApiClient.createApi(ItemsApi::class.java)
+        val prefs = SyncPreferences(applicationContext)
 
+        // ✅ watermark serveur stocké en local (epoch ms)
+        val sinceMs = prefs.lastSuccessAt.first()
+        val sinceIso = DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(sinceMs))
 
-        // 1) PUSH DELETE : envoyer les suppressions en attente
-        // ✅ getPending() exclut les FAILED => pas de retry automatique
+        var newWatermarkMs = sinceMs
+
+        // 1) PUSH DELETE
         val pendingDeletes = dao.getPending(PendingOperation.DELETE)
-
-        // TODO: Batch plutot que 1 requete par Item ?
         pendingDeletes.forEach { item ->
             try {
                 val res = api.deleteItemByClientId(
@@ -47,9 +51,8 @@ class SyncWorker(
                     clientId = item.id
                 )
 
-                // ✅ 204 = OK, ✅ 404 = déjà supprimé côté serveur => on purge local pareil
                 if (res.isSuccessful || res.code() == 404) {
-                    dao.hardDelete(item.id) // ✅ on nettoie la DB locale
+                    dao.hardDelete(item.id)
                 } else {
                     dao.markFailed(item.id, error = "delete failed code=${res.code()}")
                 }
@@ -58,11 +61,8 @@ class SyncWorker(
             }
         }
 
-
-        // 2) PUSH CREATE: envoyer les items en attente
+        // 2) PUSH CREATE
         val pendingCreates = dao.getPending(PendingOperation.CREATE)
-
-        // TODO: Batch plutot que 1 requete par Item ?
         pendingCreates.forEach { item ->
             try {
                 val dto = ItemCreateDto(
@@ -83,87 +83,79 @@ class SyncWorker(
                     body = dto
                 )
 
-                // DEBUG si error (TODO remove)
-                if (!res.isSuccessful) {
-                    val err = res.errorBody()?.string()
-                    android.util.Log.e("SyncWorker", "422 body=$err")
-                }
-
                 if (res.isSuccessful) dao.clearPending(item.id)
                 else dao.markFailed(item.id, error = "create failed code=${res.code()}")
 
             } catch (e: Exception) {
                 dao.markFailed(item.id, error = "create exception=${e.message}")
-                // On continue les autres; tu pourras plus tard faire Result.retry()
             }
         }
 
-
-        // 3) PUSH UPDATE : envoyer les edits en attente
-        // ⚠️ Ici on réutilise createItem comme "upsert" (clientId stable).
-        // Si ton backend a un vrai PATCH/PUT, remplace par api.updateItem(...)
+        // 3) PUSH UPDATE (upsert)
         val pendingUpdates = dao.getPending(PendingOperation.UPDATE)
         pendingUpdates.forEach { item ->
-                try {
-                        val dto = ItemCreateDto(
-                                clientId = item.id,
-                                barcode = item.barcode,
-                                name = item.name,
-                                brand = item.brand,
-                                imageUrl = item.imageUrl,
-                                imageIngredientsUrl = item.imageIngredientsUrl,
-                                imageNutritionUrl = item.imageNutritionUrl,
-                                nutriScore = sanitizeNutriScore(item.nutriScore),
-                                expiryDate = item.expiryDate?.let { epochMsToYyyyMmDd(it) },
-                                addMode = item.addMode,
-                            )
+            try {
+                val dto = ItemCreateDto(
+                    clientId = item.id,
+                    barcode = item.barcode,
+                    name = item.name,
+                    brand = item.brand,
+                    imageUrl = item.imageUrl,
+                    imageIngredientsUrl = item.imageIngredientsUrl,
+                    imageNutritionUrl = item.imageNutritionUrl,
+                    nutriScore = sanitizeNutriScore(item.nutriScore),
+                    expiryDate = item.expiryDate?.let { epochMsToYyyyMmDd(it) },
+                    addMode = item.addMode,
+                )
 
-                        val res = api.createItem(
-                                authorization = "Bearer $token",
-                                body = dto
-                                    )
+                val res = api.createItem(
+                    authorization = "Bearer $token",
+                    body = dto
+                )
 
-                        if (res.isSuccessful) dao.clearPending(item.id)
-                        else dao.markFailed(item.id, error = "update(upsert) failed code=${res.code()}")
+                if (res.isSuccessful) dao.clearPending(item.id)
+                else dao.markFailed(item.id, error = "update(upsert) failed code=${res.code()}")
 
-                    } catch (e: Exception) {
-                        dao.markFailed(item.id, error = "update(upsert) exception=${e.message}")
-                    }
+            } catch (e: Exception) {
+                dao.markFailed(item.id, error = "update(upsert) exception=${e.message}")
             }
+        }
 
-
-        // 4) PULL : récupérer l'état serveur et upsert local (Room) par clientId
+        // 4) PULL UPSERTS (items actifs)
         try {
+            val pullUpserts = api.getItems(
+                authorization = "Bearer $token",
+                updatedSince = sinceIso
+            )
 
-            val pull = api.getItems("Bearer $token")
-
-            if (pull.code() == 401) {
-                SyncPreferences(applicationContext).markAuthRequired()
+            if (pullUpserts.code() == 401) {
+                prefs.markAuthRequired()
                 return Result.success()
             }
 
-            if (!pull.isSuccessful) {
-                val err = pull.errorBody()?.string()
-                android.util.Log.e("SyncWorker", "pull failed code=${pull.code()} body=$err")
+            if (!pullUpserts.isSuccessful) {
+                val err = pullUpserts.errorBody()?.string()
+                android.util.Log.e("SyncWorker", "pull upserts failed code=${pullUpserts.code()} body=$err")
                 return Result.success()
             }
 
-            val remoteItems = pull.body().orEmpty()
+            val remoteItems = pullUpserts.body().orEmpty()
 
             remoteItems.forEach { dto ->
-                val clientId = dto.clientId ?: return@forEach
+                val clientId = dto.clientId
 
-                // ✅ Ne pas écraser un item local qui a des changements non push (pending)
-                // ou un item bloqué FAILED (pas de retry auto)
                 val local = dao.getById(clientId)
                 if (local != null && (local.pendingOperation != PendingOperation.NONE || local.syncState == SyncState.FAILED)) {
                     return@forEach
                 }
 
-                val serverUpdatedAt = dto.updatedAt.let(::parseAtomToEpochMs)
+                val serverUpdatedAt = parseAtomToEpochMs(dto.updatedAt)
+                newWatermarkMs = max(newWatermarkMs, serverUpdatedAt)
 
+                // Ici on ne s'attend pas à des deleted, mais on garde ton parsing safe
                 val serverDeletedAt = dto.deletedAt?.let { parseAtomToEpochMs(it) }
-                    ?: if (dto.isDeleted) serverUpdatedAt else null // fallback safe
+                    ?: if (dto.isDeleted) serverUpdatedAt else null
+                if (serverDeletedAt != null) newWatermarkMs = max(newWatermarkMs, serverDeletedAt)
 
                 val entity = ItemEntity(
                     id = clientId,
@@ -181,30 +173,63 @@ class SyncWorker(
                     syncState = SyncState.OK,
                     lastSyncError = null,
                     failedAt = null,
-                    // ✅ timestamp local (debug / tri / etc)
                     localUpdatedAt = System.currentTimeMillis(),
-                    // ✅ timestamp serveur (delta sync / merge)
                     serverUpdatedAt = serverUpdatedAt,
-                    // ✅ tombstone
                     deletedAt = serverDeletedAt
                 )
 
                 dao.upsert(entity)
             }
 
-            // ✅ ICI seulement : on considère la sync “successful”
-            SyncPreferences(applicationContext).markSyncSuccessNow()
-
         } catch (e: Exception) {
-            // Pull qui échoue : on ne casse pas tout, on garde juste le local
-            android.util.Log.e("SyncWorker", "pull exception=${e.message}")
+            android.util.Log.e("SyncWorker", "pull upserts exception=${e.message}")
+            return Result.success()
         }
 
+        // 5) PULL DELETES (tombstones)
+        try {
+            val pullDeletes = api.getDeletedItems(
+                authorization = "Bearer $token",
+                since = sinceIso
+            )
+
+            if (pullDeletes.code() == 401) {
+                prefs.markAuthRequired()
+                return Result.success()
+            }
+
+            if (!pullDeletes.isSuccessful) {
+                val err = pullDeletes.errorBody()?.string()
+                android.util.Log.e("SyncWorker", "pull deletes failed code=${pullDeletes.code()} body=$err")
+                return Result.success()
+            }
+
+            val deleted = pullDeletes.body().orEmpty()
+            deleted.forEach { t ->
+                val clientId = t.clientId
+                val deletedAtMs = parseAtomToEpochMs(t.deletedAt)
+                newWatermarkMs = max(newWatermarkMs, deletedAtMs)
+
+                // ✅ ne pas écraser les items locaux qui ont un pending/FAILED
+                val local = dao.getById(clientId)
+                if (local != null && (local.pendingOperation != PendingOperation.NONE || local.syncState == SyncState.FAILED)) {
+                    return@forEach
+                }
+
+                // ✅ choix simple: purge locale (comme après un delete push)
+                dao.hardDelete(clientId)
+            }
+
+        } catch (e: Exception) {
+            android.util.Log.e("SyncWorker", "pull deletes exception=${e.message}")
+            return Result.success()
+        }
+
+        // ✅ Sync complète OK => on stocke un watermark serveur (pas now())
+        prefs.markSyncSuccessAt(newWatermarkMs)
 
         return Result.success()
     }
-
-
 
     private val yyyyMMdd = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private fun epochMsToYyyyMmDd(ms: Long): String =
@@ -213,9 +238,8 @@ class SyncWorker(
     private fun parseAtomToEpochMs(s: String): Long =
         java.time.OffsetDateTime.parse(s).toInstant().toEpochMilli()
 
-
     private fun parseYyyyMmDdToEpochMs(s: String): Long {
-        val d = java.time.LocalDate.parse(s) // yyyy-MM-dd
-        return d.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val d = java.time.LocalDate.parse(s)
+        return d.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
     }
 }
