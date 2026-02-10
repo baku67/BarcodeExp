@@ -37,6 +37,8 @@ import androidx.compose.ui.text.withStyle
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import com.example.barcode.R
+import com.example.barcode.common.ui.components.MonthWheelFormat
+import com.example.barcode.common.ui.components.WheelDatePickerDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -316,21 +318,17 @@ fun ConfirmStepScreen(
                 Spacer(Modifier.height(8.dp))
 
                 if (showPicker) {
-                    val initial = expiry ?: System.currentTimeMillis()
-                    val state = rememberDatePickerState(initialSelectedDateMillis = initial)
-                    DatePickerDialog(
-                        onDismissRequest = { showPicker = false },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                val selectedUtc = state.selectedDateMillis
-                                expiry = selectedUtc?.let { utcMillisToLocalMidnight(it) }
-                                showPicker = false
-                            }) { Text("OK") }
+                    WheelDatePickerDialog(
+                        initialMillis = expiry,
+                        onConfirm = { newMillis ->
+                            expiry = newMillis
+                            showPicker = false
                         },
-                        dismissButton = { TextButton(onClick = { showPicker = false }) { Text("Annuler") } }
-                    ) {
-                        DatePicker(state = state, showModeToggle = false)
-                    }
+                        onDismiss = { showPicker = false },
+                        monthFormat = MonthWheelFormat.TwoDigits,
+                        showExpiredHint = true,
+                        expiredHintText = "Déjà expiré"
+                    )
                 }
             }
 

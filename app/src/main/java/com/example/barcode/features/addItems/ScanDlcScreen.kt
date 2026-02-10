@@ -92,6 +92,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import coil.compose.rememberAsyncImagePainter
 import com.example.barcode.common.ui.components.HeaderBar
+import com.example.barcode.common.ui.components.MonthWheelFormat
+import com.example.barcode.common.ui.components.WheelDatePickerBottomSheet
 import com.example.barcode.domain.models.AppIcon
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -221,8 +223,9 @@ fun ScanDlcScreen(
     }
 
     if (showManualSheet) {
-        ManualExpiryDateBottomSheet(
-            initialDate = detectedLocalDate, // ✅ LocalDate direct
+        WheelDatePickerBottomSheet(
+            initialDate = detectedLocalDate,
+            monthFormat = MonthWheelFormat.TwoDigits,
             onDismiss = {
                 showManualSheet = false
                 if (detectedDateMs == null) frozen = false
@@ -237,6 +240,7 @@ fun ScanDlcScreen(
             }
         )
     }
+
 
 
 
@@ -719,85 +723,6 @@ private fun ExpiryRoiOverlay(
     }
 }
 
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ManualExpiryDateBottomSheet(
-    initialDate: LocalDate?,
-    onDismiss: () -> Unit,
-    onConfirm: (LocalDate) -> Unit
-) {
-    val zone = remember { ZoneId.systemDefault() }
-    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
-
-    val initialMillis = remember(initialDate) {
-        initialDate
-            ?.atStartOfDay(zone)
-            ?.toInstant()
-            ?.toEpochMilli()
-    }
-
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = initialMillis
-    )
-
-    val selected: LocalDate? = state.selectedDateMillis?.let { ms ->
-        Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()
-    }
-
-    val warning = selected?.takeIf { it.isBefore(LocalDate.now()) }?.let { "Déjà expiré ?" }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Saisie manuelle",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Text(
-                text = selected?.let { "Date sélectionnée : ${it.format(dateFormatter)}" }
-                    ?: "Sélectionne une date",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
-            )
-
-            DatePicker(state = state)
-
-            if (warning != null) {
-                Text(
-                    text = warning,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)
-            ) {
-                TextButton(onClick = onDismiss) { Text("Annuler") }
-
-                Button(
-                    onClick = { selected?.let(onConfirm) },
-                    enabled = selected != null
-                ) {
-                    Text("Valider")
-                }
-            }
-        }
-    }
-}
 
 
 // ---------- ROI helpers (RGBA strict) ----------
