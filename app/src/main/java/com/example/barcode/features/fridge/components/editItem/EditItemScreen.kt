@@ -26,8 +26,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
@@ -40,7 +38,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +67,21 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import java.time.YearMonth
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlin.math.abs
+
 
 data class EditItemResult(
     val name: String?,
@@ -369,25 +381,15 @@ fun EditItemScreen(
                 }
 
                 if (showDatePicker) {
-                    val initial = expiry ?: System.currentTimeMillis()
-                    val state = rememberDatePickerState(initialSelectedDateMillis = initial)
-                    DatePickerDialog(
-                        onDismissRequest = { showDatePicker = false },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                val selectedUtc = state.selectedDateMillis
-                                expiry = selectedUtc?.let { utcMillisToLocalMidnight(it) }
-                                showDatePicker = false
-                            }) { Text("OK") }
+                    WheelDatePickerDialog(
+                        initialMillis = expiry,
+                        onConfirm = { newMillis ->
+                            expiry = newMillis
+                            showDatePicker = false
                         },
-                        dismissButton = {
-                            TextButton(onClick = { showDatePicker = false }) { Text("Annuler") }
-                        }
-                    ) {
-                        DatePicker(state = state, showModeToggle = false)
-                    }
+                        onDismiss = { showDatePicker = false }
+                    )
                 }
-
 
                 // --- OPTIONNEL : images ingrédients / nutrition (pratique si tu les modifies aussi) ---
                 /*Spacer(Modifier.height(18.dp))
@@ -536,6 +538,204 @@ private fun NutriScorePickerDialog(
         confirmButton = { TextButton(onClick = onDismiss) { Text("Fermer") } }
     )
 }
+
+
+@Composable
+private fun WheelDatePickerDialog(
+    initialMillis: Long?,
+    onConfirm: (Long?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val zone = ZoneId.systemDefault()
+
+    val initialDate = remember(initialMillis) {
+        initialMillis?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+    } ?: LocalDate.now(zone)
+
+    var year by rememberSaveable { mutableStateOf(initialDate.year) }
+    var month by rememberSaveable { mutableStateOf(initialDate.monthValue) }
+    var day by rememberSaveable { mutableStateOf(initialDate.dayOfMonth) }
+
+    val nowYear = LocalDate.now(zone).year
+    val years = remember(nowYear) { (nowYear - 10..nowYear + 15).toList() }
+    val monthLabels = remember {
+        listOf("Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc")
+    }
+
+    val maxDay = remember(year, month) { YearMonth.of(year, month).lengthOfMonth() }
+    if (day > maxDay) day = maxDay
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Choisir une date") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    WheelPicker(
+                        options = (1..maxDay).map { it.toString().padStart(2, '0') },
+                        selectedIndex = (day - 1).coerceIn(0, maxDay - 1),
+                        onIndexChanged = { day = it + 1 },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    WheelPicker(
+                        options = monthLabels,
+                        selectedIndex = (month - 1).coerceIn(0, 11),
+                        onIndexChanged = { month = it + 1 },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    WheelPicker(
+                        options = years.map { it.toString() },
+                        selectedIndex = years.indexOf(year).let { if (it >= 0) it else 0 },
+                        onIndexChanged = { year = years[it] },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Text(
+                    text = LocalDate.of(year, month, day).format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val date = LocalDate.of(year, month, day)
+                onConfirm(date.atStartOfDay(zone).toInstant().toEpochMilli())
+            }) { Text("OK") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Annuler") }
+        }
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun WheelPicker(
+    options: List<String>,
+    selectedIndex: Int,
+    onIndexChanged: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    visibleCount: Int = 5,
+    itemHeight: Dp = 34.dp,
+) {
+    if (options.isEmpty()) return
+
+    val safeSelected = selectedIndex.coerceIn(0, options.lastIndex)
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = safeSelected)
+    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
+    // padding pour centrer l’item (wheel iOS-like)
+    val verticalPadding = itemHeight * ((visibleCount - 1) / 2f)
+
+    // Si sélection clampée (ex: mois/année change), resync la roue
+    LaunchedEffect(safeSelected, options.size) {
+        if (!listState.isScrollInProgress) {
+            listState.scrollToItem(safeSelected)
+        }
+    }
+
+    val currentIndex by remember {
+        derivedStateOf {
+            val layout = listState.layoutInfo
+            val center = (layout.viewportStartOffset + layout.viewportEndOffset) / 2
+            layout.visibleItemsInfo.minByOrNull { info ->
+                abs((info.offset + info.size / 2) - center)
+            }?.index ?: safeSelected
+        }
+    }
+
+    val normalizedCenterDistanceByIndex by remember {
+        derivedStateOf {
+            val layout = listState.layoutInfo
+            val centerY = (layout.viewportStartOffset + layout.viewportEndOffset) / 2
+            layout.visibleItemsInfo.associate { info ->
+                val itemCenterY = info.offset + info.size / 2
+                val normalized = (abs(itemCenterY - centerY) / info.size.toFloat()) // 0 = centre, 1 = 1 item, etc.
+                info.index to normalized
+            }
+        }
+    }
+
+    LaunchedEffect(listState, options.size) {
+        snapshotFlow { currentIndex }
+            .distinctUntilChanged()
+            .collect { idx ->
+                if (idx in options.indices) onIndexChanged(idx)
+            }
+    }
+
+    Box(
+        modifier = modifier
+            .height(itemHeight * visibleCount)
+            .padding(horizontal = 6.dp)
+    ) {
+        LazyColumn(
+            state = listState,
+            flingBehavior = flingBehavior,
+            contentPadding = PaddingValues(vertical = verticalPadding),
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            items(options.size) { idx ->
+                val selected = idx == currentIndex
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(itemHeight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val selected = idx == currentIndex
+
+                    val norm = (normalizedCenterDistanceByIndex[idx] ?: 2.5f).coerceIn(0f, 2.5f)
+                    // Courbe simple: centre = 1f, plus loin = plus transparent
+                    val alpha = (1f - norm * 0.35f).coerceIn(0.12f, 1f)
+                    // Optionnel (rendu iOS-like): léger “focus” au centre
+                    val scale = (1f - norm * 0.06f).coerceIn(0.90f, 1f)
+
+                    val baseColor = if (selected) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+
+                    Text(
+                        text = options[idx],
+                        style = if (selected) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = baseColor.copy(alpha = if (selected) 1f else alpha),
+                        modifier = Modifier.graphicsLayer(
+                            scaleX = if (selected) 1f else scale,
+                            scaleY = if (selected) 1f else scale
+                        )
+                    )
+
+                }
+            }
+        }
+
+        // Bande "sélection"
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth()
+                .height(itemHeight)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+        )
+    }
+}
+
+
+
+
 
 // --- Utils (copiés de DetailsStepScreen) ---
 
