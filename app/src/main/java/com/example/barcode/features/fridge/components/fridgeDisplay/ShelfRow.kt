@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WarningAmber
@@ -44,6 +45,12 @@ import com.example.barcode.features.fridge.isSoon
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.Canvas
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -224,11 +231,9 @@ fun ShelfRow(
                             )
 
                             if (noteCount > 0) {
-                                NotesCountBadge(
-                                    count = noteCount,
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = (-3).dp, y = -3.dp)
+                                NotesDogEarIndicator(
+                                    modifier = Modifier.align(Alignment.TopEnd),
+                                    // showPenIcon = false // ✅ si tu veux SANS icône
                                 )
                             }
                         }
@@ -275,26 +280,66 @@ fun ShelfRow(
 }
 
 
+private val NotesDogEarShape = GenericShape { size, _ ->
+    // Triangle collé au coin haut-droit (effet "coin de page")
+    moveTo(size.width, 0f)          // haut-droit
+    lineTo(size.width, size.height) // bas-droit
+    lineTo(0f, 0f)                  // haut-gauche
+    close()
+}
+
 @Composable
-private fun NotesCountBadge(
-    count: Int,
-    modifier: Modifier = Modifier
+private fun NotesDogEarIndicator(
+    modifier: Modifier = Modifier,
+    showPenIcon: Boolean = true,
 ) {
-    val text = if (count > 9) "9+" else count.toString()
+    val baseColor = Color(0xFF1976D2)              // bleu "notes"
+    val foldColor = Color.White.copy(alpha = 0.18f) // pli plus clair
+    val lineColor = Color.White.copy(alpha = 0.30f) // liseré
 
     Box(
         modifier = modifier
-            .size(15.dp)
-            .background(Color(0xFF1976D2), RoundedCornerShape(999.dp)),
+            .size(16.dp)
+            .clip(NotesDogEarShape)
+            .background(baseColor)
+            .border(0.7.dp, lineColor, NotesDogEarShape),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            color = Color.White,
-            style = MaterialTheme.typography.labelSmall
-        )
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+
+            // petit "pli" plus clair dans le coin
+            val foldPath = Path().apply {
+                moveTo(w, 0f)
+                lineTo(w, h * 0.62f)
+                lineTo(w * 0.38f, 0f)
+                close()
+            }
+            drawPath(foldPath, color = foldColor)
+
+            // diagonale subtile (premium + lisible)
+            drawLine(
+                color = lineColor.copy(alpha = 0.22f),
+                start = Offset(0f, 0f),
+                end = Offset(w, h),
+                strokeWidth = 1.dp.toPx()
+            )
+        }
+
+        if (showPenIcon) {
+            Icon(
+                imageVector = Icons.Outlined.Edit,
+                contentDescription = "Notes",
+                tint = Color.White.copy(alpha = 0.92f),
+                modifier = Modifier
+                    .offset(x = 1.dp, y = (-1).dp)
+                    .size(10.dp)
+            )
+        }
     }
 }
+
 
 
 
