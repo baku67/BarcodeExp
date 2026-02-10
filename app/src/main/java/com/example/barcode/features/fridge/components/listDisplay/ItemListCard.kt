@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
+import com.example.barcode.common.ui.theme.ItemNote
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -181,7 +182,6 @@ public fun ItemListCard(
 }
 
 
-
 @Composable
 private fun NotesCornerCountBadge(
     count: Int,
@@ -190,32 +190,28 @@ private fun NotesCornerCountBadge(
     bottomStartRadius: Dp,
     modifier: Modifier = Modifier,
 ) {
-    val blue = Color(0xFF1976D2) // ou MaterialTheme.colorScheme.primary
-    val stroke = blue.copy(alpha = 0.90f)
-    val fold = blue.copy(alpha = 0.12f)
+    val stroke = ItemNote.copy(alpha = 0.96f)
+    val fold = ItemNote.copy(alpha = 0.18f)
 
     val display = if (count > 9) "9+" else count.toString()
 
     val badgeShape = RoundedCornerShape(
         topStart = 0.dp,
-        topEnd = topEndRadius,          // épouse le coin de la card (inner)
+        topEnd = topEndRadius,
         bottomEnd = 0.dp,
-        bottomStart = bottomStartRadius // ✅ demandé
+        bottomStart = bottomStartRadius
     )
 
     Box(
         modifier = modifier
             .size(badgeSize)
             .clip(badgeShape)
-            // ✅ pas de background => on voit la card dessous
             .border(1.dp, stroke, badgeShape),
         contentAlignment = Alignment.Center
     ) {
-        // petit “pli” interne, très léger (optionnel)
         Canvas(Modifier.fillMaxSize()) {
-            val w = this.size.width
-            val h = this.size.height
-
+            val w = size.width
+            val h = size.height
             val foldPath = Path().apply {
                 moveTo(w, 0f)
                 lineTo(w, h * 0.60f)
@@ -237,4 +233,5 @@ private fun NotesCornerCountBadge(
         )
     }
 }
+
 

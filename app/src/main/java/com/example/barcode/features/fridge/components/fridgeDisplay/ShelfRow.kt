@@ -51,6 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import com.example.barcode.common.ui.theme.ItemNote
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -288,14 +289,17 @@ private val NotesDogEarShape = GenericShape { size, _ ->
     close()
 }
 
+
 @Composable
 private fun NotesDogEarIndicator(
     modifier: Modifier = Modifier,
     showPenIcon: Boolean = true,
 ) {
-    val baseColor = Color(0xFF1976D2)              // bleu "notes"
-    val foldColor = Color.White.copy(alpha = 0.18f) // pli plus clair
-    val lineColor = Color.White.copy(alpha = 0.30f) // liseré
+    val baseColor = ItemNote
+
+    // Sur un fond clair, on passe en contrast “dark”
+    val foldColor = Color(0xFF1F1F1F).copy(alpha = 0.06f)
+    val lineColor = Color(0xFF1F1F1F).copy(alpha = 0.14f)
 
     Box(
         modifier = modifier
@@ -309,7 +313,6 @@ private fun NotesDogEarIndicator(
             val w = size.width
             val h = size.height
 
-            // petit "pli" plus clair dans le coin
             val foldPath = Path().apply {
                 moveTo(w, 0f)
                 lineTo(w, h * 0.62f)
@@ -318,7 +321,6 @@ private fun NotesDogEarIndicator(
             }
             drawPath(foldPath, color = foldColor)
 
-            // diagonale subtile (premium + lisible)
             drawLine(
                 color = lineColor.copy(alpha = 0.22f),
                 start = Offset(0f, 0f),
@@ -331,7 +333,7 @@ private fun NotesDogEarIndicator(
             Icon(
                 imageVector = Icons.Outlined.Edit,
                 contentDescription = "Notes",
-                tint = Color.White.copy(alpha = 0.92f),
+                tint = Color(0xFF1F1F1F).copy(alpha = 0.78f),
                 modifier = Modifier
                     .offset(x = 1.dp, y = (-1).dp)
                     .size(10.dp)
