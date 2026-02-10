@@ -90,7 +90,7 @@ public fun ItemListCard(
                 else surface
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-            border = null
+            border = cardBorder
         ) {
             Row(
                 Modifier.Companion
@@ -160,25 +160,25 @@ public fun ItemListCard(
                         ?: with(density) { 10.dp.toPx() }
 
                     val topEndRadiusDp = with(density) { topEndRadiusPx.toDp() }
+                    val innerTopEndRadius = (topEndRadiusDp - cardBorder.width).coerceAtLeast(0.dp)
 
                     NotesCornerCountBadge(
                             count = effectiveNotesCount,
                             badgeSize = badgeSize,
-                            topEndRadius = topEndRadiusDp,     // ✅ coin haut-droit “comme la Card”
+                            topEndRadius = innerTopEndRadius,     // ✅ coin haut-droit “comme la Card”
                             bottomStartRadius = 6.dp,          // ✅ ton radius bas-gauche
                             modifier = Modifier.align(Alignment.TopEnd)
                                 )
                 }
 
             // ✅ border de la Card DESSINÉ AU-DESSUS de tout (badge inclus) => plus de triangle gris
-            Box(
+/*            Box(
                     modifier = Modifier
                                 .matchParentSize()
                                 .border(cardBorder, cardShape)
-            )
+            )*/
     }
 }
-
 
 
 
@@ -190,15 +190,15 @@ private fun NotesCornerCountBadge(
     bottomStartRadius: Dp,
     modifier: Modifier = Modifier,
 ) {
-    val baseColor = Color(0xFF1976D2)
-    val foldColor = Color.White.copy(alpha = 0.18f)
-    val lineColor = Color.White.copy(alpha = 0.30f)
+    val blue = Color(0xFF1976D2) // ou MaterialTheme.colorScheme.primary
+    val stroke = blue.copy(alpha = 0.90f)
+    val fold = blue.copy(alpha = 0.12f)
 
     val display = if (count > 9) "9+" else count.toString()
 
     val badgeShape = RoundedCornerShape(
         topStart = 0.dp,
-        topEnd = topEndRadius,          // ✅ épouse la Card
+        topEnd = topEndRadius,          // épouse le coin de la card (inner)
         bottomEnd = 0.dp,
         bottomStart = bottomStartRadius // ✅ demandé
     )
@@ -207,27 +207,27 @@ private fun NotesCornerCountBadge(
         modifier = modifier
             .size(badgeSize)
             .clip(badgeShape)
-            .background(baseColor)
-            .border(0.7.dp, lineColor, badgeShape),
+            // ✅ pas de background => on voit la card dessous
+            .border(1.dp, stroke, badgeShape),
         contentAlignment = Alignment.Center
     ) {
+        // petit “pli” interne, très léger (optionnel)
         Canvas(Modifier.fillMaxSize()) {
             val w = this.size.width
             val h = this.size.height
 
-            // pli interne (sans changer la forme carrée)
             val foldPath = Path().apply {
                 moveTo(w, 0f)
                 lineTo(w, h * 0.60f)
                 lineTo(w * 0.60f, 0f)
                 close()
             }
-            drawPath(foldPath, color = foldColor)
+            drawPath(foldPath, color = fold)
         }
 
         Text(
             text = display,
-            color = Color.White.copy(alpha = 0.96f),
+            color = stroke,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontSize = 9.sp,
                 lineHeight = 9.sp,
@@ -237,3 +237,4 @@ private fun NotesCornerCountBadge(
         )
     }
 }
+
