@@ -46,6 +46,7 @@ import com.example.barcode.features.fridge.isSoon
 @Composable
 public fun ItemDetailsBottomSheet(
     itemEntity: ItemEntity,
+    notes: List<String> = emptyList(),
     onClose: () -> Unit,
     onOpenViewer: (List<ViewerImage>, Int) -> Unit,
     onEdit: (ItemEntity) -> Unit = {},
@@ -119,6 +120,11 @@ public fun ItemDetailsBottomSheet(
                     ingredientsUrl = itemEntity.imageIngredientsUrl,
                     nutritionUrl = itemEntity.imageNutritionUrl,
                     onOpenViewer = openViewerFromUrl
+                )
+
+                NotesCollapsibleSection(
+                    notes = notes,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
