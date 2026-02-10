@@ -3,6 +3,7 @@ package com.example.barcode.features.fridge.components.bottomSheetDetails
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -16,26 +17,22 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.ExpandLess
-import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,12 +47,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.example.barcode.common.ui.theme.ItemNote
 import com.example.barcode.data.local.entities.ItemNoteEntity
 
 private const val NOTE_MAX_LEN = 150
@@ -81,10 +83,18 @@ fun NotesCollapsibleSection(
 
     val containerShape = RoundedCornerShape(16.dp)
 
-    val headerTint by animateColorAsState(
-        targetValue = if (notes.isNotEmpty()) BadgeBlue
-        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-        label = "notesHeaderTint"
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (expanded) 90f else 0f,
+        label = "notesChevronRotation"
+    )
+
+    // teinte "normale" (icône + label Notes + parenthèses)
+    val labelTint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+
+    // teinte accent (uniquement chiffre + chevron si > 0)
+    val accentTint by animateColorAsState(
+        targetValue = if (notes.isNotEmpty()) ItemNote else labelTint,
+        label = "notesAccentTint"
     )
 
     Column(
@@ -101,23 +111,52 @@ fun NotesCollapsibleSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded }
+                .clickable(enabled = notes.isNotEmpty()) { expanded = !expanded }
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // ✅ icône "normale" (pas de couleur accent)
+            Icon(
+                imageVector = Icons.Outlined.StickyNote2,
+                contentDescription = null,
+                tint = labelTint,
+                modifier = Modifier.size(18.dp)
+            )
+
+            Spacer(Modifier.width(6.dp))
+
             Text(
-                text = "Notes (${notes.size})",
+                text = "Notes",
                 fontWeight = FontWeight.SemiBold,
-                color = headerTint
+                color = labelTint
+            )
+
+            Spacer(Modifier.width(6.dp))
+
+            // ✅ parenthèses normales + chiffre accent (si 0 => accentTint == labelTint)
+            Text(
+                text = buildAnnotatedString {
+                    append("(")
+                    withStyle(SpanStyle(color = accentTint)) { append(notes.size.toString()) }
+                    append(")")
+                },
+                fontWeight = FontWeight.SemiBold,
+                color = labelTint
             )
 
             Spacer(Modifier.weight(1f))
 
-            Icon(
-                imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.90f)
-            )
+            // ✅ chevron uniquement si > 0 + coloré
+            if (notes.isNotEmpty()) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = accentTint,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .rotate(chevronRotation)
+                )
+            }
         }
 
         AnimatedVisibility(
@@ -224,7 +263,6 @@ private fun AddNoteRow(
     }
 }
 
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun NotesWrapLeft(
@@ -256,12 +294,10 @@ private fun NotePostIt(
     val bg = Color(0xFFFFF4B0).copy(alpha = 0.96f)
     val border = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
 
-    // ✅ encore moins arrondi
     val shape = RoundedCornerShape(3.dp)
 
     Box(
         modifier = modifier
-            // ✅ plus de rotation
             .clip(shape)
             .background(bg)
             .border(1.dp, border, shape)
