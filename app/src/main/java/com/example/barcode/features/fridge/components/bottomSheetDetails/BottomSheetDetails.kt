@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FactCheck
@@ -38,8 +41,6 @@ import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.entities.ItemNoteEntity
 import com.example.barcode.features.fridge.isExpired
 import com.example.barcode.features.fridge.isSoon
-
-
 
 
 
@@ -92,6 +93,10 @@ public fun ItemDetailsBottomSheet(
         onOpenViewer(viewerImages, startIndex)
     }
 
+    val listState = rememberLazyListState()
+
+
+
     Box(Modifier.fillMaxWidth()) {
 
         Column(Modifier.fillMaxWidth()) {
@@ -106,31 +111,39 @@ public fun ItemDetailsBottomSheet(
 
             Spacer(Modifier.height(5.dp))
 
-            Column(
+            LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 18.dp),
+                contentPadding = PaddingValues(bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                ItemDetailsHeader(
-                    itemEntity = itemEntity,
-                    onClose = onClose,
-                    onOpenViewer = openViewerFromKind
-                )
+                item(key = "header") {
+                    ItemDetailsHeader(
+                        itemEntity = itemEntity,
+                        onClose = onClose,
+                        onOpenViewer = openViewerFromKind
+                    )
+                }
 
-                DetailsOpenImageButtons(
-                    ingredientsUrl = itemEntity.imageIngredientsUrl,
-                    nutritionUrl = itemEntity.imageNutritionUrl,
-                    onOpenViewer = openViewerFromUrl
-                )
+                item(key = "open_images") {
+                    DetailsOpenImageButtons(
+                        ingredientsUrl = itemEntity.imageIngredientsUrl,
+                        nutritionUrl = itemEntity.imageNutritionUrl,
+                        onOpenViewer = openViewerFromUrl
+                    )
+                }
 
-                NotesCollapsibleSection(
-                    notes = notes,
-                    onAddNote = onAddNote,
-                    onDeleteNote = onDeleteNote,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                item(key = "notes") {
+                    NotesCollapsibleSection(
+                        notes = notes,
+                        onAddNote = onAddNote,
+                        onDeleteNote = onDeleteNote,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
 
