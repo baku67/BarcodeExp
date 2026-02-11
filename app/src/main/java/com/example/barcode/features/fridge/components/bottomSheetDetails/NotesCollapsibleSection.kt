@@ -13,7 +13,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,6 +73,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.SpanStyle
@@ -233,7 +236,7 @@ fun NotesCollapsibleSection(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 6.dp, bottom = 2.dp)
+                            .padding(top = 4.dp, bottom = 2.dp)
                             .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
                             .heightIn(min = 1.dp)
                     )
@@ -249,9 +252,9 @@ fun NotesCollapsibleSection(
                     NotesWrapLeft(
                         notes = sortedNotes,
                         armedNoteId = armedNoteId,
-                        onArm = { armedNoteId = it },
+                        onArm = { id -> armedNoteId = id },
                         onDisarm = { armedNoteId = null },
-                        onDeleteNote = { id ->
+                        onConfirmDelete = { id ->
                             onDeleteNote(id)
                             armedNoteId = null
                         }
@@ -373,7 +376,6 @@ private fun AddNoteRow(
     }
 }
 
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun NotesWrapLeft(
@@ -381,19 +383,16 @@ private fun NotesWrapLeft(
     armedNoteId: String?,
     onArm: (String) -> Unit,
     onDisarm: () -> Unit,
-    onDeleteNote: (String) -> Unit,
+    onConfirmDelete: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // ✅ Tap dans les “vides” = reset (ne gêne pas les boutons internes)
+    // ✅ tap dans les zones vides = reset (ça marche déjà chez toi)
     Box(
         modifier = modifier
             .fillMaxWidth()
             .pointerInput(armedNoteId) {
-                detectTapGestures(
-                    onTap = {
-                        if (armedNoteId != null) onDisarm()
-                    }
-                )
+                if (armedNoteId == null) return@pointerInput
+                detectTapGestures(onTap = { onDisarm() })
             }
     ) {
         FlowRow(
@@ -402,19 +401,23 @@ private fun NotesWrapLeft(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             notes.forEach { note ->
+                val isArmed = (armedNoteId == note.id)
+
                 NotePostIt(
                     note = note,
-                    deleteArmed = (armedNoteId == note.id),
+                    deleteArmed = isArmed,
                     onArm = { onArm(note.id) },
                     onDisarm = onDisarm,
-                    onConfirmDelete = { onDeleteNote(note.id) },
-                    modifier = Modifier.widthIn(max = 260.dp)
+                    onConfirmDelete = { onConfirmDelete(note.id) },
+                    modifier = Modifier
+                        .widthIn(max = 260.dp)
+                        // ✅ CLÉ : si un autre post-it est armé, cliquer ici désarme (et consomme le tap)
+                        .disarmIfOtherArmed(armedNoteId = armedNoteId, noteId = note.id, onDisarm = onDisarm)
                 )
             }
         }
     }
 }
-
 
 @Composable
 private fun NotePostIt(
@@ -433,9 +436,9 @@ private fun NotePostIt(
         modifier = modifier
             .clip(shape)
             .background(bg)
-            // ✅ border constante => jamais de “shift”
+            // ✅ border constante => pas de shift
             .border(1.dp, baseBorder, shape)
-            // ✅ highlight “à l’intérieur” (overlay) => ne change pas la taille / spacing
+            // ✅ surbrillance “interne” (n’affecte pas le layout)
             .drawWithContent {
                 drawContent()
                 if (deleteArmed) {
@@ -443,12 +446,9 @@ private fun NotePostIt(
                     val inset = stroke / 2f
                     val r = 2.dp.toPx()
 
-                    // voile léger
-                    drawRect(PinRed.copy(alpha = 0.06f))
-
-                    // bordure interne
+                    drawRect(PinRed.copy(alpha = 0.05f))
                     drawRoundRect(
-                        color = PinRed.copy(alpha = 0.90f),
+                        color = PinRed.copy(alpha = 0.95f),
                         topLeft = Offset(inset, inset),
                         size = Size(size.width - stroke, size.height - stroke),
                         cornerRadius = CornerRadius(r, r),
@@ -456,7 +456,7 @@ private fun NotePostIt(
                     )
                 }
             }
-            // ✅ tap sur la note = annule le mode delete (et consomme le tap)
+            // ✅ clic sur le post-it armé => reset
             .clickable(
                 enabled = deleteArmed,
                 indication = null,
@@ -464,44 +464,38 @@ private fun NotePostIt(
             ) { onDisarm() }
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        // bouton delete (2 taps)
-        if (deleteArmed) {
-            FilledTonalIconButton(
-                onClick = onConfirmDelete,
-                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = PinRed.copy(alpha = 0.16f),
-                    contentColor = PinRed.copy(alpha = 0.95f)
-                ),
-                modifier = Modifier
-                    .size(24.dp)
-                    .align(Alignment.TopEnd)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Confirmer suppression",
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        } else {
-            IconButton(
-                onClick = onArm,
-                modifier = Modifier
-                    .size(20.dp)
-                    .align(Alignment.TopEnd)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Supprimer",
-                    tint = Color(0xFF1F1F1F).copy(alpha = 0.65f),
-                    modifier = Modifier.size(15.dp)
-                )
-            }
+        // ✅ Action (toujours la même taille => aucun reflow du FlowRow)
+        val actionSize = 24.dp
+        val actionBg = if (deleteArmed) PinRed.copy(alpha = 0.16f) else Color.Transparent
+        val actionTint = if (deleteArmed) PinRed.copy(alpha = 0.95f) else Color(0xFF1F1F1F).copy(alpha = 0.65f)
+
+        Box(
+            modifier = Modifier
+                .size(actionSize)                 // ✅ taille FIXE
+                .align(Alignment.TopEnd)
+                .clip(RoundedCornerShape(999.dp))
+                .background(actionBg)             // ✅ fond uniquement en armed
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) {
+                    if (deleteArmed) onConfirmDelete() else onArm()
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = if (deleteArmed) "Confirmer suppression" else "Supprimer",
+                tint = actionTint,
+                modifier = Modifier.size(16.dp)
+            )
         }
 
         Row(
-            modifier = Modifier.padding(end = 26.dp),
+            modifier = Modifier.padding(end = 28.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // (optionnel) badge pinned si tu veux le garder visible
             if (note.pinned) {
                 Box(
                     modifier = Modifier
@@ -528,6 +522,24 @@ private fun NotePostIt(
                 fontWeight = FontWeight.Medium
             )
         }
+    }
+}
+
+
+
+private fun Modifier.disarmIfOtherArmed(
+    armedNoteId: String?,
+    noteId: String,
+    onDisarm: () -> Unit
+): Modifier = pointerInput(armedNoteId, noteId) {
+    if (armedNoteId == null || armedNoteId == noteId) return@pointerInput
+
+    awaitPointerEventScope {
+        // ✅ capture avant les enfants (IconButton etc.)
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        down.consume() // ✅ empêche que le tap arme/supprime autre chose
+        onDisarm()
+        waitForUpOrCancellation(pass = PointerEventPass.Initial)
     }
 }
 
