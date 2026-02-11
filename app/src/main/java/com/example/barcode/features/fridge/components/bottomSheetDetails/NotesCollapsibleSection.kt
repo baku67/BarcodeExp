@@ -87,6 +87,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.key
+import androidx.compose.ui.text.font.FontStyle
 
 const val NOTE_MAX_LEN = 100
 private val BadgeBlue = Color(0xFF1976D2)
@@ -413,10 +414,10 @@ private fun NotesWrapLeft(
         FlowRow(
             modifier = Modifier
                 .fillMaxWidth()
-                // ✅ ça rend la variation de hauteur + “reflow” moins brutale
-                .animateContentSize(animationSpec = tween(220)),
-            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.Start),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(horizontal = 12.dp)      // ✅ “marge” gauche/droite
+                .animateContentSize(tween(220)),
+            horizontalArrangement = Arrangement.spacedBy(14.dp), // ✅ espace entre post-its
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             notes.forEach { note ->
                 key(note.id) {
@@ -579,9 +580,11 @@ private fun NotePostIt(
 
             Text(
                 text = note.body,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF1F1F1F),
-                fontWeight = FontWeight.Medium
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontStyle = FontStyle.Italic
+                ),
+                color = Color(0xFF1F1F1F).copy(alpha = 0.88f), // ✅ opacity “contenu utilisateur”
+                fontWeight = FontWeight.Normal                // ✅ plus naturel en italique
             )
         }
     }

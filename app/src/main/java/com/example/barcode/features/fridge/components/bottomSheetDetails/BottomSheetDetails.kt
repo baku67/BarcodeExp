@@ -136,6 +136,13 @@ public fun ItemDetailsBottomSheet(
                     )
                 }
 
+                item(key = "good_to_know") {
+                    GoodToKnowCollapsibleSection(
+                        enabled = !itemEntity.barcode.isNullOrBlank(), // ✅ grisé si barcode null
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 item(key = "notes") {
                     NotesCollapsibleSection(
                         notes = notes,

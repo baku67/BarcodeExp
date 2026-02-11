@@ -4,6 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -31,14 +33,13 @@ fun RegisterScreen(
     var password by rememberSaveable { mutableStateOf("") }
     var confirmPassword by rememberSaveable { mutableStateOf("") }
 
-// Auto-login après register
+    // Auto-login après register
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
                 AuthViewModel.AuthEvent.GoHome,
                 AuthViewModel.AuthEvent.GoHomeLocal -> {
                     navController.navigate("tabs") {
-                        // ⚠️ mieux que popUpTo("auth/register") : ça vire tout le flow auth
                         popUpTo("auth") { inclusive = true }
                         launchSingleTop = true
                     }
@@ -51,108 +52,126 @@ fun RegisterScreen(
         containerColor = Color.Transparent
     ) { innerPadding ->
 
-        AuthCenteredScreen(innerPadding) {
+        Box(modifier = Modifier.fillMaxSize()) {
 
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            AuthCenteredScreen(innerPadding) {
 
-                Box(
-                    modifier = Modifier
-                        .size(104.dp)
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.frigozen_icon),
-                        contentDescription = "FrigoZen",
-                        modifier = Modifier.size(72.dp)
+
+                    Box(
+                        modifier = Modifier
+                            .size(104.dp)
+                            .clip(RoundedCornerShape(28.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.frigozen_icon),
+                            contentDescription = "FrigoZen",
+                            modifier = Modifier.size(72.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Text(
+                        text = "FrigoZen",
+                        fontSize = 42.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary
                     )
-                }
 
-                Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(6.dp))
 
-                Text(
-                    text = "FrigoZen",
-                    fontSize = 42.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                    Text(
+                        text = "Créer un compte",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
 
-                Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(15.dp))
 
-                Text(
-                    text = "Créer un compte",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                    TextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.loading
+                    )
 
-                Spacer(Modifier.height(15.dp))
-
-                TextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("Email") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.loading
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                TextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Mot de passe") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.loading
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                TextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    label = { Text("Confirmer le mot de passe") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.loading
-                )
-
-                Spacer(Modifier.height(16.dp))
-
-                if (state.loading) {
-
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        CircularProgressIndicator()
-                    }
-
-                } else {
-
-                    Button(
-                        onClick = { viewModel.onRegister(email, password, confirmPassword) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Créer le compte")
-                    }
-
-                    TextButton(onClick = onNavigateToLogin) {
-                        Text("J’ai déjà un compte")
-                    }
-                }
-
-                state.error?.let {
                     Spacer(Modifier.height(12.dp))
-                    Text(it, color = MaterialTheme.colorScheme.error)
+
+                    TextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Mot de passe") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.loading
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    TextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirmer le mot de passe") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.loading
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    if (state.loading) {
+
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            CircularProgressIndicator()
+                        }
+
+                    } else {
+
+                        Button(
+                            onClick = { viewModel.onRegister(email, password, confirmPassword) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Créer le compte")
+                        }
+
+                        TextButton(onClick = onNavigateToLogin) {
+                            Text("J’ai déjà un compte")
+                        }
+                    }
+
+                    state.error?.let {
+                        Spacer(Modifier.height(12.dp))
+                        Text(it, color = MaterialTheme.colorScheme.error)
+                    }
                 }
+            }
+
+            // ✕ (Primary) — skip auth → mode local (même logique que LoginScreen)
+            IconButton(
+                onClick = { viewModel.onUseLocalMode() },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Continuer hors-ligne",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
