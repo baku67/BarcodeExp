@@ -25,12 +25,14 @@ import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -95,10 +97,33 @@ public fun ItemDetailsBottomSheet(
 
     val listState = rememberLazyListState()
 
+    val sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
+    val surface = MaterialTheme.colorScheme.surface
+    val elevated = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp)
+    val tintTop = strokeColor.copy(alpha = 0.10f)
 
-    Box(Modifier.fillMaxWidth()) {
+    val sheetBrush = remember(strokeColor, surface, elevated) {
+        Brush.verticalGradient(
+            colorStops = arrayOf(
+                0f to tintTop,          // petit glow en haut (lié au stroke : expiré/soon/ok)
+                0.35f to elevated,      // léger “lift”
+                1f to surface           // base
+            )
+        )
+    }
 
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(sheetShape)
+            .background(sheetBrush)
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                shape = sheetShape
+            )
+    ) {
         Column(Modifier.fillMaxWidth()) {
 
             CornerRadiusEtPoignee(
@@ -106,7 +131,7 @@ public fun ItemDetailsBottomSheet(
                 strokeWidth = 2.dp,
                 strokeColor = strokeColor,
                 handleHeight = 4.dp,
-                topEndContent = null // <- on n'utilise plus le slot ici
+                topEndContent = null
             )
 
             Spacer(Modifier.height(5.dp))
