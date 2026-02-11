@@ -1,5 +1,9 @@
 package com.example.barcode.features.fridge.components.bottomSheetDetails
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -56,14 +60,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
-import kotlinx.coroutines.launch
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.VectorConverter
-import androidx.compose.animation.core.tween
-import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.Job
-
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 public enum class ViewerImageKind {
     Preview,
@@ -121,12 +120,12 @@ public fun ImageViewerDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        // ✅ La barre “prend sa place” (pas en overlay)
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(bgBrush)
         ) {
+            // ✅ Header opaque, prend sa place (réduit l’image)
             Surface(
                 color = headerColor,
                 tonalElevation = 0.dp,
@@ -204,7 +203,6 @@ public fun ImageViewerDialog(
     }
 }
 
-
 @Composable
 private fun ZoomableImagePage(
     url: String,
@@ -212,6 +210,9 @@ private fun ZoomableImagePage(
 ) {
     var scale by remember(url) { mutableStateOf(1f) }
     var offset by remember(url) { mutableStateOf(Offset.Zero) }
+
+    // ✅ Source de vérité pour le toggle double-tap (sinon “re-double-tap pendant anim” peut rater)
+    var isZoomed by remember(url) { mutableStateOf(false) }
 
     var containerSize by remember(url) { mutableStateOf(IntSize.Zero) }
     var imageSize by remember(url) { mutableStateOf(IntSize.Zero) }
@@ -222,15 +223,14 @@ private fun ZoomableImagePage(
     fun animateZoom(targetScale: Float, targetOffset: Offset) {
         zoomJob?.cancel()
         zoomJob = scope.launch {
-            val scaleAnim = Animatable(scale)
-            // Si `Offset.VectorConverter` ne compile pas chez toi, remplace par `Offset.Companion.VectorConverter`
-            val offsetAnim = Animatable(offset, Offset.VectorConverter)
-
-            val spec = tween<Float>(durationMillis = 220, easing = FastOutSlowInEasing)
+            val specScale = tween<Float>(durationMillis = 220, easing = FastOutSlowInEasing)
             val specOffset = tween<Offset>(durationMillis = 220, easing = FastOutSlowInEasing)
 
+            val scaleAnim = Animatable(scale)
+            val offsetAnim = Animatable(offset, Offset.VectorConverter)
+
             launch {
-                scaleAnim.animateTo(targetScale, animationSpec = spec) {
+                scaleAnim.animateTo(targetScale, animationSpec = specScale) {
                     scale = value
                     onScaleChanged(scale)
                 }
@@ -262,23 +262,28 @@ private fun ZoomableImagePage(
                     .padding(18.dp)
                     .onGloballyPositioned { coords -> imageSize = coords.size }
 
-                    // ✅ Double-tap animé : zoom <-> reset
+                    // ✅ Double-tap animé : zoom <-> reset (et re-double-tap pendant anim = OK)
                     .pointerInput(url) {
                         detectTapGestures(
                             onDoubleTap = {
-                                val zoomIn = scale <= 1.02f
-                                val targetScale = if (zoomIn) 2.5f else 1f
+                                val targetScale = if (!isZoomed) 2.5f else 1f
                                 val targetOffset = Offset.Zero
+
+                                // toggle immédiat
+                                isZoomed = !isZoomed
+
                                 animateZoom(targetScale, targetOffset)
                             }
                         )
                     }
 
-                    // ✅ Pinch/drag immédiat (PAS d’Animatable ici) -> plus d’erreur restricted
+                    // ✅ Pinch/drag immédiat (ne casse pas les taps)
                     .pointerInput(url) {
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
+
                             var transforming = false
+                            val panThreshold = viewConfiguration.touchSlop / 3f
 
                             do {
                                 val event = awaitPointerEvent()
@@ -286,9 +291,13 @@ private fun ZoomableImagePage(
                                 val pressedCount = event.changes.count { it.pressed }
                                 val zoom = event.calculateZoom()
                                 val pan = event.calculatePan()
+                                val panDistance = pan.getDistance()
+
+                                // ✅ Pan 1 doigt seulement si on bouge vraiment, sinon ça laisse passer les double-taps
+                                val wantsOneFingerPan = scale > 1.02f && panDistance > panThreshold
 
                                 if (!transforming) {
-                                    transforming = pressedCount >= 2 || scale > 1f
+                                    transforming = pressedCount >= 2 || wantsOneFingerPan
                                 }
 
                                 if (transforming) {
@@ -304,10 +313,12 @@ private fun ZoomableImagePage(
                                         scale = scale
                                     )
 
-                                    if (kotlin.math.abs(scale - 1f) < 0.03f) {
+                                    if (abs(scale - 1f) < 0.03f) {
                                         scale = 1f
                                         offset = Offset.Zero
                                     }
+
+                                    isZoomed = scale > 1.02f
 
                                     onScaleChanged(scale)
                                     event.changes.forEach { it.consume() }
@@ -326,7 +337,10 @@ private fun ZoomableImagePage(
         }
 
         if (pState is AsyncImagePainter.State.Loading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator(
                     strokeWidth = 2.dp,
                     modifier = Modifier.size(36.dp),
@@ -336,7 +350,10 @@ private fun ZoomableImagePage(
         }
 
         if (pState is AsyncImagePainter.State.Error) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
                     imageVector = Icons.Outlined.Image,
                     contentDescription = null,
@@ -347,8 +364,6 @@ private fun ZoomableImagePage(
         }
     }
 }
-
-
 
 private fun Offset.clampToBounds(
     containerSize: IntSize,
