@@ -80,7 +80,8 @@ class SyncWorker(
                     itemClientId = note.itemId,
                     body = ItemNoteCreateDto(
                         clientId = note.id,
-                        body = note.body
+                        body = note.body,
+                        pinned = note.pinned
                     )
                 )
 
@@ -326,6 +327,7 @@ class SyncWorker(
                             id = clientId,
                             itemId = dto.itemClientId,
                             body = dto.body,
+                            pinned = dto.pinned,
                             createdAt = createdAt,
                             deletedAt = null,
                             pendingOperation = PendingOperation.NONE,

@@ -33,10 +33,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,19 +69,29 @@ private val BadgeBlue = Color(0xFF1976D2)
 @Composable
 fun NotesCollapsibleSection(
     notes: List<ItemNoteEntity>,
-    onAddNote: (String) -> Unit,
+    onAddNote: (text: String, pinned: Boolean) -> Unit,
     onDeleteNote: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     var draft by rememberSaveable { mutableStateOf("") }
+    var pinnedDraft by rememberSaveable { mutableStateOf(false) }
 
     val submit: () -> Unit = {
         val text = draft.trim().take(NOTE_MAX_LEN)
         if (text.isNotBlank()) {
-            onAddNote(text)
+            onAddNote(text, pinnedDraft)
             draft = ""
+            pinnedDraft = false
         }
+    }
+
+    // ✅ Tri : épinglées d’abord, puis par date (récent -> ancien)
+    val sortedNotes = remember(notes) {
+        notes.sortedWith(
+            compareByDescending<ItemNoteEntity> { it.pinned }
+                .thenByDescending { it.createdAt }
+        )
     }
 
     val containerShape = RoundedCornerShape(16.dp)
@@ -89,10 +101,8 @@ fun NotesCollapsibleSection(
         label = "notesChevronRotation"
     )
 
-    // teinte "normale" (icône + label Notes + parenthèses)
     val labelTint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
 
-    // teinte accent (uniquement chiffre + chevron si > 0)
     val accentTint by animateColorAsState(
         targetValue = if (notes.isNotEmpty()) ItemNote else labelTint,
         label = "notesAccentTint"
@@ -116,7 +126,6 @@ fun NotesCollapsibleSection(
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // ✅ icône "normale" (pas de couleur accent)
             Icon(
                 imageVector = Icons.Outlined.StickyNote2,
                 contentDescription = null,
@@ -134,7 +143,6 @@ fun NotesCollapsibleSection(
 
             Spacer(Modifier.width(6.dp))
 
-            // ✅ parenthèses normales + chiffre accent (si 0 => accentTint == labelTint)
             Text(
                 text = buildAnnotatedString {
                     append("(")
@@ -146,22 +154,20 @@ fun NotesCollapsibleSection(
             )
 
             Spacer(Modifier.weight(1f))
-
-            // ✅ chevron uniquement si > 0 + coloré
             Spacer(Modifier.weight(1f))
 
             if (notes.isEmpty()) {
                 Icon(
                     imageVector = Icons.Filled.Add,
                     contentDescription = "Ajouter une note",
-                    tint = labelTint, // ✅ pas de couleur accent
+                    tint = labelTint,
                     modifier = Modifier.size(20.dp)
                 )
             } else {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = accentTint, // ✅ coloré quand > 0
+                    tint = accentTint,
                     modifier = Modifier
                         .size(20.dp)
                         .rotate(chevronRotation)
@@ -184,6 +190,8 @@ fun NotesCollapsibleSection(
                 AddNoteRow(
                     draft = draft,
                     onDraftChange = { draft = it.take(NOTE_MAX_LEN) },
+                    pinned = pinnedDraft,
+                    onTogglePinned = { pinnedDraft = !pinnedDraft },
                     onSubmit = submit
                 )
 
@@ -195,7 +203,7 @@ fun NotesCollapsibleSection(
                     )
                 } else {
                     NotesWrapLeft(
-                        notes = notes,
+                        notes = sortedNotes,
                         onDeleteNote = onDeleteNote
                     )
                 }
@@ -208,6 +216,8 @@ fun NotesCollapsibleSection(
 private fun AddNoteRow(
     draft: String,
     onDraftChange: (String) -> Unit,
+    pinned: Boolean,
+    onTogglePinned: () -> Unit,
     onSubmit: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -216,6 +226,24 @@ private fun AddNoteRow(
     val borderColor =
         if (focused) BadgeBlue.copy(alpha = 0.55f)
         else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+
+    val pinBg by animateColorAsState(
+        targetValue = if (pinned) MaterialTheme.colorScheme.error.copy(alpha = 0.10f)
+        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f),
+        label = "notePinBg"
+    )
+
+    val pinBorder by animateColorAsState(
+        targetValue = if (pinned) MaterialTheme.colorScheme.error.copy(alpha = 0.55f)
+        else borderColor,
+        label = "notePinBorder"
+    )
+
+    val pinTint by animateColorAsState(
+        targetValue = if (pinned) MaterialTheme.colorScheme.error.copy(alpha = 0.90f)
+        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+        label = "notePinTint"
+    )
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
@@ -253,6 +281,23 @@ private fun AddNoteRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged { focused = it.isFocused }
+                )
+            }
+
+            IconToggleButton(
+                checked = pinned,
+                onCheckedChange = { onTogglePinned() },
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(inputShape)
+                    .background(pinBg)
+                    .border(1.dp, pinBorder, inputShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.PushPin,
+                    contentDescription = "Épingler",
+                    tint = pinTint,
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
@@ -327,12 +372,26 @@ private fun NotePostIt(
             )
         }
 
-        Text(
-            text = note.body,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF1F1F1F),
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(end = 22.dp)
-        )
+        Row(
+            modifier = Modifier.padding(end = 22.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (note.pinned) {
+                Icon(
+                    imageVector = Icons.Outlined.PushPin,
+                    contentDescription = "Note épinglée",
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+            }
+
+            Text(
+                text = note.body,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF1F1F1F),
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }

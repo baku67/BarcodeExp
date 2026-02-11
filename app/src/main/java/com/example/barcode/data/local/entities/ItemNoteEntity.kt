@@ -14,6 +14,8 @@ import java.util.UUID
         Index(value = ["pendingOperation"], name = "index_item_notes_pendingOperation"),
         Index(value = ["syncState"], name = "index_item_notes_syncState"),
         Index(value = ["serverUpdatedAt"], name = "index_item_notes_serverUpdatedAt"),
+        // utile pour le tri: pinned DESC, createdAt DESC
+        Index(value = ["itemId", "pinned", "createdAt"], name = "index_item_notes_itemId_pinned_createdAt"),
     ]
 )
 data class ItemNoteEntity(
@@ -21,6 +23,9 @@ data class ItemNoteEntity(
 
     val itemId: String, // = itemClientId (ItemEntity.id)
     val body: String,
+
+    @ColumnInfo(defaultValue = "0")
+    val pinned: Boolean = false,
 
     val createdAt: Long = System.currentTimeMillis(),
     val deletedAt: Long? = null,

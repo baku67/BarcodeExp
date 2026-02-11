@@ -49,7 +49,7 @@ import com.example.barcode.features.fridge.isSoon
 public fun ItemDetailsBottomSheet(
     itemEntity: ItemEntity,
     notes: List<ItemNoteEntity> = emptyList(),
-    onAddNote: (String) -> Unit = {},
+    onAddNote: (String, Boolean) -> Unit = { _, _ -> },
     onDeleteNote: (String) -> Unit = {},
     onClose: () -> Unit,
     onOpenViewer: (List<ViewerImage>, Int) -> Unit,

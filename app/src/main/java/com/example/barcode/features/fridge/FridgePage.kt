@@ -349,7 +349,7 @@ fun FridgePage(
             ItemDetailsBottomSheet(
                 itemEntity = sheetItemEntity!!,
                 notes = notes,
-                onAddNote = { text -> vm.addNote(itemId, text) },
+                onAddNote = { text, pinned -> vm.addNote(itemId, text, pinned) },
                 onDeleteNote = { noteId -> vm.deleteNote(noteId) },
 
                 onClose = { closeSheet() },

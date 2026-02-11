@@ -13,7 +13,7 @@ import com.example.barcode.data.local.dao.ItemNoteDao
 import com.example.barcode.data.local.entities.ItemNoteEntity
 
 @TypeConverters(RoomConverters::class)
-@Database(entities = [ItemEntity::class, ItemNoteEntity::class], version = 8, exportSchema = true)
+@Database(entities = [ItemEntity::class, ItemNoteEntity::class], version = 9, exportSchema = true)
 abstract class AppDb : RoomDatabase() {
 
     abstract fun itemDao(): ItemDao
@@ -175,6 +175,16 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
+        // Ajout pinned sur ItemNote
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                if (!columnExists(db, "item_notes", "pinned")) {
+                    db.execSQL("ALTER TABLE item_notes ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0")
+                }
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_item_notes_itemId_pinned_createdAt ON item_notes(itemId, pinned, createdAt)")
+            }
+        }
+
 
         private fun columnExists(db: SupportSQLiteDatabase, table: String, column: String): Boolean {
             db.query("PRAGMA table_info($table)").use { cursor ->
@@ -207,6 +217,7 @@ abstract class AppDb : RoomDatabase() {
                     .addMigrations(MIGRATION_5_6)
                     .addMigrations(MIGRATION_6_7)
                     .addMigrations(MIGRATION_7_8)
+                    .addMigrations(MIGRATION_8_9)
 
                     // Toujours à la fin
                     .build().also { INSTANCE = it }

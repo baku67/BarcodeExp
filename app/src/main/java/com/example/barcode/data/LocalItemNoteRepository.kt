@@ -12,15 +12,16 @@ class LocalItemNoteRepository(
 ) {
     fun observeNotes(itemId: String): Flow<List<ItemNoteEntity>> = dao.observeForItem(itemId)
 
-    suspend fun addNote(itemId: String, body: String) {
+    suspend fun addNote(itemId: String, body: String, pinned: Boolean = false) {
         val trimmed = body.trim()
         if (trimmed.isBlank()) return
-        if (trimmed.length > 800) return
+        if (trimmed.length > 100) return // max char 100
 
         dao.upsert(
             ItemNoteEntity(
                 itemId = itemId,
                 body = trimmed,
+                pinned = pinned,
                 pendingOperation = PendingOperation.CREATE,
                 syncState = SyncState.OK
             )

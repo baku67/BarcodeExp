@@ -118,8 +118,8 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
     fun observeNotes(itemId: String): Flow<List<ItemNoteEntity>> =
         notesRepo.observeNotes(itemId)
 
-    fun addNote(itemId: String, body: String) = viewModelScope.launch {
-        notesRepo.addNote(itemId, body)
+    fun addNote(itemId: String, body: String, pinned: Boolean = false) = viewModelScope.launch {
+        notesRepo.addNote(itemId, body, pinned)
         if (session.isAuthenticated()) SyncScheduler.enqueueSync(getApplication())
     }
 

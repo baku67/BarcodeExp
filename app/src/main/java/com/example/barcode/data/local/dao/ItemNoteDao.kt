@@ -15,7 +15,7 @@ interface ItemNoteDao {
         SELECT * FROM item_notes
         WHERE itemId = :itemId
           AND deletedAt IS NULL
-        ORDER BY createdAt DESC
+        ORDER BY pinned DESC, createdAt DESC
     """)
     fun observeForItem(itemId: String): Flow<List<ItemNoteEntity>>
 

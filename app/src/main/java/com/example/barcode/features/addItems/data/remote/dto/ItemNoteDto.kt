@@ -7,6 +7,7 @@ data class ItemNoteDto(
     val clientId: String,
     val itemClientId: String,
     val body: String,
+    val pinned: Boolean = false,
     val createdAt: String?,
     val updatedAt: String,
     val deletedAt: String?,
@@ -15,7 +16,8 @@ data class ItemNoteDto(
 
 data class ItemNoteCreateDto(
     val clientId: String,
-    val body: String
+    val body: String,
+    val pinned: Boolean = false
 )
 
 data class NotesSyncResponseDto(
