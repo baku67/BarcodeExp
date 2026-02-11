@@ -45,11 +45,7 @@ import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -85,6 +81,12 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.common.ui.theme.ItemNote
 import com.example.barcode.data.local.entities.ItemNoteEntity
 import kotlinx.coroutines.delay
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.runtime.key
 
 const val NOTE_MAX_LEN = 100
 private val BadgeBlue = Color(0xFF1976D2)
@@ -386,7 +388,20 @@ private fun NotesWrapLeft(
     onConfirmDelete: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // ✅ tap dans les zones vides = reset (ça marche déjà chez toi)
+    // ✅ IDs connus au moment où la section est rendue => pas d’anim “initiale”
+    var knownIds by remember { mutableStateOf(notes.map { it.id }.toSet()) }
+
+    // ✅ on garde l’item le temps de l’anim de sortie, puis on supprime vraiment
+    var deletingIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    val exitMs = 170
+
+    fun requestDelete(id: String) {
+        onDisarm() // ✅ UX: pas besoin de 2 taps pour armer un autre post-it pendant l’anim
+        deletingIds = deletingIds + id
+    }
+
+    // ✅ tap dans les zones vides = reset
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -396,28 +411,75 @@ private fun NotesWrapLeft(
             }
     ) {
         FlowRow(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                // ✅ ça rend la variation de hauteur + “reflow” moins brutale
+                .animateContentSize(animationSpec = tween(220)),
             horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.Start),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             notes.forEach { note ->
-                val isArmed = (armedNoteId == note.id)
+                key(note.id) {
+                    val isDeleting = deletingIds.contains(note.id)
+                    val isArmed = (armedNoteId == note.id)
+                    val isNew = !knownIds.contains(note.id)
 
-                NotePostIt(
-                    note = note,
-                    deleteArmed = isArmed,
-                    onArm = { onArm(note.id) },
-                    onDisarm = onDisarm,
-                    onConfirmDelete = { onConfirmDelete(note.id) },
-                    modifier = Modifier
-                        .widthIn(max = 260.dp)
-                        // ✅ CLÉ : si un autre post-it est armé, cliquer ici désarme (et consomme le tap)
-                        .disarmIfOtherArmed(armedNoteId = armedNoteId, noteId = note.id, onDisarm = onDisarm)
-                )
+                    // ✅ entrée animée uniquement pour les nouveaux
+                    val visibleState = remember(note.id) {
+                        MutableTransitionState(!isNew)
+                    }
+
+                    LaunchedEffect(note.id, isNew) {
+                        if (isNew) {
+                            visibleState.targetState = true
+                            knownIds = knownIds + note.id
+                        }
+                    }
+
+                    // ✅ sortie animée + suppression réelle après la sortie
+                    LaunchedEffect(note.id, isDeleting) {
+                        if (isDeleting) {
+                            visibleState.targetState = false
+                            delay(exitMs.toLong())
+                            onConfirmDelete(note.id)
+                            deletingIds = deletingIds - note.id
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visibleState = visibleState,
+                        enter =
+                        fadeIn(tween(160)) +
+                                slideInVertically(tween(200)) { (it * -0.20f).toInt() } +
+                                scaleIn(tween(200), initialScale = 0.97f),
+                        exit =
+                        fadeOut(tween(exitMs)) +
+                                slideOutVertically(tween(exitMs)) { (it * 0.20f).toInt() } +
+                                scaleOut(tween(exitMs), targetScale = 0.97f)
+                    ) {
+                        NotePostIt(
+                            note = note,
+                            // ✅ garde le style “armed” pendant la sortie même si on a disarm
+                            deleteArmed = isArmed || isDeleting,
+                            onArm = { onArm(note.id) },
+                            onDisarm = onDisarm,
+                            // ✅ ici on demande l’anim de suppression, pas la suppression directe
+                            onConfirmDelete = { requestDelete(note.id) },
+                            modifier = Modifier
+                                .widthIn(max = 260.dp)
+                                .disarmIfOtherArmed(
+                                    armedNoteId = armedNoteId,
+                                    noteId = note.id,
+                                    onDisarm = onDisarm
+                                )
+                        )
+                    }
+                }
             }
         }
     }
 }
+
 
 @Composable
 private fun NotePostIt(
