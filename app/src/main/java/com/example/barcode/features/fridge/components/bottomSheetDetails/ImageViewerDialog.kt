@@ -1,16 +1,16 @@
 package com.example.barcode.features.fridge.components.bottomSheetDetails
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
-import androidx.compose.foundation.gestures.calculateRotation
 import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -22,39 +22,48 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
-import kotlin.math.abs
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
 import kotlinx.coroutines.launch
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.Job
+
 
 public enum class ViewerImageKind {
     Preview,
@@ -88,24 +97,102 @@ public fun ImageViewerDialog(
         pageCount = { images.size }
     )
 
-    // ✅ Désactive le swipe quand on est zoomé (sinon c'est vite relou)
+    // Désactive le swipe quand on est zoomé
     val pageScales = remember { mutableStateMapOf<Int, Float>() }
     val currentScale = pageScales[pagerState.currentPage] ?: 1f
     val canSwipe = currentScale <= 1.02f
+
     val scope = rememberCoroutineScope()
+
+    // Palette “premium” (soft, pas noir pur)
+    val bgBrush = remember {
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFF0B0D12),
+                Color(0xFF000000)
+            )
+        )
+    }
+    val headerColor = Color(0xFF101218) // opaque
+    val dividerColor = Color.White.copy(alpha = 0.08f)
+    val indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f)
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Box(
+        // ✅ La barre “prend sa place” (pas en overlay)
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(bgBrush)
         ) {
+            Surface(
+                color = headerColor,
+                tonalElevation = 0.dp,
+                shadowElevation = 8.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(start = 12.dp, end = 6.dp), // ✅ pas de padding vertical => indicateur collé en bas
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ScrollableTabRow(
+                            selectedTabIndex = pagerState.currentPage,
+                            modifier = Modifier.weight(1f),
+                            containerColor = Color.Transparent,
+                            contentColor = Color.White,
+                            edgePadding = 0.dp,
+                            divider = {},
+                            indicator = { tabPositions ->
+                                TabRowDefaults.SecondaryIndicator(
+                                    modifier = Modifier
+                                        .tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                                    height = 3.dp,
+                                    color = indicatorColor
+                                )
+                            }
+                        ) {
+                            images.forEachIndexed { index, img ->
+                                val selected = pagerState.currentPage == index
+                                Tab(
+                                    selected = selected,
+                                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                                    text = {
+                                        Text(
+                                            text = img.title,
+                                            maxLines = 1,
+                                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                            color = Color.White.copy(alpha = if (selected) 0.95f else 0.62f),
+                                            style = MaterialTheme.typography.titleSmall
+                                        )
+                                    }
+                                )
+                            }
+                        }
+
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = "Fermer",
+                                tint = Color.White
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = dividerColor, thickness = 1.dp)
+                }
+            }
+
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 userScrollEnabled = canSwipe
             ) { page ->
                 ZoomableImagePage(
@@ -113,54 +200,10 @@ public fun ImageViewerDialog(
                     onScaleChanged = { pageScales[page] = it }
                 )
             }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ScrollableTabRow(
-                        selectedTabIndex = pagerState.currentPage,
-                        modifier = Modifier.weight(1f),
-                        containerColor = Color.Transparent,
-                        contentColor = Color.White,
-                        edgePadding = 0.dp,
-                        divider = {}
-                    ) {
-                        images.forEachIndexed { index, img ->
-                            val selected = pagerState.currentPage == index
-
-                            Tab(
-                                selected = selected,
-                                onClick = {
-                                    scope.launch { pagerState.animateScrollToPage(index) }
-                                },
-                                text = {
-                                    Text(
-                                        text = img.title,
-                                        maxLines = 1,
-                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                        color = Color.White.copy(alpha = if (selected) 0.95f else 0.65f),
-                                        style = MaterialTheme.typography.titleSmall
-                                    )
-                                }
-                            )
-                        }
-                    }
-
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Filled.Close, contentDescription = "Fermer", tint = Color.White)
-                    }
-                }
-            }
         }
     }
 }
+
 
 @Composable
 private fun ZoomableImagePage(
@@ -168,32 +211,42 @@ private fun ZoomableImagePage(
     onScaleChanged: (Float) -> Unit
 ) {
     var scale by remember(url) { mutableStateOf(1f) }
-    var rotation by remember(url) { mutableStateOf(0f) }
-    var offset by remember(url) { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    var offset by remember(url) { mutableStateOf(Offset.Zero) }
 
-    val state = rememberTransformableState { zoomChange, panChange, rotationChange ->
-        scale = (scale * zoomChange).coerceIn(1f, 8f)
-        rotation += rotationChange
-        offset += panChange
-
-        if (abs(scale - 1f) < 0.03f) {
-            scale = 1f
-            rotation = 0f
-            offset = androidx.compose.ui.geometry.Offset.Zero
-        }
-
-        onScaleChanged(scale)
-    }
-
-    // pour pas moove infini dans le vide quand zoomed
     var containerSize by remember(url) { mutableStateOf(IntSize.Zero) }
     var imageSize by remember(url) { mutableStateOf(IntSize.Zero) }
 
+    val scope = rememberCoroutineScope()
+    var zoomJob by remember(url) { mutableStateOf<Job?>(null) }
+
+    fun animateZoom(targetScale: Float, targetOffset: Offset) {
+        zoomJob?.cancel()
+        zoomJob = scope.launch {
+            val scaleAnim = Animatable(scale)
+            // Si `Offset.VectorConverter` ne compile pas chez toi, remplace par `Offset.Companion.VectorConverter`
+            val offsetAnim = Animatable(offset, Offset.VectorConverter)
+
+            val spec = tween<Float>(durationMillis = 220, easing = FastOutSlowInEasing)
+            val specOffset = tween<Offset>(durationMillis = 220, easing = FastOutSlowInEasing)
+
+            launch {
+                scaleAnim.animateTo(targetScale, animationSpec = spec) {
+                    scale = value
+                    onScaleChanged(scale)
+                }
+            }
+            launch {
+                offsetAnim.animateTo(targetOffset, animationSpec = specOffset) {
+                    offset = value
+                }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color.Transparent)
             .onSizeChanged { containerSize = it }
     ) {
         val painter = rememberAsyncImagePainter(url)
@@ -207,13 +260,24 @@ private fun ZoomableImagePage(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(18.dp)
-                    .onGloballyPositioned { coords ->
-                        imageSize = coords.size
+                    .onGloballyPositioned { coords -> imageSize = coords.size }
+
+                    // ✅ Double-tap animé : zoom <-> reset
+                    .pointerInput(url) {
+                        detectTapGestures(
+                            onDoubleTap = {
+                                val zoomIn = scale <= 1.02f
+                                val targetScale = if (zoomIn) 2.5f else 1f
+                                val targetOffset = Offset.Zero
+                                animateZoom(targetScale, targetOffset)
+                            }
+                        )
                     }
+
+                    // ✅ Pinch/drag immédiat (PAS d’Animatable ici) -> plus d’erreur restricted
                     .pointerInput(url) {
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
-
                             var transforming = false
 
                             do {
@@ -222,19 +286,18 @@ private fun ZoomableImagePage(
                                 val pressedCount = event.changes.count { it.pressed }
                                 val zoom = event.calculateZoom()
                                 val pan = event.calculatePan()
-                                val rot = 0f
 
-                                // ✅ On ne "prend la main" QUE si:
-                                // - multi-touch (pinch), ou
-                                // - déjà zoomé (permet pan)
                                 if (!transforming) {
                                     transforming = pressedCount >= 2 || scale > 1f
                                 }
 
                                 if (transforming) {
+                                    // Interaction > animation
+                                    zoomJob?.cancel()
+
                                     val newScale = (scale * zoom).coerceIn(1f, 8f)
                                     scale = newScale
-                                    rotation += rot
+
                                     offset = (offset + pan).clampToBounds(
                                         containerSize = containerSize,
                                         contentSize = imageSize,
@@ -243,34 +306,27 @@ private fun ZoomableImagePage(
 
                                     if (kotlin.math.abs(scale - 1f) < 0.03f) {
                                         scale = 1f
-                                        rotation = 0f
-                                        offset = androidx.compose.ui.geometry.Offset.Zero
+                                        offset = Offset.Zero
                                     }
 
                                     onScaleChanged(scale)
-
-                                    // ✅ Ici on consomme, sinon le Pager swipe en même temps
                                     event.changes.forEach { it.consume() }
                                 }
-
                             } while (event.changes.any { it.pressed })
                         }
                     }
+
                     .graphicsLayer {
                         translationX = offset.x
                         translationY = offset.y
                         scaleX = scale
                         scaleY = scale
-                        rotationZ = rotation
                     }
             )
         }
 
         if (pState is AsyncImagePainter.State.Loading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
                     strokeWidth = 2.dp,
                     modifier = Modifier.size(36.dp),
@@ -280,10 +336,7 @@ private fun ZoomableImagePage(
         }
 
         if (pState is AsyncImagePainter.State.Error) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Outlined.Image,
                     contentDescription = null,
@@ -295,11 +348,13 @@ private fun ZoomableImagePage(
     }
 }
 
-private fun androidx.compose.ui.geometry.Offset.clampToBounds(
+
+
+private fun Offset.clampToBounds(
     containerSize: IntSize,
     contentSize: IntSize,
     scale: Float
-): androidx.compose.ui.geometry.Offset {
+): Offset {
     if (containerSize.width == 0 || containerSize.height == 0) return this
     if (contentSize.width == 0 || contentSize.height == 0) return this
 
@@ -309,9 +364,8 @@ private fun androidx.compose.ui.geometry.Offset.clampToBounds(
     val maxX = ((scaledW - containerSize.width) / 2f).coerceAtLeast(0f)
     val maxY = ((scaledH - containerSize.height) / 2f).coerceAtLeast(0f)
 
-    val clampedX = x.coerceIn(-maxX, maxX)
-    val clampedY = y.coerceIn(-maxY, maxY)
-
-    return androidx.compose.ui.geometry.Offset(clampedX, clampedY)
+    return Offset(
+        x = x.coerceIn(-maxX, maxX),
+        y = y.coerceIn(-maxY, maxY)
+    )
 }
-

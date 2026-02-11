@@ -121,7 +121,7 @@ public fun ItemDetailsBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 item(key = "header") {
-                    ItemDetailsHeader(
+                    BottomSheetDetailsHeader(
                         itemEntity = itemEntity,
                         onClose = onClose,
                         onOpenViewer = openViewerFromKind

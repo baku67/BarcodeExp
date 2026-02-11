@@ -104,7 +104,7 @@ private fun expiryChipStyle(expiry: Long?): ExpiryChipStyle {
 
 
 @Composable
-fun ItemDetailsHeader(
+fun BottomSheetDetailsHeader(
     itemEntity: ItemEntity,
     onClose: () -> Unit,
     onOpenViewer: (ViewerImageKind) -> Unit
