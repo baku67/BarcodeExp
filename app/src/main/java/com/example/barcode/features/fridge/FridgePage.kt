@@ -126,7 +126,9 @@ fun FridgePage(
     val token = session.token.collectAsState(initial = null).value
 
     // Préférences User (displayFridge)
-    val prefs = authVm.preferences.collectAsState(initial = UserPreferences()).value
+    val prefs = authVm.preferences.collectAsState(
+        initial = UserPreferences(frigoLayout = FrigoLayout.DESIGN)
+    ).value
 
     val selectedViewMode = when (prefs.frigoLayout) {
         FrigoLayout.LIST -> ViewMode.List

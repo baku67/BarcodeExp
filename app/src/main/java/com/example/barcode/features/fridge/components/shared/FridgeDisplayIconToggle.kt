@@ -35,28 +35,29 @@ fun FridgeDisplayIconToggle(
             .border(1.dp, borderColor, shape)
             .padding(2.dp)
     ) {
+        // ✅ 1) Frigo (design)
+        SegIcon(
+            active = selected == ViewMode.Fridge,
+            // icon = AppIcon.Drawable(R.drawable.display_fridge_grid),
+            icon = AppIcon.Vector(Icons.Filled.GridView),
+            onClick = { onSelect(ViewMode.Fridge) },
+            shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+        )
+
+        // ✅ 2) Liste
         SegIcon(
             active = selected == ViewMode.List,
             icon = AppIcon.Vector(Icons.Filled.ViewList),
             onClick = { onSelect(ViewMode.List) },
-            shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
-        )
-
-        SegIcon(
-            active = selected == ViewMode.Fridge,
-            // icon = AppIcon.Drawable(R.drawable.display_fridge_grid), // icon custom fridge bof bof
-            icon = AppIcon.Vector(Icons.Filled.GridView),
-            onClick = { onSelect(ViewMode.Fridge) },
             shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
         )
     }
 }
 
-
 @Composable
 fun SegIcon(
     active: Boolean,
-    icon: AppIcon, // ImageVector (Icones Material) ou @DrawableRes Int (Pour Icones SVG->XML customs)
+    icon: AppIcon,
     onClick: () -> Unit,
     shape: RoundedCornerShape
 ) {

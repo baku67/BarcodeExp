@@ -28,8 +28,9 @@ class UserPreferencesStore(private val context: Context) {
             else -> ThemeMode.SYSTEM
         }
         val layout = when (p[PREF_FRIGO_LAYOUT]) {
+            "list" -> FrigoLayout.LIST
             "design" -> FrigoLayout.DESIGN
-            else -> FrigoLayout.LIST
+            else -> FrigoLayout.DESIGN // ✅ défaut: Frigo (design)
         }
 
         UserPreferences(
