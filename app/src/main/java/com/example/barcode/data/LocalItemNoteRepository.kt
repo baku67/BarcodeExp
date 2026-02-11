@@ -4,6 +4,7 @@ import com.example.barcode.data.local.dao.ItemNoteDao
 import com.example.barcode.data.local.entities.ItemNoteEntity
 import com.example.barcode.data.local.entities.PendingOperation
 import com.example.barcode.data.local.entities.SyncState
+import com.example.barcode.features.fridge.components.bottomSheetDetails.NOTE_MAX_LEN
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -15,7 +16,7 @@ class LocalItemNoteRepository(
     suspend fun addNote(itemId: String, body: String, pinned: Boolean = false) {
         val trimmed = body.trim()
         if (trimmed.isBlank()) return
-        if (trimmed.length > 100) return // max char 100
+        if (trimmed.length > NOTE_MAX_LEN) return // max char 100
 
         dao.upsert(
             ItemNoteEntity(
