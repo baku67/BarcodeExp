@@ -128,6 +128,12 @@ fun ShelfRow(
                 val hasSheetSelection = selectedSheetId != null
                 val dimOthers = hasSheetSelection && !isSheetSelected
 
+
+
+                val isMultiSelected = selectionMode && selectedIds.contains(item.id)
+                // ✅ Même rendu que la sélection “single” (BottomSheet) : bordure calée à l'image
+                val isVisuallySelected = isSheetSelected || isMultiSelected
+
                 val sheetOtherAlpha by animateFloatAsState(
                     targetValue = if (dimOthers) 0.55f else 1f,
                     animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
@@ -139,12 +145,16 @@ fun ShelfRow(
                     animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
                     label = "sheetDimOverlay"
                 )
-
                 val effectiveDim = maxOf(dimAlpha, sheetDimOverlay)
 
-                val isMultiSelected = selectionMode && selectedIds.contains(item.id)
-                // ✅ Même rendu que la sélection “single” (BottomSheet) : bordure calée à l'image
-                val isVisuallySelected = isSheetSelected || isMultiSelected
+                val multiDimOverlay by animateFloatAsState(
+                    targetValue = if (selectionMode && !isMultiSelected) 0.55f else 0f,
+                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                    label = "multiDimOverlay"
+                )
+
+// ✅ dim global frigo (allumage) + dim “sheet” + dim “multi”
+                val finalDimAlpha = maxOf(dimAlpha, sheetDimOverlay, multiDimOverlay)
 
                 val dimForMultiSelect = selectionMode && !isMultiSelected
                 val multiAlpha by animateFloatAsState(
@@ -199,14 +209,12 @@ fun ShelfRow(
 
                     val wrapperModifier = Modifier
                         .fillMaxSize()
-                        .alpha(itemAlpha)
                         .zIndex(if (isSheetSelected) 2f else 0f)
                         .graphicsLayer {
-                            // ✅ pivot en bas-centre => le scale ne “descend” plus, il grandit vers le haut
                             transformOrigin = TransformOrigin(0.5f, 1f)
                             scaleX = selectedScale
                             scaleY = selectedScale
-                            translationY = -liftPx // ✅ pousse un peu vers le haut
+                            translationY = -liftPx
                         }
                         .giggleEvery(
                             enabled = shouldGiggle && !isSheetSelected,
@@ -230,11 +238,7 @@ fun ShelfRow(
                                 cornerIcon = cornerIcon,
                                 cornerIconTint = glowColor,
                                 onImageLoaded = { imageLoaded = it },
-                                dimAlpha = when {
-                                    isSheetSelected -> 0f
-                                    dimForMultiSelect -> 0.55f
-                                    else -> effectiveDim
-                                },
+                                dimAlpha = if (isSheetSelected) 0f else finalDimAlpha,
                                 showImageBorder = isVisuallySelected,
                                 imageBorderColor = selectionBorderColor,
                                 imageBorderWidth = 2.dp,
