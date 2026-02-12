@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -90,6 +91,9 @@ fun ItemThumbnail(
 
     val dimFactor = (dimAlpha / 0.55f).coerceIn(0f, 1f)  // 0..1
     val brightness = 1f - (0.70f * dimFactor)            // 1 -> ~0.30
+
+    // ✅ dim overlays (icônes / badges)
+    val overlayAlpha = 1f - (0.55f * dimFactor)          // 1 -> ~0.45
 
     val dimFilter = remember(brightness) {
         ColorFilter.colorMatrix(
@@ -166,7 +170,7 @@ fun ItemThumbnail(
                                 colorStops = arrayOf(
                                     0f to Color.Transparent,
                                     0.30f to Color.Transparent,
-                                    1f to cornerIconTint.copy(alpha = 1f)
+                                    1f to cornerIconTint.copy(alpha = overlayAlpha)
                                 ),
                                 startY = top,
                                 endY = top + h
@@ -198,13 +202,13 @@ fun ItemThumbnail(
                             .offset(x = xDp, y = yDp)
                             .size(15.dp)
                             .clip(CircleShape)
-                            .background(cornerIconTint),
+                            .background(cornerIconTint.copy(alpha = overlayAlpha)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = cornerIcon,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = Color.White.copy(alpha = overlayAlpha),
                             modifier = Modifier.size(11.dp)
                         )
                     }
@@ -224,6 +228,7 @@ fun ItemThumbnail(
                                 x = leftDp + wDp - topRightOverlaySize - inset,
                                 y = topDp + inset
                             )
+                            .graphicsLayer { alpha = overlayAlpha }
                     ) {
                         topRightOverlayOnImage()
                     }
