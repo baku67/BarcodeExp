@@ -47,6 +47,7 @@ import com.example.barcode.common.expiry.ExpiryLevel
 import com.example.barcode.common.expiry.ExpiryPolicy
 import com.example.barcode.common.expiry.expiryLevel
 import com.example.barcode.common.expiry.formatRelativeDaysCompact
+import com.example.barcode.common.ui.expiry.expiryAccentColor
 import com.example.barcode.data.local.entities.ItemEntity
 
 @DrawableRes
@@ -69,30 +70,26 @@ private data class HeaderExpiryChipStyle(
 @Composable
 private fun headerExpiryChipStyle(expiryMillis: Long?, policy: ExpiryPolicy): HeaderExpiryChipStyle {
     val cs = MaterialTheme.colorScheme
-    val warning = Color(0xFFFFC107)
+    val level = expiryLevel(expiryMillis, policy)
 
-    return when (expiryLevel(expiryMillis, policy)) {
-        ExpiryLevel.NONE -> HeaderExpiryChipStyle(
+    // ✅ neutre si pas de date
+    if (level == ExpiryLevel.NONE) {
+        return HeaderExpiryChipStyle(
             container = cs.surfaceVariant.copy(alpha = 0.55f),
             label = cs.onSurface.copy(alpha = 0.55f),
             border = cs.outlineVariant.copy(alpha = 0.55f)
         )
-        ExpiryLevel.EXPIRED -> HeaderExpiryChipStyle(
-            container = cs.error.copy(alpha = 0.14f),
-            label = cs.error.copy(alpha = 0.95f),
-            border = cs.error.copy(alpha = 0.40f)
-        )
-        ExpiryLevel.SOON -> HeaderExpiryChipStyle(
-            container = warning.copy(alpha = 0.16f),
-            label = warning.copy(alpha = 0.95f),
-            border = warning.copy(alpha = 0.40f)
-        )
-        ExpiryLevel.OK -> HeaderExpiryChipStyle(
-            container = cs.primary.copy(alpha = 0.10f),
-            label = cs.primary.copy(alpha = 0.95f),
-            border = cs.primary.copy(alpha = 0.30f)
-        )
     }
+
+    // ✅ couleur centralisée dans ExpiryUi.kt
+    // (et donc EXPIRED => tertiary si c’est ton choix global)
+    val accent = expiryAccentColor(level)
+
+    return HeaderExpiryChipStyle(
+        container = accent.copy(alpha = 0.14f),
+        label = accent.copy(alpha = 0.95f),
+        border = accent.copy(alpha = 0.38f)
+    )
 }
 
 /**

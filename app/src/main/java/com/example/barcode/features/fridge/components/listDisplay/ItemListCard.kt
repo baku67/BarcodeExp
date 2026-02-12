@@ -40,6 +40,7 @@ import com.example.barcode.common.expiry.ExpiryLevel
 import com.example.barcode.common.expiry.ExpiryPolicy
 import com.example.barcode.common.expiry.expiryLevel
 import com.example.barcode.common.expiry.formatRelativeDaysCompact
+import com.example.barcode.common.ui.expiry.expiryAccentColor
 import com.example.barcode.common.ui.expiry.expiryStrokeColor
 import com.example.barcode.common.ui.theme.ItemNote
 import com.example.barcode.features.fridge.components.shared.ItemThumbnail
@@ -91,7 +92,9 @@ fun ItemListCard(
 
     val cardBorder = when {
         selected -> BorderStroke(2.dp, cs.primary)
-        else -> BorderStroke(1.dp, expiryStrokeColor(expiry, expiryPolicy))
+        level == ExpiryLevel.EXPIRED || level == ExpiryLevel.SOON ->
+            BorderStroke(1.dp, expiryAccentColor(level))
+        else -> BorderStroke(1.dp, cs.outlineVariant)
     }
 
     Box {
@@ -150,9 +153,9 @@ fun ItemListCard(
                     Text(
                         text = relativeCompact,
                         color = when (level) {
+                            ExpiryLevel.EXPIRED, ExpiryLevel.SOON -> expiryAccentColor(level)
                             ExpiryLevel.NONE -> onSurface.copy(alpha = 0.6f)
-                            ExpiryLevel.OK -> onSurface.copy(alpha = 0.82f)
-                            ExpiryLevel.SOON, ExpiryLevel.EXPIRED -> expiryColor
+                            else -> onSurface.copy(alpha = 0.8f)
                         },
                         style = MaterialTheme.typography.bodySmall
                     )
