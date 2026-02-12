@@ -27,13 +27,3 @@ data class AddItemDraft(
     val manualType: ManualType? = null,
     val manualSubtype: ManualSubType? = null
 ) : Parcelable
-
-
-
-// Helpers
-fun ManualType.subtypes(): List<ManualSubType> =
-    ManualSubType.entries.filter { it.parentType == this }
-fun requireSubtypeCompatible(type: ManualType?, sub: ManualSubType?): Boolean {
-    if (type == null || sub == null) return false
-    return sub.parentType == type
-}

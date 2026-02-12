@@ -3,96 +3,61 @@
     {
       "code": "VEGETABLES",
       "title": "Légumes",
-      "subtitle": "Marché, vrac",
-      "description": "Idéal pour proposer une DLC selon le type de légume.",
-      "icon": "eco",
-      "tips": ["Ne lave pas avant stockage", "Garde au bac à légumes", "Utilise un sachet perforé si besoin"]
+      "image": "manual_type_vegetables"
     },
     {
       "code": "MEAT",
       "title": "Viandes",
-      "subtitle": "Boucherie, barquette",
-      "description": "La DLC dépend fortement du type (hachée vs morceaux) et du stockage.",
-      "icon": "restaurant",
-      "tips": ["Sépare cru/cuit", "Hachée = DLC courte", "Zone la plus froide du frigo"]
+      "image": "manual_type_meat"
     },
     {
       "code": "FISH",
       "title": "Poissons / Fruits de mer",
-      "subtitle": "Très périssable",
-      "description": "Souvent la DLC la plus courte : consommer rapidement.",
-      "icon": "fish",
-      "tips": ["Consommer dans les 24–48h", "Garde très froid", "Évite les ouvertures répétées"]
-    },
-    {
-      "code": "EGGS",
-      "title": "Œufs",
-      "subtitle": "Boîte, plateau",
-      "description": "Bonne conservation au frais, attention aux dates et à la coquille.",
-      "icon": "egg",
-      "tips": ["Garde au frigo (idéalement)", "Pointe vers le bas", "Évite les chocs / fissures"]
+      "image": "manual_type_fish"
     },
     {
       "code": "DAIRY",
       "title": "Produits laitiers",
-      "subtitle": "Fromage, yaourt, lait",
-      "description": "Pratique pour mieux gérer fromages, yaourts, crème et beurre.",
-      "icon": "spa",
-      "tips": ["Referme bien", "Zone froide du frigo", "Respecte la chaîne du froid"]
+      "image": "manual_type_dairy"
     },
     {
       "code": "LEFTOVERS",
       "title": "Restes / Tupperware",
-      "subtitle": "Plats maison",
-      "description": "Parfait pour les plats cuisinés maison ou restes de repas.",
-      "icon": "lunch",
-      "tips": ["Refroidir avant frigo", "Étiquette la date", "Consommer en priorité"]
-    },
-    {
-      "code": "OTHER",
-      "title": "Autre",
-      "subtitle": "Générique",
-      "description": "Quand aucun type ne correspond (ou produit atypique).",
-      "icon": "other",
-      "tips": ["Ajoute une note utile (ex: 'à consommer vite')", "Choisis une DLC prudente"]
+      "image": "manual_type_leftovers"
     }
   ],
   "subtypes": [
-    { "code": "VEG_CARROT", "parent": "VEGETABLES", "title": "Carottes" },
-    { "code": "VEG_GREEN_BEANS", "parent": "VEGETABLES", "title": "Haricots verts" },
-    { "code": "VEG_SALAD", "parent": "VEGETABLES", "title": "Salade" },
-    { "code": "VEG_TOMATO", "parent": "VEGETABLES", "title": "Tomates" },
-    { "code": "VEG_CUCUMBER", "parent": "VEGETABLES", "title": "Concombre" },
-    { "code": "VEG_ZUCCHINI", "parent": "VEGETABLES", "title": "Courgette" },
-    { "code": "VEG_BROCCOLI", "parent": "VEGETABLES", "title": "Brocoli" },
-    { "code": "VEG_CAULIFLOWER", "parent": "VEGETABLES", "title": "Chou-fleur" },
-    { "code": "VEG_PEPPER", "parent": "VEGETABLES", "title": "Poivron" },
-    { "code": "VEG_MUSHROOM", "parent": "VEGETABLES", "title": "Champignons" },
-    { "code": "VEG_ONION", "parent": "VEGETABLES", "title": "Oignons" },
-    { "code": "VEG_POTATO", "parent": "VEGETABLES", "title": "Pommes de terre" },
+    { "code": "VEG_CARROT", "parent": "VEGETABLES", "title": "Carottes", "image": "manual_subtype_veg_carrot", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_GREEN_BEANS", "parent": "VEGETABLES", "title": "Haricots verts", "image": "manual_subtype_veg_green_beans", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_SALAD", "parent": "VEGETABLES", "title": "Salade", "image": "manual_subtype_veg_salad", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_TOMATO", "parent": "VEGETABLES", "title": "Tomates", "image": "manual_subtype_veg_tomato", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_CUCUMBER", "parent": "VEGETABLES", "title": "Concombre", "image": "manual_subtype_veg_cucumber", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_ZUCCHINI", "parent": "VEGETABLES", "title": "Courgette", "image": "manual_subtype_veg_zucchini", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_BROCCOLI", "parent": "VEGETABLES", "title": "Brocoli", "image": "manual_subtype_veg_broccoli", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_CAULIFLOWER", "parent": "VEGETABLES", "title": "Chou-fleur", "image": "manual_subtype_veg_cauliflower", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_PEPPER", "parent": "VEGETABLES", "title": "Poivron", "image": "manual_subtype_veg_pepper", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_MUSHROOM", "parent": "VEGETABLES", "title": "Champignons", "image": "manual_subtype_veg_mushroom", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_ONION", "parent": "VEGETABLES", "title": "Oignons", "image": "manual_subtype_veg_onion", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_POTATO", "parent": "VEGETABLES", "title": "Pommes de terre", "image": "manual_subtype_veg_potato", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
 
-    { "code": "MEAT_CHICKEN", "parent": "MEAT", "title": "Poulet" },
-    { "code": "MEAT_BEEF", "parent": "MEAT", "title": "Bœuf" },
-    { "code": "MEAT_PORK", "parent": "MEAT", "title": "Porc" },
-    { "code": "MEAT_TURKEY", "parent": "MEAT", "title": "Dinde" },
-    { "code": "MEAT_LAMB", "parent": "MEAT", "title": "Agneau" },
-    { "code": "MEAT_GROUND_MEAT", "parent": "MEAT", "title": "Viande hachée" },
-    { "code": "MEAT_DELI_MEAT", "parent": "MEAT", "title": "Charcuterie" },
+    { "code": "MEAT_CHICKEN", "parent": "MEAT", "title": "Poulet", "image": "manual_subtype_meat_chicken", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "MEAT_BEEF", "parent": "MEAT", "title": "Bœuf", "image": "manual_subtype_meat_beef", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "MEAT_PORK", "parent": "MEAT", "title": "Porc", "image": "manual_subtype_meat_pork", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "MEAT_TURKEY", "parent": "MEAT", "title": "Dinde", "image": "manual_subtype_meat_turkey", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "MEAT_LAMB", "parent": "MEAT", "title": "Agneau", "image": "manual_subtype_meat_lamb", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "MEAT_GROUND_MEAT", "parent": "MEAT", "title": "Viande hachée", "image": "manual_subtype_meat_ground_meat", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "MEAT_DELI_MEAT", "parent": "MEAT", "title": "Charcuterie", "image": "manual_subtype_meat_deli_meat", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
 
-    { "code": "DAIRY_MILK", "parent": "DAIRY", "title": "Lait" },
-    { "code": "DAIRY_YOGURT", "parent": "DAIRY", "title": "Yaourt" },
-    { "code": "DAIRY_CREAM", "parent": "DAIRY", "title": "Crème" },
-    { "code": "DAIRY_BUTTER", "parent": "DAIRY", "title": "Beurre" },
-    { "code": "DAIRY_SOFT_CHEESE", "parent": "DAIRY", "title": "Fromage (pâte molle)" },
-    { "code": "DAIRY_HARD_CHEESE", "parent": "DAIRY", "title": "Fromage (pâte dure)" },
-    { "code": "DAIRY_FRESH_CHEESE", "parent": "DAIRY", "title": "Fromage frais / Faisselle" },
+    { "code": "DAIRY_MILK", "parent": "DAIRY", "title": "Lait", "image": "manual_subtype_dairy_milk", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "DAIRY_YOGURT", "parent": "DAIRY", "title": "Yaourt", "image": "manual_subtype_dairy_yogurt", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "DAIRY_CREAM", "parent": "DAIRY", "title": "Crème", "image": "manual_subtype_dairy_cream", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "DAIRY_BUTTER", "parent": "DAIRY", "title": "Beurre", "image": "manual_subtype_dairy_butter", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "DAIRY_SOFT_CHEESE", "parent": "DAIRY", "title": "Fromage (pâte molle)", "image": "manual_subtype_dairy_soft_cheese", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "DAIRY_HARD_CHEESE", "parent": "DAIRY", "title": "Fromage (pâte dure)", "image": "manual_subtype_dairy_hard_cheese", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "DAIRY_FRESH_CHEESE", "parent": "DAIRY", "title": "Fromage frais / Faisselle", "image": "manual_subtype_dairy_fresh_cheese", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
 
-    { "code": "FISH_WHITE", "parent": "FISH", "title": "Poisson blanc" },
-    { "code": "FISH_SALMON", "parent": "FISH", "title": "Saumon" },
-    { "code": "FISH_SHELLFISH", "parent": "FISH", "title": "Fruits de mer" },
-
-    { "code": "EGGS_CHICKEN", "parent": "EGGS", "title": "Œufs de poule" },
-
-    { "code": "GENERIC", "parent": "OTHER", "title": "Générique" }
+    { "code": "FISH_WHITE", "parent": "FISH", "title": "Poisson blanc", "image": "manual_subtype_fish_white", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "FISH_SALMON", "parent": "FISH", "title": "Saumon", "image": "manual_subtype_fish_salmon", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "FISH_SHELLFISH", "parent": "FISH", "title": "Fruits de mer", "image": "manual_subtype_fish_shellfish", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" }
   ]
 }

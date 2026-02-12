@@ -3,17 +3,15 @@ package com.example.barcode.features.addItems.manual
 data class ManualTypeMeta(
     val code: String,
     val title: String,
-    val subtitle: String? = null,
-    val description: String? = null,
-    val iconKey: String? = null,
-    val tips: List<String> = emptyList()
+    val image: String? = null,
 )
 
 data class ManualSubtypeMeta(
     val code: String,
     val parentCode: String,
     val title: String,
-    val subtitle: String? = null
+    val image: String? = null,
+    val goodToKnow: String? = null
 )
 
 data class ManualTaxonomy(

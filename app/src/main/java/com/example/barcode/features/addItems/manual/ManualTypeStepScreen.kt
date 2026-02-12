@@ -1,5 +1,6 @@
 package com.example.barcode.features.addItems.manual
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -21,7 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemStepScaffold
 import androidx.compose.foundation.lazy.grid.items
-
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 
 
 @Composable
@@ -64,15 +66,22 @@ fun ManualTypeStepScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
+                userScrollEnabled = false
             ) {
-                items(types) { meta ->
+                items(types, key = { it.code }) { meta ->  // <-- ✅ meta défini ici
+
+                    val imageResId = drawableId(context, meta.image)
+
                     BigGradientTypeCard(
                         modifier = Modifier.fillMaxWidth(),
                         title = meta.title,
-                        subtitle = meta.subtitle ?: "",
-                        icon = illustrationFor(meta.iconKey, Icons.Outlined.Restaurant),
+                        imageResId = imageResId,
                         gradient = gradientForType(meta.code),
-                        onClick = { onPick(ManualType.valueOf(meta.code)) }
+                        onClick = {
+                            runCatching { ManualType.valueOf(meta.code) }
+                                .getOrNull()
+                                ?.let(onPick)
+                        }
                     )
                 }
             }
@@ -91,12 +100,12 @@ private fun gradientForType(code: String): Brush {
     }
 }
 
+
 @Composable
 private fun BigGradientTypeCard(
     modifier: Modifier = Modifier,
     title: String,
-    subtitle: String,
-    icon: ImageVector,
+    imageResId: Int,
     gradient: Brush,
     onClick: () -> Unit
 ) {
@@ -116,17 +125,17 @@ private fun BigGradientTypeCard(
                 .background(gradient)
                 .padding(14.dp)
         ) {
-            // Icône “illustration”
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.92f),
-                modifier = Modifier
-                    .size(34.dp)
-                    .align(Alignment.TopEnd)
-            )
+            if (imageResId != 0) {
+                Image(
+                    painter = painterResource(imageResId),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .align(Alignment.TopEnd),
+                    contentScale = ContentScale.Fit
+                )
+            }
 
-            // Texte
             Column(
                 modifier = Modifier.align(Alignment.BottomStart),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -136,12 +145,6 @@ private fun BigGradientTypeCard(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White
-                )
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontWeight = FontWeight.SemiBold
                 )
             }
         }

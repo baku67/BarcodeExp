@@ -17,44 +17,62 @@ object ManualTaxonomyRepository {
     }
 
     private fun load(context: Context): ManualTaxonomy {
-        val json = context.resources
-            // ✅ si ton fichier s'appelle manual_taxonomy.json
-            .openRawResource(R.raw.manual_taxonomy)
-            // ✅ si ton fichier s'appelle manual_taxonomie.json, remplace par :
-            // .openRawResource(R.raw.manual_taxonomie)
-            .bufferedReader()
-            .use { it.readText() }
+        return try {
+            val json = context.resources
+                // ✅ si ton fichier s'appelle manual_taxonomy.json
+                .openRawResource(R.raw.manual_taxonomy)
+                // ✅ si ton fichier s'appelle manual_taxonomie.json, remplace par :
+                // .openRawResource(R.raw.manual_taxonomie)
+                .bufferedReader()
+                .use { it.readText() }
 
-        val root = JSONObject(json)
-        val types = root.getJSONArray("types").toTypeMetas()
-        val subtypes = root.getJSONArray("subtypes").toSubtypeMetas()
-        return ManualTaxonomy(types = types, subtypes = subtypes)
+            val root = JSONObject(json)
+            val types = root.getJSONArray("types").toTypeMetas()
+            val subtypes = root.getJSONArray("subtypes").toSubtypeMetas()
+            return ManualTaxonomy(types = types, subtypes = subtypes)
+        } catch (e: Exception) {
+            android.util.Log.e("ManualTaxonomy", "Failed to load taxonomy", e)
+            ManualTaxonomy(types = emptyList(), subtypes = emptyList())
+        }
     }
 
-    private fun JSONArray.toTypeMetas(): List<ManualTypeMeta> =
-        List(length()) { i ->
-            val o = getJSONObject(i)
-            ManualTypeMeta(
-                code = o.getString("code"),
-                title = o.getString("title"),
-                subtitle = o.optString("subtitle").takeIf { it.isNotBlank() },
-                description = o.optString("description").takeIf { it.isNotBlank() },
-                iconKey = o.optString("icon").takeIf { it.isNotBlank() },
-                tips = o.optJSONArray("tips")?.toStringList().orEmpty()
+    private fun JSONArray.toTypeMetas(): List<ManualTypeMeta> = buildList {
+        for (i in 0 until length()) {
+            val o = optJSONObject(i) ?: continue
+            val code = o.optString("code").takeIf { it.isNotBlank() } ?: continue
+            val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
+
+            add(
+                ManualTypeMeta(
+                    code = code,
+                    title = title,
+                    image = o.optString("image").takeIf { it.isNotBlank() }
+                )
             )
         }
+    }
 
-    private fun JSONArray.toSubtypeMetas(): List<ManualSubtypeMeta> =
-        List(length()) { i ->
-            val o = getJSONObject(i)
-            ManualSubtypeMeta(
-                code = o.getString("code"),
-                parentCode = o.getString("parent"),
-                title = o.getString("title"),
-                subtitle = o.optString("subtitle").takeIf { it.isNotBlank() }
+    private fun JSONArray.toSubtypeMetas(): List<ManualSubtypeMeta> = buildList {
+        for (i in 0 until length()) {
+            val o = optJSONObject(i)
+            if (o == null) {
+                android.util.Log.e("ManualTaxonomy", "Subtype null at index=$i")
+                continue
+            }
+
+            val code = o.optString("code").takeIf { it.isNotBlank() } ?: continue
+            val parent = o.optString("parent").takeIf { it.isNotBlank() } ?: continue
+            val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
+
+            add(
+                ManualSubtypeMeta(
+                    code = code,
+                    parentCode = parent,
+                    title = title,
+                    image = o.optString("image").takeIf { it.isNotBlank() },
+                    goodToKnow = o.optString("goodToKnow").takeIf { it.isNotBlank() }
+                )
             )
         }
-
-    private fun JSONArray.toStringList(): List<String> =
-        List(length()) { i -> getString(i) }
+    }
 }

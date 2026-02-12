@@ -1,18 +1,20 @@
 package com.example.barcode.features.addItems.manual
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
-import com.example.barcode.features.addItems.subtypes
 
 
 @Composable
@@ -48,12 +50,6 @@ fun ManualSubtypeStepScreen(
                 fontWeight = FontWeight.SemiBold
             )
 
-            Text(
-                text = typeMeta?.description ?: "Sélectionner un sous-type.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
-            )
-
             if (type == null) {
                 Spacer(Modifier.height(8.dp))
                 AssistChip(
@@ -79,11 +75,12 @@ fun ManualSubtypeStepScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(list) { subMeta ->
-                    val selected = draft.manualSubtype?.name == subMeta.code
+                    val imageRes = drawableId(context, subMeta.image)
 
                     SubtypeRow(
                         title = subMeta.title,
-                        selected = selected,
+                        selected = draft.manualSubtype?.name == subMeta.code,
+                        imageResId = imageRes,
                         onClick = {
                             runCatching { ManualSubType.valueOf(subMeta.code) }
                                 .getOrNull()
@@ -100,6 +97,7 @@ fun ManualSubtypeStepScreen(
 private fun SubtypeRow(
     title: String,
     selected: Boolean,
+    imageResId: Int,
     onClick: () -> Unit
 ) {
     val shape = MaterialTheme.shapes.large
@@ -108,23 +106,32 @@ private fun SubtypeRow(
         onClick = onClick,
         shape = shape,
         tonalElevation = 0.dp,
-        color = if (selected) {
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-        } else {
-            MaterialTheme.colorScheme.surface
-        }
+        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        else MaterialTheme.colorScheme.surface
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (imageResId != 0) {
+                    Image(
+                        painter = painterResource(imageResId),
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                }
+
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
 
             if (selected) {
                 Text(
