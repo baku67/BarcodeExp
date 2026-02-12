@@ -48,6 +48,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.platform.LocalDensity
 import com.example.barcode.common.expiry.ExpiryLevel
 import com.example.barcode.common.expiry.ExpiryPolicy
 import com.example.barcode.common.expiry.expiryLevel
@@ -96,8 +98,6 @@ fun ShelfRow(
     val rowHeight = productSize + spec.height
 
     val cs = MaterialTheme.colorScheme
-    val warning = Color(0xFFFFC107)
-    val warningGlow = Color(0xFFF9A825)
 
     Box(
         modifier = Modifier
@@ -189,13 +189,24 @@ fun ShelfRow(
                             else -> sheetOtherAlpha
                         }
 
+                    val density = LocalDensity.current
+                    val liftTargetPx = with(density) { 2.dp.toPx() } // décalage vers le haut lors selectItem (pour compenser MID border bottom)
+                    val liftPx by animateFloatAsState(
+                        targetValue = if (isVisuallySelected) liftTargetPx else 0f,
+                        animationSpec = tween(durationMillis = 260),
+                        label = "liftPx"
+                    )
+
                     val wrapperModifier = Modifier
                         .fillMaxSize()
                         .alpha(itemAlpha)
                         .zIndex(if (isSheetSelected) 2f else 0f)
                         .graphicsLayer {
+                            // ✅ pivot en bas-centre => le scale ne “descend” plus, il grandit vers le haut
+                            transformOrigin = TransformOrigin(0.5f, 1f)
                             scaleX = selectedScale
                             scaleY = selectedScale
+                            translationY = -liftPx // ✅ pousse un peu vers le haut
                         }
                         .giggleEvery(
                             enabled = shouldGiggle && !isSheetSelected,

@@ -181,7 +181,7 @@ fun ItemThumbnail(
                             color = imageBorderColor,
                             topLeft = Offset(left, top),
                             size = Size(w, h),
-                            cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx()),
+                            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
                             style = Stroke(width = imageBorderWidth.toPx())
                         )
                     }
