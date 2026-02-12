@@ -6,6 +6,8 @@ data class ItemDto(
     val clientId: String,
     val homeId: Int? = null,
 
+    val photoId: String? = null, // photoId == clientId
+
     val name: String?,
     val expiryDate: String?,     // yyyy-MM-dd
     val addMode: String?,        // "barcode_scan" | "manual"

@@ -5,6 +5,9 @@ data class CreateItemRequestDto(
     val name: String,
     val expiryDate: String?, // yyyy-MM-dd
     val addMode: String,
+
+    val photoId: String? = null, // photoId == clientId
+
     val scan: ScanPayload? = null,
     val manual: ManualPayload? = null
 )

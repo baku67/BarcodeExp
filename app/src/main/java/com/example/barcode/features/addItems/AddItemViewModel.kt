@@ -9,15 +9,24 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class AddItemViewModel(
     private val savedState: SavedStateHandle
 ) : ViewModel() {
 
-    private val _draft = MutableStateFlow(savedState.get<AddItemDraft>("draft") ?: AddItemDraft())
+    private val _draft = MutableStateFlow(
+        savedState.get<AddItemDraft>("draft")
+            ?: AddItemDraft(photoId = UUID.randomUUID().toString())
+    )
+
     val draft = _draft.asStateFlow()
 
     init {
+        if (_draft.value.photoId.isNullOrBlank()) {
+            _draft.update { it.copy(photoId = UUID.randomUUID().toString()) }
+        }
+
         viewModelScope.launch {
             draft.collect { savedState["draft"] = it }
         }
@@ -49,9 +58,7 @@ class AddItemViewModel(
         }
     }
 
-    fun reset() { _draft.value = AddItemDraft() }
-
-
+    fun reset() { _draft.value = AddItemDraft(photoId = UUID.randomUUID().toString()) }
 
 
     // Pour tester les 4 images candidates récupérées

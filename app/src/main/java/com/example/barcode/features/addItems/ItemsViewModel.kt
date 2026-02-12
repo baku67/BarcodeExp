@@ -45,10 +45,17 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
         imageNutritionUrl: String?,
         nutriScore: String?,
         addMode: String,
+        photoId: String? = null,
     ) = viewModelScope.launch {
 
         // 1) Toujours écrire en local
+        val itemId = java.util.UUID.randomUUID().toString()
+        val resolvedPhotoId = photoId ?: itemId
+
         val entity = ItemEntity(
+            id = itemId,
+            photoId = resolvedPhotoId,
+
             barcode = barcode,
             name = name,
             brand = brand,
@@ -132,11 +139,16 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
     fun addItemFromDraft(d: AddItemDraft) = viewModelScope.launch {
         val name = requireNotNull(d.name) { "name requis" }
 
+        val itemId = java.util.UUID.randomUUID().toString()
+        val resolvedPhotoId = d.photoId ?: itemId  // ✅ photoId commun scan/manual
+
         val entity = ItemEntity(
-            id = java.util.UUID.randomUUID().toString(),
+            id = itemId,
+            photoId = resolvedPhotoId,
+
             name = name,
             expiryDate = d.expiryDate,
-            addMode = d.addMode.value, // ou d.addMode.name.lowercase() selon ton enum
+            addMode = d.addMode.value,
 
             // scan uniquement
             barcode = if (d.addMode == ItemAddMode.BARCODE_SCAN) d.barcode else null,

@@ -143,6 +143,7 @@ class SyncWorker(
                             name = name,
                             expiryDate = expiry,
                             addMode = "manual",
+                            photoId = item.photoId,
                             scan = null,
                             manual = ManualPayload(
                                 type = type,
@@ -163,6 +164,7 @@ class SyncWorker(
                             name = name,
                             expiryDate = expiry,
                             addMode = "barcode_scan",
+                            photoId = item.photoId,
                             manual = null,
                             scan = ScanPayload(
                                 barcode = barcode,

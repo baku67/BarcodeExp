@@ -21,6 +21,9 @@ fun ItemDto.toEntity(): ItemEntity {
 
     return ItemEntity(
         id = clientId, // 🔥 IMPORTANT : ton PK local doit rester le clientId (sinon sync galère)
+
+        photoId = photoId,
+
         name = name,
         expiryDate = expiryDate.toEpochMillisFromIsoDate(),
         addMode = addModeResolved,
