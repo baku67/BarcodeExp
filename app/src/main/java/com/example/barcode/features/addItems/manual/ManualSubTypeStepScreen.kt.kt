@@ -5,12 +5,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
 import com.example.barcode.features.addItems.subtypes
+
 
 @Composable
 fun ManualSubtypeStepScreen(
@@ -19,8 +22,12 @@ fun ManualSubtypeStepScreen(
     onBack: () -> Unit,
     onCancel: () -> Unit
 ) {
+    val context = LocalContext.current
+    val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
+
     val type: ManualType? = draft.manualType
-    val list = type?.subtypes().orEmpty()
+    val list = type?.let { taxonomy.subtypesOf(it) }.orEmpty()
+    val typeMeta = type?.let { taxonomy.typeMeta(it) }
 
     AddItemStepScaffold(
         step = 2,
@@ -42,15 +49,7 @@ fun ManualSubtypeStepScreen(
             )
 
             Text(
-                text = when (type) {
-                    ManualType.VEGETABLES -> "Quel légume ? (utile pour proposer une DLC)"
-                    ManualType.MEAT -> "Quel type de viande ? (utile pour proposer une DLC)"
-                    ManualType.DAIRY -> "Quel produit laitier ?"
-                    ManualType.FISH -> "Quel type de poisson ?"
-                    ManualType.EGGS -> "Quel type d'œufs ?"
-                    null -> "Type manquant. Reviens en arrière."
-                    else -> "Sélectionner un sous-type."
-                },
+                text = typeMeta?.description ?: "Sélectionner un sous-type.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
             )
@@ -67,7 +66,7 @@ fun ManualSubtypeStepScreen(
             if (list.isEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Aucun sous-type disponible pour ${type.label}.",
+                    "Aucun sous-type disponible pour ${typeMeta?.title ?: type.name}.",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 return@AddItemStepScaffold
@@ -79,11 +78,17 @@ fun ManualSubtypeStepScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(list) { sub ->
+                items(list) { subMeta ->
+                    val selected = draft.manualSubtype?.name == subMeta.code
+
                     SubtypeRow(
-                        title = sub.label,
-                        selected = draft.manualSubtype == sub,
-                        onClick = { onPick(sub) }
+                        title = subMeta.title,
+                        selected = selected,
+                        onClick = {
+                            runCatching { ManualSubType.valueOf(subMeta.code) }
+                                .getOrNull()
+                                ?.let(onPick)
+                        }
                     )
                 }
             }

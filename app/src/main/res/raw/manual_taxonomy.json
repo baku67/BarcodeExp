@@ -1,0 +1,98 @@
+{
+  "types": [
+    {
+      "code": "VEGETABLES",
+      "title": "Légumes",
+      "subtitle": "Marché, vrac",
+      "description": "Idéal pour proposer une DLC selon le type de légume.",
+      "icon": "eco",
+      "tips": ["Ne lave pas avant stockage", "Garde au bac à légumes", "Utilise un sachet perforé si besoin"]
+    },
+    {
+      "code": "MEAT",
+      "title": "Viandes",
+      "subtitle": "Boucherie, barquette",
+      "description": "La DLC dépend fortement du type (hachée vs morceaux) et du stockage.",
+      "icon": "restaurant",
+      "tips": ["Sépare cru/cuit", "Hachée = DLC courte", "Zone la plus froide du frigo"]
+    },
+    {
+      "code": "FISH",
+      "title": "Poissons / Fruits de mer",
+      "subtitle": "Très périssable",
+      "description": "Souvent la DLC la plus courte : consommer rapidement.",
+      "icon": "fish",
+      "tips": ["Consommer dans les 24–48h", "Garde très froid", "Évite les ouvertures répétées"]
+    },
+    {
+      "code": "EGGS",
+      "title": "Œufs",
+      "subtitle": "Boîte, plateau",
+      "description": "Bonne conservation au frais, attention aux dates et à la coquille.",
+      "icon": "egg",
+      "tips": ["Garde au frigo (idéalement)", "Pointe vers le bas", "Évite les chocs / fissures"]
+    },
+    {
+      "code": "DAIRY",
+      "title": "Produits laitiers",
+      "subtitle": "Fromage, yaourt, lait",
+      "description": "Pratique pour mieux gérer fromages, yaourts, crème et beurre.",
+      "icon": "spa",
+      "tips": ["Referme bien", "Zone froide du frigo", "Respecte la chaîne du froid"]
+    },
+    {
+      "code": "LEFTOVERS",
+      "title": "Restes / Tupperware",
+      "subtitle": "Plats maison",
+      "description": "Parfait pour les plats cuisinés maison ou restes de repas.",
+      "icon": "lunch",
+      "tips": ["Refroidir avant frigo", "Étiquette la date", "Consommer en priorité"]
+    },
+    {
+      "code": "OTHER",
+      "title": "Autre",
+      "subtitle": "Générique",
+      "description": "Quand aucun type ne correspond (ou produit atypique).",
+      "icon": "other",
+      "tips": ["Ajoute une note utile (ex: 'à consommer vite')", "Choisis une DLC prudente"]
+    }
+  ],
+  "subtypes": [
+    { "code": "VEG_CARROT", "parent": "VEGETABLES", "title": "Carottes" },
+    { "code": "VEG_GREEN_BEANS", "parent": "VEGETABLES", "title": "Haricots verts" },
+    { "code": "VEG_SALAD", "parent": "VEGETABLES", "title": "Salade" },
+    { "code": "VEG_TOMATO", "parent": "VEGETABLES", "title": "Tomates" },
+    { "code": "VEG_CUCUMBER", "parent": "VEGETABLES", "title": "Concombre" },
+    { "code": "VEG_ZUCCHINI", "parent": "VEGETABLES", "title": "Courgette" },
+    { "code": "VEG_BROCCOLI", "parent": "VEGETABLES", "title": "Brocoli" },
+    { "code": "VEG_CAULIFLOWER", "parent": "VEGETABLES", "title": "Chou-fleur" },
+    { "code": "VEG_PEPPER", "parent": "VEGETABLES", "title": "Poivron" },
+    { "code": "VEG_MUSHROOM", "parent": "VEGETABLES", "title": "Champignons" },
+    { "code": "VEG_ONION", "parent": "VEGETABLES", "title": "Oignons" },
+    { "code": "VEG_POTATO", "parent": "VEGETABLES", "title": "Pommes de terre" },
+
+    { "code": "MEAT_CHICKEN", "parent": "MEAT", "title": "Poulet" },
+    { "code": "MEAT_BEEF", "parent": "MEAT", "title": "Bœuf" },
+    { "code": "MEAT_PORK", "parent": "MEAT", "title": "Porc" },
+    { "code": "MEAT_TURKEY", "parent": "MEAT", "title": "Dinde" },
+    { "code": "MEAT_LAMB", "parent": "MEAT", "title": "Agneau" },
+    { "code": "MEAT_GROUND_MEAT", "parent": "MEAT", "title": "Viande hachée" },
+    { "code": "MEAT_DELI_MEAT", "parent": "MEAT", "title": "Charcuterie" },
+
+    { "code": "DAIRY_MILK", "parent": "DAIRY", "title": "Lait" },
+    { "code": "DAIRY_YOGURT", "parent": "DAIRY", "title": "Yaourt" },
+    { "code": "DAIRY_CREAM", "parent": "DAIRY", "title": "Crème" },
+    { "code": "DAIRY_BUTTER", "parent": "DAIRY", "title": "Beurre" },
+    { "code": "DAIRY_SOFT_CHEESE", "parent": "DAIRY", "title": "Fromage (pâte molle)" },
+    { "code": "DAIRY_HARD_CHEESE", "parent": "DAIRY", "title": "Fromage (pâte dure)" },
+    { "code": "DAIRY_FRESH_CHEESE", "parent": "DAIRY", "title": "Fromage frais / Faisselle" },
+
+    { "code": "FISH_WHITE", "parent": "FISH", "title": "Poisson blanc" },
+    { "code": "FISH_SALMON", "parent": "FISH", "title": "Saumon" },
+    { "code": "FISH_SHELLFISH", "parent": "FISH", "title": "Fruits de mer" },
+
+    { "code": "EGGS_CHICKEN", "parent": "EGGS", "title": "Œufs de poule" },
+
+    { "code": "GENERIC", "parent": "OTHER", "title": "Générique" }
+  ]
+}

@@ -2,23 +2,25 @@ package com.example.barcode.features.addItems.manual
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Eco
-import androidx.compose.material.icons.outlined.LunchDining
 import androidx.compose.material.icons.outlined.Restaurant
-import androidx.compose.material.icons.outlined.Spa
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemStepScaffold
+import androidx.compose.foundation.lazy.grid.items
 
 
 
@@ -28,6 +30,10 @@ fun ManualTypeStepScreen(
     onBack: () -> Unit,
     onCancel: () -> Unit
 ) {
+    val context = LocalContext.current
+    val taxonomy = remember { ManualTaxonomyRepository.get(context) }
+    val types = taxonomy.types
+
     AddItemStepScaffold(
         step = 1,
         onBack = onBack,
@@ -53,60 +59,35 @@ fun ManualTypeStepScreen(
 
             Spacer(Modifier.height(6.dp))
 
-            Row(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                BigGradientTypeCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Légumes",
-                    subtitle = "Marché, vrac",
-                    icon = Icons.Outlined.Eco,
-                    gradient = Brush.linearGradient(
-                        listOf(Color(0xFF1B5E20), Color(0xFF43A047), Color(0xFFB2FF59))
-                    ),
-                    onClick = { onPick(ManualType.VEGETABLES) }
-                )
-
-                BigGradientTypeCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Viande",
-                    subtitle = "Boucherie",
-                    icon = Icons.Outlined.Restaurant,
-                    gradient = Brush.linearGradient(
-                        listOf(Color(0xFF4E342E), Color(0xFFB71C1C), Color(0xFFFF7043))
-                    ),
-                    onClick = { onPick(ManualType.MEAT) }
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                BigGradientTypeCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Laitier",
-                    subtitle = "Fromage, yaourt",
-                    icon = Icons.Outlined.Spa,
-                    gradient = Brush.linearGradient(
-                        listOf(Color(0xFF0D47A1), Color(0xFF1976D2), Color(0xFF80DEEA))
-                    ),
-                    onClick = { onPick(ManualType.DAIRY) }
-                )
-
-                BigGradientTypeCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Restes",
-                    subtitle = "Tupperware",
-                    icon = Icons.Outlined.LunchDining,
-                    gradient = Brush.linearGradient(
-                        listOf(Color(0xFF311B92), Color(0xFF7C4DFF), Color(0xFFFFD54F))
-                    ),
-                    onClick = { onPick(ManualType.LEFTOVERS) }
-                )
+                items(types) { meta ->
+                    BigGradientTypeCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = meta.title,
+                        subtitle = meta.subtitle ?: "",
+                        icon = illustrationFor(meta.iconKey, Icons.Outlined.Restaurant),
+                        gradient = gradientForType(meta.code),
+                        onClick = { onPick(ManualType.valueOf(meta.code)) }
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun gradientForType(code: String): Brush {
+    return when (code) {
+        "VEGETABLES" -> Brush.linearGradient(listOf(Color(0xFF1B5E20), Color(0xFF43A047), Color(0xFFB2FF59)))
+        "MEAT" -> Brush.linearGradient(listOf(Color(0xFF4E342E), Color(0xFFB71C1C), Color(0xFFFF7043)))
+        "DAIRY" -> Brush.linearGradient(listOf(Color(0xFF0D47A1), Color(0xFF1976D2), Color(0xFF80DEEA)))
+        "LEFTOVERS" -> Brush.linearGradient(listOf(Color(0xFF311B92), Color(0xFF7C4DFF), Color(0xFFFFD54F)))
+        else -> Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))
     }
 }
 

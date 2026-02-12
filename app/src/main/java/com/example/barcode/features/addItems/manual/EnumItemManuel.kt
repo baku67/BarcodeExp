@@ -2,11 +2,11 @@ package com.example.barcode.features.addItems.manual
 
 
 enum class ManualType(val label: String) {
-    MEAT("Viande"),
+    MEAT("Viandes"),
     VEGETABLES("Légumes"),
     EGGS("Œufs"),
     DAIRY("Produits laitiers"),
-    FISH("Poisson"),
+    FISH("Poissons/fruits de mer"),
     LEFTOVERS("Restes / Tupperware"),
     OTHER("Autre")
 }
