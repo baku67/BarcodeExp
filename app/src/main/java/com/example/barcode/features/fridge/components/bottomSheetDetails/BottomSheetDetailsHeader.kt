@@ -43,11 +43,11 @@ import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.example.barcode.R
+import com.example.barcode.common.expiry.ExpiryLevel
+import com.example.barcode.common.expiry.ExpiryPolicy
+import com.example.barcode.common.expiry.expiryLevel
+import com.example.barcode.common.expiry.formatRelativeDaysCompact
 import com.example.barcode.data.local.entities.ItemEntity
-import com.example.barcode.features.fridge.formatRelativeDaysCompact
-import com.example.barcode.features.fridge.isExpired
-import com.example.barcode.features.fridge.isSoon
-
 
 @DrawableRes
 private fun nutriScoreRes(score: String?): Int? = when (score?.trim()?.uppercase()) {
@@ -60,40 +60,34 @@ private fun nutriScoreRes(score: String?): Int? = when (score?.trim()?.uppercase
 }
 
 @Immutable
-private data class ExpiryChipStyle(
+private data class HeaderExpiryChipStyle(
     val container: Color,
     val label: Color,
     val border: Color
 )
 
-
-
 @Composable
-private fun expiryChipStyle(expiry: Long?): ExpiryChipStyle {
+private fun headerExpiryChipStyle(expiryMillis: Long?, policy: ExpiryPolicy): HeaderExpiryChipStyle {
     val cs = MaterialTheme.colorScheme
+    val warning = Color(0xFFFFC107)
 
-    if (expiry == null) {
-        return ExpiryChipStyle(
+    return when (expiryLevel(expiryMillis, policy)) {
+        ExpiryLevel.NONE -> HeaderExpiryChipStyle(
             container = cs.surfaceVariant.copy(alpha = 0.55f),
             label = cs.onSurface.copy(alpha = 0.55f),
             border = cs.outlineVariant.copy(alpha = 0.55f)
         )
-    }
-
-    return when {
-        isExpired(expiry) -> ExpiryChipStyle(
-            container = cs.tertiary.copy(alpha = 0.12f),
-            label = cs.tertiary.copy(alpha = 0.95f),
-            border = cs.tertiary.copy(alpha = 0.35f)
+        ExpiryLevel.EXPIRED -> HeaderExpiryChipStyle(
+            container = cs.error.copy(alpha = 0.14f),
+            label = cs.error.copy(alpha = 0.95f),
+            border = cs.error.copy(alpha = 0.40f)
         )
-
-        isSoon(expiry) -> ExpiryChipStyle(
-            container = Color(0xFFFFC107).copy(alpha = 0.16f),  // amber
-            label = Color(0xFFFFC107).copy(alpha = 0.95f),
-            border = Color(0xFFFFC107).copy(alpha = 0.40f)
+        ExpiryLevel.SOON -> HeaderExpiryChipStyle(
+            container = warning.copy(alpha = 0.16f),
+            label = warning.copy(alpha = 0.95f),
+            border = warning.copy(alpha = 0.40f)
         )
-
-        else -> ExpiryChipStyle(
+        ExpiryLevel.OK -> HeaderExpiryChipStyle(
             container = cs.primary.copy(alpha = 0.10f),
             label = cs.primary.copy(alpha = 0.95f),
             border = cs.primary.copy(alpha = 0.30f)
@@ -101,26 +95,28 @@ private fun expiryChipStyle(expiry: Long?): ExpiryChipStyle {
     }
 }
 
-
-
+/**
+ * ✅ Nom volontairement différent pour éviter le conflit si tu as une autre fonction
+ * BottomSheetDetailsHeader(...) ailleurs.
+ */
 @Composable
-fun BottomSheetDetailsHeader(
+fun BottomSheetDetailsHeaderContent(
     itemEntity: ItemEntity,
     onClose: () -> Unit,
     onOpenViewer: (ViewerImageKind) -> Unit
 ) {
+    // TODO: branche soonDays sur tes Settings
+    val expiryPolicy = remember { ExpiryPolicy(soonDays = 2) }
+
     val name = itemEntity.name?.takeIf { it.isNotBlank() } ?: "(sans nom)"
     val brand = itemEntity.brand?.takeIf { it.isNotBlank() } ?: "—"
-    val nutriScore = itemEntity.nutriScore?.takeIf { it.isNotBlank() } ?: "—"
-    val daysText = itemEntity.expiryDate?.let { formatRelativeDaysCompact(it) } ?: "—"
+    val daysText = itemEntity.expiryDate?.let { formatRelativeDaysCompact(it, expiryPolicy) } ?: "—"
 
-    val chip = expiryChipStyle(itemEntity.expiryDate)
+    val chip = headerExpiryChipStyle(itemEntity.expiryDate, expiryPolicy)
 
     Box(Modifier.fillMaxWidth()) {
-
-
         val context = LocalContext.current
-        val imageUrl = itemEntity.imageUrl?.takeIf { it.isNotBlank() }
+        val imageUrl = itemEntity.imageUrl?.trim()?.takeIf { it.isNotBlank() }
 
         val imageRequest = remember(imageUrl) {
             ImageRequest.Builder(context)
@@ -132,20 +128,18 @@ fun BottomSheetDetailsHeader(
         val blurBg = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Modifier.blur(26.dp)
         } else {
-            Modifier // pas de blur réel < Android 12
+            Modifier
         }
 
-        // ✅ Contenu header normal
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
         ) {
-            // Image
             Box(
                 modifier = Modifier
                     .size(96.dp)
                     .clip(RoundedCornerShape(18.dp))
-                    .clickable(enabled = !itemEntity.imageUrl.isNullOrBlank()) {
+                    .clickable(enabled = !imageUrl.isNullOrBlank()) {
                         onOpenViewer(ViewerImageKind.Preview)
                     }
                     .background(MaterialTheme.colorScheme.surfaceVariant),
@@ -155,7 +149,6 @@ fun BottomSheetDetailsHeader(
                     val bgPainter = rememberAsyncImagePainter(imageRequest)
                     val fgPainter = rememberAsyncImagePainter(imageRequest)
 
-                    // 1) Fond flou (scale pour éviter les bords “sales” après blur + clip)
                     Image(
                         painter = bgPainter,
                         contentDescription = null,
@@ -170,7 +163,6 @@ fun BottomSheetDetailsHeader(
                         contentScale = ContentScale.Crop
                     )
 
-                    // 2) Overlay “frosted / premium” (donne du contraste même sans blur sur < 31)
                     Box(
                         modifier = Modifier
                             .matchParentSize()
@@ -184,7 +176,6 @@ fun BottomSheetDetailsHeader(
                             )
                     )
 
-                    // 3) Premier plan (image nette, un peu de padding pour laisser respirer le fond)
                     Image(
                         painter = fgPainter,
                         contentDescription = "Image produit",
@@ -197,7 +188,6 @@ fun BottomSheetDetailsHeader(
                 } else {
                     Text("🧺", fontSize = 22.sp)
                 }
-
             }
 
             Spacer(Modifier.width(12.dp))
@@ -207,7 +197,7 @@ fun BottomSheetDetailsHeader(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = name.replaceFirstChar { it.titlecase() }, // Majuscule
+                    text = name.replaceFirstChar { it.titlecase() },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,

@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.GenericShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.outlined.TimerOff
@@ -40,18 +39,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.features.fridge.components.shared.ItemThumbnail
-import com.example.barcode.features.fridge.isExpired
-import com.example.barcode.features.fridge.isSoon
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Canvas
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import com.example.barcode.common.expiry.ExpiryLevel
+import com.example.barcode.common.expiry.ExpiryPolicy
+import com.example.barcode.common.expiry.expiryLevel
+import com.example.barcode.common.ui.expiry.expiryGlowColor
+import com.example.barcode.common.ui.expiry.expirySelectionBorderColor
 import com.example.barcode.common.ui.theme.ItemNote
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -69,6 +70,9 @@ fun ShelfRow(
     emptyOpacity: Float = 1f,
     emptyCenterLabel: String? = null
 ) {
+    // TODO: branche soonDays sur tes Settings
+    val expiryPolicy = remember { ExpiryPolicy(soonDays = 2) }
+
     val preset = when (index) {
         0 -> ShelfPreset.TOP1
         1 -> ShelfPreset.TOP2
@@ -91,8 +95,12 @@ fun ShelfRow(
     val productSize = 56.dp
     val rowHeight = productSize + spec.height
 
+    val cs = MaterialTheme.colorScheme
+    val warning = Color(0xFFFFC107)
+    val warningGlow = Color(0xFFF9A825)
+
     Box(
-        modifier = Modifier.Companion
+        modifier = Modifier
             .fillMaxWidth()
             .height(rowHeight)
     ) {
@@ -100,18 +108,22 @@ fun ShelfRow(
 
         // --- Produits
         Row(
-            modifier = Modifier.Companion
-                .align(Alignment.Companion.TopCenter)
+            modifier = Modifier
+                .align(Alignment.TopCenter)
                 .padding(horizontal = 12.dp)
                 .offset(y = productDrop)
                 .zIndex(if (productsOnTop) 1f else 0f),
             horizontalArrangement = Arrangement.spacedBy(3.dp), // espacement produits
-            verticalAlignment = Alignment.Companion.Bottom
+            verticalAlignment = Alignment.Bottom
         ) {
             itemEntities.forEachIndexed { itemIndex, item ->
 
+                val level = remember(item.id, item.expiryDate, expiryPolicy.soonDays) {
+                    expiryLevel(item.expiryDate, expiryPolicy)
+                }
+
                 val isSheetSelected =
-                    selectedSheetId != null && item.id == selectedSheetId // pour mettre l'item en surbrillance pendant le BottomSheetDetails
+                    selectedSheetId != null && item.id == selectedSheetId // surbrillance pendant BottomSheetDetails
 
                 val hasSheetSelection = selectedSheetId != null
                 val dimOthers = hasSheetSelection && !isSheetSelected
@@ -141,48 +153,34 @@ fun ShelfRow(
                     label = "multiSelectAlpha"
                 )
 
-                val glowColor = when {
-                    item.expiryDate == null -> null
-                    isExpired(item.expiryDate) -> MaterialTheme.colorScheme.tertiary
-                    isSoon(item.expiryDate) -> Color(0xFFF9A825)
-                    else -> null
-                }
-
-                val selectionBorderColor = when {
-                    item.expiryDate != null && isExpired(item.expiryDate) -> MaterialTheme.colorScheme.tertiary
-                    item.expiryDate != null && isSoon(item.expiryDate) -> Color(0xFFFFC107) // jaune
-                    else -> Color(0xFF2ECC71) // vert (ou utilise cs.tertiary si tu préfères un vert "theme")
-                }.copy(alpha = 0.95f)
+                val glowColor = expiryGlowColor(level)
+                val selectionBorderColor = expirySelectionBorderColor(level)
 
                 var imageLoaded by remember(item.id) { mutableStateOf(false) }
 
                 val noteCount = notesCountByItemId[item.id] ?: 0
 
                 Box(
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .size(productSize),
-                    contentAlignment = Alignment.Companion.BottomCenter
+                    contentAlignment = Alignment.BottomCenter
                 ) {
-                    val cornerIcon = when {
-                        item.expiryDate == null -> null
-                        isExpired(item.expiryDate) -> Icons.Filled.WarningAmber
-                        isSoon(item.expiryDate) -> Icons.Outlined.TimerOff
+                    val cornerIcon = when (level) {
+                        ExpiryLevel.EXPIRED -> Icons.Filled.WarningAmber
+                        ExpiryLevel.SOON -> Icons.Outlined.TimerOff
                         else -> null
                     }
 
                     val shouldGiggle =
-                        !selectionMode && // évite que ça bouge pendant la sélection et anim que quand image chargée
+                        !selectionMode &&
                                 imageLoaded &&
-                                item.expiryDate != null &&
-                                (isExpired(item.expiryDate) || isSoon(item.expiryDate))
+                                (level == ExpiryLevel.EXPIRED || level == ExpiryLevel.SOON)
 
                     val selectedScale by animateFloatAsState(
                         targetValue = if (isSheetSelected) 1.07f else 1f,
                         animationSpec = tween(durationMillis = 260),
                         label = "selectedScale"
                     )
-
-
 
                     val itemAlpha =
                         when {
@@ -231,33 +229,31 @@ fun ShelfRow(
                                 imageBorderWidth = 2.dp,
                                 modifier = Modifier.fillMaxSize(),
 
-                                // ✅ NEW
+                                // ✅ DogEar notes
                                 topRightOverlayOnImage = if (noteCount > 0) {
                                     {
                                         NotesDogEarIndicator(
                                             modifier = Modifier
                                                 // ✅ fait dépasser un peu à l'extérieur (droite + haut)
-                                                .offset(x = 2.dp, y = -2.dp)
+                                                .offset(x = 2.dp, y = (-2).dp)
                                                 .zIndex(5f),
                                             showPenIcon = true
                                         )
                                     }
                                 } else null
-
                             )
-
                         }
                     }
                 }
             }
 
-            repeat(5 - itemEntities.size) { Spacer(Modifier.Companion.size(productSize)) }
+            repeat(5 - itemEntities.size) { Spacer(Modifier.size(productSize)) }
         }
 
         // --- Étagère
         ShelfRowTrapezoid(
-            modifier = Modifier.Companion
-                .align(Alignment.Companion.BottomCenter)
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
                 .zIndex(if (productsOnTop) 0f else 1f)
@@ -267,26 +263,22 @@ fun ShelfRow(
             lipHeight = spec.lipHeight,
             view = spec.view,
             lipAlpha = spec.lipAlpha,
-            dimAlpha = dimAlpha // ✅ NEW
+            dimAlpha = dimAlpha
         )
-
 
         // ✅ Message "liste vide" intégré au design (uniquement étagère MID)
         if (emptyCenterLabel != null && itemEntities.isEmpty() && preset == ShelfPreset.MID) {
             Text(
                 text = emptyCenterLabel,
-                style = MaterialTheme.typography.titleMedium, // ✅ plus gros que bodyMedium
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f), // ✅ plus visible
+                style = MaterialTheme.typography.titleMedium,
+                color = cs.onSurface.copy(alpha = 0.72f),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .offset(y = (-16).dp) // légèrement moins haut
-                    .alpha((emptyOpacity * 1.15f).coerceIn(0f, 1f)) // ✅ garde l'effet "ghost", mais moins fade
+                    .offset(y = (-16).dp)
+                    .alpha((emptyOpacity * 1.15f).coerceIn(0f, 1f))
             )
         }
-
-
     }
-
 }
 
 

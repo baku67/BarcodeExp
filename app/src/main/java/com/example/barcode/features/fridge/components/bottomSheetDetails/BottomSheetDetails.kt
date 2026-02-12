@@ -32,23 +32,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.example.barcode.common.expiry.ExpiryLevel
+import com.example.barcode.common.expiry.ExpiryPolicy
+import com.example.barcode.common.expiry.expiryLevel
+import com.example.barcode.common.ui.expiry.expiryStrokeColor
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.entities.ItemNoteEntity
-import com.example.barcode.features.fridge.isExpired
-import com.example.barcode.features.fridge.isSoon
 
-
-
-// BOTTOM SHEET 1/2:
 @Composable
-public fun ItemDetailsBottomSheet(
+fun ItemDetailsBottomSheet(
     itemEntity: ItemEntity,
     notes: List<ItemNoteEntity> = emptyList(),
     onAddNote: (String, Boolean) -> Unit = { _, _ -> },
@@ -60,8 +64,16 @@ public fun ItemDetailsBottomSheet(
     onAddToFavorites: (ItemEntity) -> Unit = {},
     onAddToShoppingList: (ItemEntity) -> Unit = {},
 ) {
+    // TODO: branche soonDays sur tes Settings
+    val expiryPolicy = remember { ExpiryPolicy(soonDays = 2) }
+
+    val level = remember(itemEntity.expiryDate) {
+        expiryLevel(itemEntity.expiryDate, expiryPolicy)
+    }
+    val isWarning = level == ExpiryLevel.EXPIRED || level == ExpiryLevel.SOON
+
     val strokeColor by animateColorAsState(
-        targetValue = expiryStrokeColor(itemEntity.expiryDate),
+        targetValue = expiryStrokeColor(itemEntity.expiryDate, expiryPolicy),
         label = "sheetStrokeColor"
     )
 
@@ -87,28 +99,30 @@ public fun ItemDetailsBottomSheet(
 
     val openViewerFromKind: (ViewerImageKind) -> Unit = open@{ kind ->
         if (viewerImages.isEmpty()) return@open
-
         val startIndex = viewerImages.indexOfFirst { it.kind == kind }.let { idx ->
             if (idx >= 0) idx else 0
         }
-
         onOpenViewer(viewerImages, startIndex)
     }
 
     val listState = rememberLazyListState()
-
     val sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
-    val surface = MaterialTheme.colorScheme.surface
-    val elevated = MaterialTheme.colorScheme.surfaceColorAtElevation(6.dp)
-    val tintTop = strokeColor.copy(alpha = 0.10f)
+    val cs = MaterialTheme.colorScheme
+    val surface = cs.surface
+    val elevated = cs.surfaceColorAtElevation(6.dp)
 
-    val sheetBrush = remember(strokeColor, surface, elevated) {
+    // ✅ pas de “vert” au milieu quand warning : on n’utilise pas surfaceColorAtElevation
+    val tint = strokeColor.copy(alpha = 1f)
+    val topTint = if (isWarning) lerp(surface, tint, 0.26f) else lerp(surface, tint, 0.10f)
+    val midTint = if (isWarning) lerp(surface, tint, 0.14f) else elevated
+
+    val sheetBrush = remember(surface, topTint, midTint) {
         Brush.verticalGradient(
             colorStops = arrayOf(
-                0f to tintTop,          // petit glow en haut (lié au stroke : expiré/soon/ok)
-                0.35f to elevated,      // léger “lift”
-                1f to surface           // base
+                0f to topTint,
+                0.55f to midTint,
+                1f to surface
             )
         )
     }
@@ -120,7 +134,7 @@ public fun ItemDetailsBottomSheet(
             .background(sheetBrush)
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                color = cs.outlineVariant.copy(alpha = 0.35f),
                 shape = sheetShape
             )
     ) {
@@ -134,7 +148,7 @@ public fun ItemDetailsBottomSheet(
                 topEndContent = null
             )
 
-            Spacer(Modifier.height(5.dp))
+            Spacer(Modifier.height(6.dp))
 
             LazyColumn(
                 state = listState,
@@ -146,7 +160,7 @@ public fun ItemDetailsBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 item(key = "header") {
-                    BottomSheetDetailsHeader(
+                    BottomSheetDetailsHeaderContent(
                         itemEntity = itemEntity,
                         onClose = onClose,
                         onOpenViewer = openViewerFromKind
@@ -163,7 +177,7 @@ public fun ItemDetailsBottomSheet(
 
                 item(key = "good_to_know") {
                     GoodToKnowCollapsibleSection(
-                        enabled = !itemEntity.barcode.isNullOrBlank(), // ✅ grisé si barcode null
+                        enabled = !itemEntity.barcode.isNullOrBlank(),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -179,7 +193,6 @@ public fun ItemDetailsBottomSheet(
             }
         }
 
-        // ✅ FAB overlay (ne prend PAS de place dans le layout)
         BottomSheetMenuButton(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -192,8 +205,6 @@ public fun ItemDetailsBottomSheet(
         )
     }
 }
-
-
 
 @Composable
 private fun DetailsOpenImageButtons(
@@ -225,25 +236,6 @@ private fun DetailsOpenImageButtons(
     }
 }
 
-
-
-// Couleur du border top BottomSheet
-@Composable
-private fun expiryStrokeColor(expiry: Long?): Color {
-    val base = MaterialTheme.colorScheme.primary
-
-    if (expiry == null) return base.copy(alpha = 0.35f)
-
-    return when {
-        isExpired(expiry) -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.65f) // expiré
-        isSoon(expiry) -> Color(0xFFFFC107).copy(alpha = 0.45f) // bientôt (jaune)
-        else -> base.copy(alpha = 0.55f) // ok
-    }
-}
-
-
-
-
 @Composable
 fun TopRoundedStroke(
     modifier: Modifier = Modifier,
@@ -262,10 +254,10 @@ fun TopRoundedStroke(
         val r = radius.toPx().coerceAtMost(w / 2f)
         val y = sw / 2f
 
-        val leftRect = androidx.compose.ui.geometry.Rect(0f, y, 2 * r, 2 * r + y)
-        val rightRect = androidx.compose.ui.geometry.Rect(w - 2 * r, y, w, 2 * r + y)
+        val leftRect = Rect(0f, y, 2 * r, 2 * r + y)
+        val rightRect = Rect(w - 2 * r, y, w, 2 * r + y)
 
-        val path = androidx.compose.ui.graphics.Path().apply {
+        val path = Path().apply {
             moveTo(0f, r + y)
             arcTo(leftRect, 180f, 90f, false)
             lineTo(w - r, y)
@@ -274,8 +266,7 @@ fun TopRoundedStroke(
 
         val fade = edgeFadePct.coerceIn(0f, 0.49f)
 
-        // ✅ Brush: transparent -> color -> transparent
-        val brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+        val brush = Brush.horizontalGradient(
             colorStops = arrayOf(
                 0f to color.copy(alpha = 0f),
                 fade to color,
@@ -291,16 +282,12 @@ fun TopRoundedStroke(
             brush = brush,
             style = androidx.compose.ui.graphics.drawscope.Stroke(
                 width = sw,
-                cap = androidx.compose.ui.graphics.StrokeCap.Round,
-                join = androidx.compose.ui.graphics.StrokeJoin.Round
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
             )
         )
     }
 }
-
-
-
-
 
 @Composable
 private fun CornerRadiusEtPoignee(
@@ -315,9 +302,8 @@ private fun CornerRadiusEtPoignee(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(radius) // ✅ la zone de rayon sert à la fois au trait ET à la poignée
+            .height(radius)
     ) {
-        // ✅ Trait arrondi
         TopRoundedStroke(
             modifier = Modifier.matchParentSize(),
             strokeWidth = strokeWidth,
@@ -325,24 +311,21 @@ private fun CornerRadiusEtPoignee(
             color = strokeColor
         )
 
-
-        // ✅ TODO Slot action en haut à droite (menu 3 points) mieu
         if (topEndContent != null) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 2.dp, end = 8.dp)
-                .zIndex(1f) // au-dessus du stroke Canvas
-           ) {
-               topEndContent()
-           }
-       }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 2.dp, end = 8.dp)
+                    .zIndex(1f)
+            ) {
+                topEndContent()
+            }
+        }
 
-        // ✅ Poignée DANS la zone (pas en dessous)
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 6.dp) // ajuste visuellement
+                .padding(bottom = 6.dp)
                 .width(handleWidth)
                 .height(handleHeight)
                 .clip(RoundedCornerShape(999.dp))
@@ -350,10 +333,6 @@ private fun CornerRadiusEtPoignee(
         )
     }
 }
-
-
-
-
 
 @Composable
 private fun DetailsTabButton(
@@ -364,30 +343,34 @@ private fun DetailsTabButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val cs = MaterialTheme.colorScheme
+
     val bg = when {
-        !enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-        selected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
-        else -> MaterialTheme.colorScheme.surface
+        !enabled -> cs.surfaceVariant.copy(alpha = 0.35f)
+        selected -> cs.primary.copy(alpha = 0.14f)
+        else -> cs.surface
     }
 
     val border = when {
-        !enabled -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-        selected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-        else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.80f)
+        !enabled -> cs.outlineVariant.copy(alpha = 0.25f)
+        selected -> cs.primary.copy(alpha = 0.55f)
+        else -> cs.outlineVariant.copy(alpha = 0.80f)
     }
 
     val content = when {
-        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
-        selected -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f)
+        !enabled -> cs.onSurface.copy(alpha = 0.22f)
+        selected -> cs.primary
+        else -> cs.onSurface.copy(alpha = 0.82f)
     }
+
+    val shape = RoundedCornerShape(14.dp)
 
     Box(
         modifier = modifier
             .height(44.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(shape)
             .background(bg)
-            .border(1.dp, border, RoundedCornerShape(14.dp))
+            .border(1.dp, border, shape)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -405,15 +388,14 @@ private fun DetailsTabButton(
                 Spacer(Modifier.width(8.dp))
             }
 
-            Text(text, fontWeight = FontWeight.SemiBold, color = content)
+            Text(
+                text = text,
+                fontWeight = FontWeight.SemiBold,
+                color = content
+            )
         }
     }
 }
-
-
-
-
-
 
 private fun buildViewerImages(
     previewUrl: String?,
@@ -436,5 +418,3 @@ private fun buildViewerImages(
 
     return out
 }
-
-

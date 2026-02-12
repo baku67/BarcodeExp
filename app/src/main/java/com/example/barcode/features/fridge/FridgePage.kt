@@ -58,7 +58,6 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 
 enum class ViewMode { List, Fridge }
 
@@ -806,36 +805,6 @@ fun FridgePage(
 }
 
 /* ——— Utils ——— */
-
-fun formatRelativeDaysCompact(targetMillis: Long): String {
-    val zone = ZoneId.systemDefault()
-    val today = LocalDate.now(zone)
-    val target = Instant.ofEpochMilli(targetMillis).atZone(zone).toLocalDate()
-    val days = ChronoUnit.DAYS.between(today, target).toInt()
-    return when {
-        days == 0 -> "aujourd'hui"
-        days == 1 -> "demain"
-        days > 1 -> "dans ${days}j"
-        days == -1 -> "hier"
-        else -> "il y a ${-days}j (!)"
-    }
-}
-
-fun isExpired(expiry: Long): Boolean {
-    val zone = ZoneId.systemDefault()
-    val today = LocalDate.now(zone)
-    val target = Instant.ofEpochMilli(expiry).atZone(zone).toLocalDate()
-    return target.isBefore(today)
-}
-
-// Laisser l'utilisateur modifier la valeur de "isSoon" dans Settings
-fun isSoon(expiry: Long): Boolean {
-    val zone = ZoneId.systemDefault()
-    val today = LocalDate.now(zone)
-    val target = Instant.ofEpochMilli(expiry).atZone(zone).toLocalDate()
-    val days = ChronoUnit.DAYS.between(today, target).toInt()
-    return days in 0..2
-}
 
 // Template ligne/étape contenu Modal d'aide (click "?"):
 @Composable
