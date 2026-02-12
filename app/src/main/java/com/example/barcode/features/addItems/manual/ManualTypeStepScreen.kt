@@ -2,21 +2,28 @@ package com.example.barcode.features.addItems.manual
 
 import android.content.Context
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,6 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -36,11 +44,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.Image
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,9 +59,10 @@ fun ManualTypeStepScreen(
     val types = taxonomy.types
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Choisir un type") },
+                title = { Text("Ajout manuel") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Retour")
@@ -66,7 +72,10 @@ fun ManualTypeStepScreen(
                     IconButton(onClick = onCancel) {
                         Icon(Icons.Filled.Close, contentDescription = "Annuler")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { innerPadding ->
@@ -74,36 +83,38 @@ fun ManualTypeStepScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                "Ajout manuel",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
+                text = "Choisis une catégorie",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold
             )
             Text(
-                "Sélectionne une catégorie (images WebP dans drawable).",
+                text = "Les couleurs des cartes sont calées sur tes illustrations WebP (512×512).",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
             )
 
             Spacer(Modifier.height(6.dp))
 
             LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+                columns = GridCells.Adaptive(minSize = 172.dp),
                 modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 18.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(types, key = { it.code }) { meta ->
                     val imageResId = drawableId(context, meta.image)
+                    val palette = paletteForType(meta.code)
 
-                    BigGradientTypeCard(
+                    BigTypeCard(
                         modifier = Modifier.fillMaxWidth(),
                         title = meta.title,
                         imageResId = imageResId,
-                        gradient = gradientForType(meta.code),
+                        palette = palette,
                         onClick = {
                             runCatching { ManualType.valueOf(meta.code) }
                                 .getOrNull()
@@ -116,50 +127,89 @@ fun ManualTypeStepScreen(
     }
 }
 
+private data class TypePalette(
+    val bg0: Color,
+    val bg1: Color,
+    val accent: Color
+) {
+    val gradient: Brush = Brush.linearGradient(listOf(bg0, bg1))
+}
+
 @Composable
-private fun BigGradientTypeCard(
+private fun BigTypeCard(
     modifier: Modifier = Modifier,
     title: String,
     @DrawableRes imageResId: Int,
-    gradient: Brush,
+    palette: TypePalette,
     onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(26.dp)
 
     Surface(
         onClick = onClick,
-        modifier = modifier.height(118.dp),
+        modifier = modifier
+            .aspectRatio(1.10f),
         shape = shape,
-        color = Color.Transparent,
-        tonalElevation = 0.dp
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, palette.accent.copy(alpha = 0.42f))
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(shape)
-                .background(gradient)
-                .padding(14.dp)
+                .background(palette.gradient)
         ) {
+            // léger "glow" pour donner du volume (sans casser les perfs)
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.14f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
+            // bloc texte lisible même si la carte finit claire (ex: leftovers / dairy)
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(14.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color.Black.copy(alpha = 0.18f))
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "Appuie pour choisir",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.82f)
+                )
+            }
+
             if (imageResId != 0) {
                 Image(
                     painter = painterResource(imageResId),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(44.dp)
-                        .align(Alignment.TopEnd),
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 10.dp, bottom = 8.dp)
+                        // "big illustration" : plus présente, légèrement hors-centre
+                        .size(132.dp)
+                        .offset(x = 10.dp, y = 6.dp),
                     contentScale = ContentScale.Fit
-                )
-            }
-
-            Row(
-                modifier = Modifier.align(Alignment.BottomStart),
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White
                 )
             }
         }
@@ -173,16 +223,49 @@ fun drawableId(context: Context, name: String?): Int {
 }
 
 /**
- * Optionnel : tu peux changer ces gradients, ou remplacer par un gradient unique.
+ * Palettes inspirées directement des couleurs dominantes visibles sur tes WebP:
+ * - légumes: verts profonds + accent tomate
+ * - viandes: bordeaux/rouge + accent rosé
+ * - poisson: bleu profond + accent saumon
+ * - laitages: bleu "frais" + accent crème
+ * - restes: brun chaud + accent vert (brocoli)
  */
-private fun gradientForType(code: String): Brush {
+private fun paletteForType(code: String): TypePalette {
     return when (code) {
-        "VEGETABLES" -> Brush.linearGradient(listOf(Color(0xFF1B5E20), Color(0xFF43A047)))
-        "MEAT" -> Brush.linearGradient(listOf(Color(0xFF6D2C2C), Color(0xFFC62828)))
-        "FISH" -> Brush.linearGradient(listOf(Color(0xFF0D47A1), Color(0xFF1976D2)))
-        "EGGS" -> Brush.linearGradient(listOf(Color(0xFF6A1B9A), Color(0xFF9C27B0)))
-        "DAIRY" -> Brush.linearGradient(listOf(Color(0xFF006064), Color(0xFF26C6DA)))
-        "LEFTOVERS" -> Brush.linearGradient(listOf(Color(0xFF3E2723), Color(0xFF8D6E63)))
-        else -> Brush.linearGradient(listOf(Color(0xFF455A64), Color(0xFF78909C)))
+        "VEGETABLES" -> TypePalette(
+            bg0 = Color(0xFF0F2A12),
+            bg1 = Color(0xFF2E7D32),
+            accent = Color(0xFFE53935)
+        )
+
+        "MEAT" -> TypePalette(
+            bg0 = Color(0xFF3B1418),
+            bg1 = Color(0xFFC62828),
+            accent = Color(0xFFFFB4A8)
+        )
+
+        "FISH" -> TypePalette(
+            bg0 = Color(0xFF0B1E3A),
+            bg1 = Color(0xFF1565C0),
+            accent = Color(0xFFFF7043)
+        )
+
+        "DAIRY" -> TypePalette(
+            bg0 = Color(0xFF123A63),
+            bg1 = Color(0xFF4FC3F7),
+            accent = Color(0xFFFFF1D6)
+        )
+
+        "LEFTOVERS" -> TypePalette(
+            bg0 = Color(0xFF3E2723),
+            bg1 = Color(0xFFD7A86E),
+            accent = Color(0xFF43A047)
+        )
+
+        else -> TypePalette(
+            bg0 = Color(0xFF263238),
+            bg1 = Color(0xFF607D8B),
+            accent = Color(0xFFB0BEC5)
+        )
     }
 }
