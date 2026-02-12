@@ -415,18 +415,13 @@ class MainActivity : ComponentActivity() {
                                             addVm.setDetails(name, brand)
                                             addVm.setExpiryDate(expiry)
 
-                                            itemsVm.addItem(
-                                                barcode = (draft.barcode ?: "(sans barcode)"),
-                                                name = (name ?: draft.name ?: "(sans nom)"),
-                                                brand = (brand ?: draft.brand ?: "(sans brand)"),
-                                                expiry = (expiry ?: draft.expiryDate),
-                                                imageUrl = draft.imageUrl, // souvent null en manuel
-                                                imageIngredientsUrl = draft.imageIngredientsUrl,
-                                                imageNutritionUrl = draft.imageNutritionUrl,
-                                                nutriScore = draft.nutriScore,
-                                                addMode = draft.addMode.value
+                                            val finalDraft = draft.copy(
+                                                name = name ?: draft.name,
+                                                brand = brand ?: draft.brand,
+                                                expiryDate = expiry ?: draft.expiryDate
                                             )
 
+                                            itemsVm.addItemFromDraft(finalDraft)
                                             close(addVm)
                                         },
                                         onBack = { navController.popBackStack() },

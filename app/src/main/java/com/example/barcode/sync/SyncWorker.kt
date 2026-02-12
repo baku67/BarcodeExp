@@ -124,18 +124,17 @@ class SyncWorker(
             try {
                 val name = item.name?.trim().orEmpty()
                 if (name.isBlank()) {
-                    itemDao.markFailed(item.id, error = "create/update: name is blank")
+                    itemDao.markFailed(item.id, error = "name is blank")
                     return@forEach
                 }
 
                 val expiry = item.expiryDate?.let { epochMsToYyyyMmDd(it) }
-                val addMode = item.addMode // "barcode_scan" | "manual"
 
-                val dto = when (addMode) {
+                val dto = when (item.addMode) {
                     "manual" -> {
                         val type = item.manualType?.trim().orEmpty()
                         if (type.isBlank()) {
-                            itemDao.markFailed(item.id, error = "manual item missing manualType")
+                            itemDao.markFailed(item.id, error = "manualType missing")
                             return@forEach
                         }
 
@@ -155,7 +154,7 @@ class SyncWorker(
                     else -> {
                         val barcode = item.barcode?.trim().orEmpty()
                         if (barcode.isBlank()) {
-                            itemDao.markFailed(item.id, error = "scanned item missing barcode")
+                            itemDao.markFailed(item.id, error = "barcode missing for barcode_scan")
                             return@forEach
                         }
 
@@ -183,7 +182,8 @@ class SyncWorker(
                 )
 
                 if (res.isSuccessful) itemDao.clearPending(item.id)
-                else itemDao.markFailed(item.id, error = "create failed code=${res.code()}")
+                else itemDao.markFailed(item.id, error = "create failed code=${res.code()} body=${res.errorBody()?.string()}")
+
 
             } catch (e: Exception) {
                 itemDao.markFailed(item.id, error = "create exception=${e.message}")
