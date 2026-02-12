@@ -12,7 +12,9 @@ import com.example.barcode.data.local.entities.PendingOperation
 import com.example.barcode.data.local.entities.SyncState
 import com.example.barcode.features.addItems.data.remote.api.ItemNotesApi
 import com.example.barcode.features.addItems.data.remote.api.ItemsApi
-import com.example.barcode.features.addItems.data.remote.dto.ItemCreateDto
+import com.example.barcode.features.addItems.data.remote.dto.CreateItemRequestDto
+import com.example.barcode.features.addItems.data.remote.dto.ScanPayload
+import com.example.barcode.features.addItems.data.remote.dto.ManualPayload
 import com.example.barcode.features.addItems.data.remote.dto.ItemNoteCreateDto
 import com.example.barcode.util.sanitizeNutriScore
 import kotlinx.coroutines.flow.first
@@ -120,18 +122,60 @@ class SyncWorker(
         val pendingCreates = itemDao.getPending(PendingOperation.CREATE)
         pendingCreates.forEach { item ->
             try {
-                val dto = ItemCreateDto(
-                    clientId = item.id,
-                    barcode = item.barcode,
-                    name = item.name,
-                    brand = item.brand,
-                    imageUrl = item.imageUrl,
-                    imageIngredientsUrl = item.imageIngredientsUrl,
-                    imageNutritionUrl = item.imageNutritionUrl,
-                    nutriScore = sanitizeNutriScore(item.nutriScore),
-                    expiryDate = item.expiryDate?.let { epochMsToYyyyMmDd(it) },
-                    addMode = item.addMode,
-                )
+                val name = item.name?.trim().orEmpty()
+                if (name.isBlank()) {
+                    itemDao.markFailed(item.id, error = "create/update: name is blank")
+                    return@forEach
+                }
+
+                val expiry = item.expiryDate?.let { epochMsToYyyyMmDd(it) }
+                val addMode = item.addMode // "barcode_scan" | "manual"
+
+                val dto = when (addMode) {
+                    "manual" -> {
+                        val type = item.manualType?.trim().orEmpty()
+                        if (type.isBlank()) {
+                            itemDao.markFailed(item.id, error = "manual item missing manualType")
+                            return@forEach
+                        }
+
+                        CreateItemRequestDto(
+                            clientId = item.id,
+                            name = name,
+                            expiryDate = expiry,
+                            addMode = "manual",
+                            scan = null,
+                            manual = ManualPayload(
+                                type = type,
+                                subtype = item.manualSubtype
+                            )
+                        )
+                    }
+
+                    else -> {
+                        val barcode = item.barcode?.trim().orEmpty()
+                        if (barcode.isBlank()) {
+                            itemDao.markFailed(item.id, error = "scanned item missing barcode")
+                            return@forEach
+                        }
+
+                        CreateItemRequestDto(
+                            clientId = item.id,
+                            name = name,
+                            expiryDate = expiry,
+                            addMode = "barcode_scan",
+                            manual = null,
+                            scan = ScanPayload(
+                                barcode = barcode,
+                                brand = item.brand,
+                                imageUrl = item.imageUrl,
+                                imageIngredientsUrl = item.imageIngredientsUrl,
+                                imageNutritionUrl = item.imageNutritionUrl,
+                                nutriScore = sanitizeNutriScore(item.nutriScore)
+                            )
+                        )
+                    }
+                }
 
                 val res = itemsApi.createItem(
                     authorization = "Bearer $token",
@@ -150,18 +194,60 @@ class SyncWorker(
         val pendingUpdates = itemDao.getPending(PendingOperation.UPDATE)
         pendingUpdates.forEach { item ->
             try {
-                val dto = ItemCreateDto(
-                    clientId = item.id,
-                    barcode = item.barcode,
-                    name = item.name,
-                    brand = item.brand,
-                    imageUrl = item.imageUrl,
-                    imageIngredientsUrl = item.imageIngredientsUrl,
-                    imageNutritionUrl = item.imageNutritionUrl,
-                    nutriScore = sanitizeNutriScore(item.nutriScore),
-                    expiryDate = item.expiryDate?.let { epochMsToYyyyMmDd(it) },
-                    addMode = item.addMode,
-                )
+                val name = item.name?.trim().orEmpty()
+                if (name.isBlank()) {
+                    itemDao.markFailed(item.id, error = "create/update: name is blank")
+                    return@forEach
+                }
+
+                val expiry = item.expiryDate?.let { epochMsToYyyyMmDd(it) }
+                val addMode = item.addMode // "barcode_scan" | "manual"
+
+                val dto = when (addMode) {
+                    "manual" -> {
+                        val type = item.manualType?.trim().orEmpty()
+                        if (type.isBlank()) {
+                            itemDao.markFailed(item.id, error = "manual item missing manualType")
+                            return@forEach
+                        }
+
+                        CreateItemRequestDto(
+                            clientId = item.id,
+                            name = name,
+                            expiryDate = expiry,
+                            addMode = "manual",
+                            scan = null,
+                            manual = ManualPayload(
+                                type = type,
+                                subtype = item.manualSubtype
+                            )
+                        )
+                    }
+
+                    else -> {
+                        val barcode = item.barcode?.trim().orEmpty()
+                        if (barcode.isBlank()) {
+                            itemDao.markFailed(item.id, error = "scanned item missing barcode")
+                            return@forEach
+                        }
+
+                        CreateItemRequestDto(
+                            clientId = item.id,
+                            name = name,
+                            expiryDate = expiry,
+                            addMode = "barcode_scan",
+                            manual = null,
+                            scan = ScanPayload(
+                                barcode = barcode,
+                                brand = item.brand,
+                                imageUrl = item.imageUrl,
+                                imageIngredientsUrl = item.imageIngredientsUrl,
+                                imageNutritionUrl = item.imageNutritionUrl,
+                                nutriScore = sanitizeNutriScore(item.nutriScore)
+                            )
+                        )
+                    }
+                }
 
                 val res = itemsApi.createItem(
                     authorization = "Bearer $token",

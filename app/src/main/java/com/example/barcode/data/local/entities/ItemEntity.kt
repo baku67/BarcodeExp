@@ -55,4 +55,9 @@ data class ItemEntity(
 
     @ColumnInfo(defaultValue = "barcode_scan")
     val addMode: String = "barcode_scan",
+
+    // ✅ Manual
+    val manualType: String? = null,
+    val manualSubtype: String? = null,
+    val manualMetaJson: String? = null,
 )

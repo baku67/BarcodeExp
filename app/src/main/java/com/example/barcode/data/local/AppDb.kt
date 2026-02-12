@@ -13,7 +13,7 @@ import com.example.barcode.data.local.dao.ItemNoteDao
 import com.example.barcode.data.local.entities.ItemNoteEntity
 
 @TypeConverters(RoomConverters::class)
-@Database(entities = [ItemEntity::class, ItemNoteEntity::class], version = 9, exportSchema = true)
+@Database(entities = [ItemEntity::class, ItemNoteEntity::class], version = 10, exportSchema = true)
 abstract class AppDb : RoomDatabase() {
 
     abstract fun itemDao(): ItemDao
@@ -185,6 +185,15 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
+        // Scan/manual différentiation
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE items ADD COLUMN manualType TEXT")
+                db.execSQL("ALTER TABLE items ADD COLUMN manualSubtype TEXT")
+                db.execSQL("ALTER TABLE items ADD COLUMN manualMetaJson TEXT")
+            }
+        }
+
 
         private fun columnExists(db: SupportSQLiteDatabase, table: String, column: String): Boolean {
             db.query("PRAGMA table_info($table)").use { cursor ->
@@ -218,6 +227,7 @@ abstract class AppDb : RoomDatabase() {
                     .addMigrations(MIGRATION_6_7)
                     .addMigrations(MIGRATION_7_8)
                     .addMigrations(MIGRATION_8_9)
+                    .addMigrations(MIGRATION_9_10)
 
                     // Toujours à la fin
                     .build().also { INSTANCE = it }

@@ -127,4 +127,38 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
         notesRepo.deleteNote(noteId)
         if (session.isAuthenticated()) SyncScheduler.enqueueSync(getApplication())
     }
+
+
+    fun addItemFromDraft(d: AddItemDraft) = viewModelScope.launch {
+        val name = requireNotNull(d.name) { "name requis" }
+
+        val entity = ItemEntity(
+            id = java.util.UUID.randomUUID().toString(),
+            name = name,
+            expiryDate = d.expiryDate,
+            addMode = d.addMode.value, // ou d.addMode.name.lowercase() selon ton enum
+
+            // scan uniquement
+            barcode = if (d.addMode == ItemAddMode.BARCODE_SCAN) d.barcode else null,
+            brand = if (d.addMode == ItemAddMode.BARCODE_SCAN) d.brand else null,
+            imageUrl = if (d.addMode == ItemAddMode.BARCODE_SCAN) d.imageUrl else null,
+            imageIngredientsUrl = if (d.addMode == ItemAddMode.BARCODE_SCAN) d.imageIngredientsUrl else null,
+            imageNutritionUrl = if (d.addMode == ItemAddMode.BARCODE_SCAN) d.imageNutritionUrl else null,
+            nutriScore = if (d.addMode == ItemAddMode.BARCODE_SCAN) d.nutriScore else null,
+
+            // manual uniquement
+            manualType = if (d.addMode == ItemAddMode.MANUAL) d.manualType?.name else null,
+            manualSubtype = if (d.addMode == ItemAddMode.MANUAL) d.manualSubtype?.name else null,
+
+            pendingOperation = PendingOperation.CREATE,
+            syncState = SyncState.OK
+        )
+
+        repo.addOrUpdate(entity)
+
+        if (session.isAuthenticated()) {
+            SyncScheduler.enqueueSync(getApplication())
+        }
+    }
+
 }
