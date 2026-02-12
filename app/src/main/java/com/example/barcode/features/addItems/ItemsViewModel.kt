@@ -139,12 +139,12 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
     fun addItemFromDraft(d: AddItemDraft) = viewModelScope.launch {
         val name = requireNotNull(d.name) { "name requis" }
 
-        val itemId = java.util.UUID.randomUUID().toString()
-        val resolvedPhotoId = d.photoId ?: itemId  // ✅ photoId commun scan/manual
+        // ✅ Un seul ID pour l’item + photo
+        val itemId = d.photoId?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
 
         val entity = ItemEntity(
             id = itemId,
-            photoId = resolvedPhotoId,
+            photoId = itemId,
 
             name = name,
             expiryDate = d.expiryDate,
