@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemChooseScreen
 import com.example.barcode.features.addItems.ItemAddMode
 import com.example.barcode.features.addItems.manual.ManualDetailsStepScreen
-import com.example.barcode.features.addItems.manual.ManualExpiryStepScreen
 import com.example.barcode.features.addItems.manual.ManualSubtypeStepScreen
 import com.example.barcode.features.addItems.manual.ManualTypeStepScreen
 import com.example.barcode.features.auth.RegisterScreen
@@ -368,31 +367,9 @@ class MainActivity : ComponentActivity() {
 
                                     ManualDetailsStepScreen(
                                         draft = draft,
-                                        onNext = { name, brandOrNull ->
+                                        onNext = { name, brandOrNull, expiryMs ->
                                             addVm.setDetails(name, brandOrNull)
-                                            navController.navigate("addItem/manual/expiry")
-                                        },
-                                        onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) }
-                                    )
-                                }
-
-                                // ✅ Manuel - Étape 3 : DLC optionnelle
-                                composable("addItem/manual/expiry") { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry("addItem")
-                                    }
-                                    val addVm: AddItemViewModel = viewModel(parentEntry)
-                                    val draft by addVm.draft.collectAsState()
-
-                                    ManualExpiryStepScreen(
-                                        title = draft.name ?: "Produit",
-                                        onPickExpiry = { expiryMs ->
                                             addVm.setExpiryDate(expiryMs)
-                                            navController.navigate("addItem/manual/confirm")
-                                        },
-                                        onSkip = {
-                                            addVm.setExpiryDate(null)
                                             navController.navigate("addItem/manual/confirm")
                                         },
                                         onBack = { navController.popBackStack() },
