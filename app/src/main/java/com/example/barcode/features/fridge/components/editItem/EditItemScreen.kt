@@ -85,11 +85,13 @@ import androidx.compose.ui.unit.Dp
 import com.example.barcode.common.ui.components.WheelDatePickerDialog
 import com.example.barcode.core.UserPreferencesStore
 import com.example.barcode.domain.models.ThemeMode
+import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import java.time.YearMonth
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlin.math.abs
 
+private val MANUAL_TYPES_WITH_SUBTYPE_IMAGE = setOf("VEGETABLES", "MEAT", "FISH", "DAIRY")
 
 data class EditItemResult(
     val name: String?,
@@ -126,6 +128,35 @@ fun EditItemScreen(
     val relative = remember(expiry) { expiry?.let { formatRelativeDaysAnyDistance(it) } ?: "—" }
     val absolute = remember(expiry) { expiry?.let { formatAbsoluteDate(it) } ?: "—" }
     val scrollState = rememberScrollState()
+
+    // --- Preview image : si manual + type (veg/meat/fish/dairy) => image = subtype (manual_taxonomy.json) ---
+    val usesSubtypeIllustration = remember(itemEntity.addMode, itemEntity.manualType, itemEntity.manualSubtype) {
+            itemEntity.addMode == "manual" &&
+                        itemEntity.manualType != null &&
+                        itemEntity.manualType in MANUAL_TYPES_WITH_SUBTYPE_IMAGE &&
+                        !itemEntity.manualSubtype.isNullOrBlank()
+        }
+
+    val previewImageUrl = remember(
+        usesSubtypeIllustration,
+        itemEntity.manualSubtype,
+        imageUrl
+            ) {
+        if (!usesSubtypeIllustration) return@remember imageUrl.trim()
+
+        val subtype = itemEntity.manualSubtype?.trim().orEmpty()
+        if (subtype.isBlank()) return@remember imageUrl.trim()
+
+        val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(
+                context = context,
+                subtypeCode = subtype
+                    )
+
+        // fallback (au cas où subtype inconnu / drawable manquant) => l’URL existante
+        if (resId == 0) imageUrl.trim()
+        else "android.resource://${context.packageName}/$resId"
+    }
+
 
     val prefsStore = remember(context) { UserPreferencesStore(context) }
 
@@ -189,10 +220,10 @@ fun EditItemScreen(
                         .height(220.dp)
                         .clip(RoundedCornerShape(16.dp))
                 ) {
-                    val painter = rememberAsyncImagePainter(model = imageUrl.ifBlank { null })
+                    val painter = rememberAsyncImagePainter(model = previewImageUrl.ifBlank { null })
                     val isImageLoading = painter.state is AsyncImagePainter.State.Loading
 
-                    if (imageUrl.isNotBlank()) {
+                    if (previewImageUrl.isNotBlank()) {
 
                         // 1) Fond : crop + blur
                         Image(
@@ -268,28 +299,36 @@ fun EditItemScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (imageUrl.isBlank()) "Aucune image" else "Image actuelle",
+                            text = when {
+                                    previewImageUrl.isBlank() -> "Aucune image"
+                                    usesSubtypeIllustration -> "Illustration (sous-type)"
+                                    else -> "Image actuelle"
+                                },
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.92f)
                         )
 
                         Spacer(Modifier.weight(1f))
 
-                        FilledTonalIconButton(onClick = { showImageDialog = true }) {
+                        // Pour l’instant : si l’image est gérée via sous-type => on ne branche pas l’édition
+                        FilledTonalIconButton(
+                            onClick = { showImageDialog = true },
+                            enabled = !usesSubtypeIllustration
+                        ) {
                             Icon(Icons.Filled.Image, contentDescription = "Modifier l'image")
                         }
                     }
                 }
 
-                if (showImageDialog) {
+                if (showImageDialog && !usesSubtypeIllustration) {
                     EditImageUrlDialog(
-                        initial = imageUrl,
-                        onConfirm = {
-                            imageUrl = it
-                            showImageDialog = false
-                        },
-                        onDismiss = { showImageDialog = false }
-                    )
+                            initial = imageUrl,
+                            onConfirm = {
+                                imageUrl = it
+                                showImageDialog = false
+                            },
+                            onDismiss = { showImageDialog = false }
+                        )
                 }
 
                 Spacer(Modifier.height(16.dp))
