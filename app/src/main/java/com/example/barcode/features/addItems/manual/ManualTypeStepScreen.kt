@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.barcode.features.addItems.AddItemStepScaffold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,26 +62,10 @@ fun ManualTypeStepScreen(
     val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
     val types = taxonomy.types
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = { Text("Ajout manuel") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Retour")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onCancel) {
-                        Icon(Icons.Filled.Close, contentDescription = "Annuler")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        }
+    AddItemStepScaffold(
+        step = 1,
+        onBack = onBack,
+        onCancel = onCancel
     ) { innerPadding ->
         Column(
             modifier = Modifier

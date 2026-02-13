@@ -187,8 +187,10 @@ class MainActivity : ComponentActivity() {
 
                                 fun close(addVm: AddItemViewModel) {
                                     addVm.reset()
-                                    val popped = navController.popBackStack("tabs", false)
-                                    if (!popped) navController.navigate("tabs") { launchSingleTop = true }
+                                    navController.navigate("tabs") {
+                                        popUpTo("addItem") { inclusive = true } // ✅ kill tout le graph addItem
+                                        launchSingleTop = true
+                                    }
                                 }
 
                                 // ✅ 0) Choix méthode
@@ -330,7 +332,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-                                // ✅ Manuel - Étape 1.1 : subtype (vegetables, viande, laitiers)
+                                // ✅ Manuel - Étape 2 : subtype (vegetables, viande, laitiers)
                                 composable("addItem/manual/subtype") { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
                                         navController.getBackStackEntry("addItem")
@@ -349,7 +351,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-/*                              TODO: Branch “Restes / Tupperware” : parcours différent
+                                /* TODO: Branch “Restes / Tupperware” : parcours différent
                                 Tu as demandé un parcours différent : c’est une bonne idée (sinon ça va devenir bancal avec “marque”, “nutri-score”, etc.).
                                 Option recommandée (simple & clean)
                                 Dès ManualTypeStepScreen, si type == LEFTOVERS, navigate vers un autre flow :
@@ -357,28 +359,8 @@ class MainActivity : ComponentActivity() {
                                 addItem/manual/leftovers/expiry (proposition auto J+2 / J+3)
                                 confirm*/
 
-                                // ✅ Manuel - Étape 2 : détails
+                                // ✅ Manuel - Étape 3 : détails + confirm
                                 composable("addItem/manual/details") { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry("addItem")
-                                    }
-                                    val addVm: AddItemViewModel = viewModel(parentEntry)
-                                    val draft by addVm.draft.collectAsState()
-
-                                    ManualDetailsStepScreen(
-                                        draft = draft,
-                                        onNext = { name, brandOrNull, expiryMs ->
-                                            addVm.setDetails(name, brandOrNull)
-                                            addVm.setExpiryDate(expiryMs)
-                                            navController.navigate("addItem/manual/confirm")
-                                        },
-                                        onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) }
-                                    )
-                                }
-
-                                // ✅ Manuel - Étape 4 : confirm (réutilise ton écran)
-                                composable("addItem/manual/confirm") { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
                                         navController.getBackStackEntry("addItem")
                                     }
@@ -390,25 +372,23 @@ class MainActivity : ComponentActivity() {
                                     }
                                     val itemsVm: ItemsViewModel = viewModel(homeEntry)
 
-                                    ConfirmStepScreen(
+                                    ManualDetailsStepScreen(
                                         draft = draft,
-                                        onConfirm = { name, brand, expiry ->
-                                            addVm.setDetails(name, brand)
-                                            addVm.setExpiryDate(expiry)
+                                        onNext = { name, brandOrNull, expiryMs ->
+                                            addVm.setDetails(name, brandOrNull)
+                                            addVm.setExpiryDate(expiryMs)
 
                                             val finalDraft = draft.copy(
-                                                name = name ?: draft.name,
-                                                brand = brand ?: draft.brand,
-                                                expiryDate = expiry ?: draft.expiryDate
+                                                name = name,
+                                                brand = brandOrNull,
+                                                expiryDate = expiryMs
                                             )
 
                                             itemsVm.addItemFromDraft(finalDraft)
                                             close(addVm)
                                         },
                                         onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) },
-                                        onCycleImage = { addVm.cycleNextImage() },
-                                        onNutriScoreChange = { addVm.setNutriScore(it) }
+                                        onCancel = { close(addVm) }
                                     )
                                 }
                             }

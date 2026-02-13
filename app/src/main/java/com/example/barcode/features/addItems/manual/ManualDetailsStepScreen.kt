@@ -72,7 +72,7 @@ fun ManualDetailsStepScreen(
     }
 
     AddItemStepScaffold(
-        step = 2,
+        step = 3,
         onBack = onBack,
         onCancel = onCancel
     ) { innerPadding ->
@@ -174,7 +174,7 @@ fun ManualDetailsStepScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = name.trim().isNotEmpty()
                 ) {
-                    Text("Continuer")
+                    Text("Ajouter")
                 }
             }
         }
