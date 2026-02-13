@@ -99,6 +99,7 @@ private fun headerExpiryChipStyle(expiryMillis: Long?, policy: ExpiryPolicy): He
 @Composable
 fun BottomSheetDetailsHeaderContent(
     itemEntity: ItemEntity,
+    previewImageUrl: String?,
     onClose: () -> Unit,
     onOpenViewer: (ViewerImageKind) -> Unit
 ) {
@@ -113,7 +114,7 @@ fun BottomSheetDetailsHeaderContent(
 
     Box(Modifier.fillMaxWidth()) {
         val context = LocalContext.current
-        val imageUrl = itemEntity.imageUrl?.trim()?.takeIf { it.isNotBlank() }
+        val imageUrl = previewImageUrl?.trim()?.takeIf { it.isNotBlank() }
 
         val imageRequest = remember(imageUrl) {
             ImageRequest.Builder(context)

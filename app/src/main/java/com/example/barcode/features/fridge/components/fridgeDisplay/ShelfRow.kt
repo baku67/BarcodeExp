@@ -49,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import com.example.barcode.common.expiry.ExpiryLevel
 import com.example.barcode.common.expiry.ExpiryPolicy
@@ -56,6 +57,7 @@ import com.example.barcode.common.expiry.expiryLevel
 import com.example.barcode.common.ui.expiry.expiryGlowColor
 import com.example.barcode.common.ui.expiry.expirySelectionBorderColor
 import com.example.barcode.common.ui.theme.ItemNote
+import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -145,7 +147,6 @@ fun ShelfRow(
                     animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
                     label = "sheetDimOverlay"
                 )
-                val effectiveDim = maxOf(dimAlpha, sheetDimOverlay)
 
                 val multiDimOverlay by animateFloatAsState(
                     targetValue = if (selectionMode && !isMultiSelected) 0.55f else 0f,
@@ -169,6 +170,32 @@ fun ShelfRow(
                 var imageLoaded by remember(item.id) { mutableStateOf(false) }
 
                 val noteCount = notesCountByItemId[item.id] ?: 0
+
+
+                val context = LocalContext.current
+
+                val effectiveImageUrl = remember(
+                    item.addMode,
+                    item.manualType,
+                    item.manualSubtype,
+                    item.imageUrl
+                ) {
+                    val manualTypes = setOf("VEGETABLES", "MEAT", "FISH", "DAIRY")
+                    val shouldUseSubtypeImage =
+                        item.addMode == "manual" &&
+                                item.manualType != null &&
+                                item.manualType in manualTypes &&
+                                !item.manualSubtype.isNullOrBlank()
+
+                    if (!shouldUseSubtypeImage) return@remember item.imageUrl
+
+                    val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(
+                        context = context,
+                        subtypeCode = item.manualSubtype!!.trim()
+                    )
+
+                    if (resId == 0) item.imageUrl else "android.resource://${context.packageName}/$resId"
+                }
 
                 Box(
                     modifier = Modifier
@@ -233,7 +260,7 @@ fun ShelfRow(
                         Box(modifier = wrapperModifier) {
 
                             ItemThumbnail(
-                                imageUrl = item.imageUrl,
+                                imageUrl = effectiveImageUrl,
                                 alignBottom = true,
                                 cornerIcon = cornerIcon,
                                 cornerIconTint = glowColor,

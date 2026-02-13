@@ -587,10 +587,7 @@ fun FridgePage(
 
                                         Box(modifier = Modifier.alpha(rowAlpha)) {
                                             ItemListCard(
-                                                name = it.name ?: "(sans nom)",
-                                                brand = it.brand,
-                                                expiry = it.expiryDate,
-                                                imageUrl = it.imageUrl,
+                                                item = it,
                                                 notesCount = noteCount,
                                                 selected = isSelected,
                                                 selectionMode = selectionMode,

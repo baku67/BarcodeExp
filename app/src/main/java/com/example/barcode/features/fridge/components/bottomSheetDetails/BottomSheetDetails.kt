@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -50,6 +51,7 @@ import com.example.barcode.common.expiry.expiryLevel
 import com.example.barcode.common.ui.expiry.expiryStrokeColor
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.entities.ItemNoteEntity
+import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 
 @Composable
 fun ItemDetailsBottomSheet(
@@ -77,13 +79,39 @@ fun ItemDetailsBottomSheet(
         label = "sheetStrokeColor"
     )
 
+        val context = LocalContext.current
+
+        val effectivePreviewUrl = remember(
+            itemEntity.addMode,
+            itemEntity.manualType,
+            itemEntity.manualSubtype,
+            itemEntity.imageUrl
+                ) {
+            val manualTypes = setOf("VEGETABLES", "MEAT", "FISH", "DAIRY")
+            val shouldUseSubtypeImage =
+                    itemEntity.addMode == "manual" &&
+                                itemEntity.manualType != null &&
+                                itemEntity.manualType in manualTypes &&
+                                !itemEntity.manualSubtype.isNullOrBlank()
+
+            if (!shouldUseSubtypeImage) return@remember itemEntity.imageUrl
+
+            val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(
+                    context = context,
+                    subtypeCode = itemEntity.manualSubtype!!.trim()
+                        )
+
+            if (resId == 0) itemEntity.imageUrl else "android.resource://${context.packageName}/$resId"
+        }
+
     val viewerImages = remember(
         itemEntity.imageUrl,
+        effectivePreviewUrl,
         itemEntity.imageIngredientsUrl,
         itemEntity.imageNutritionUrl
     ) {
         buildViewerImages(
-            previewUrl = itemEntity.imageUrl,
+            previewUrl = effectivePreviewUrl,
             ingredientsUrl = itemEntity.imageIngredientsUrl,
             nutritionUrl = itemEntity.imageNutritionUrl
         )
@@ -162,6 +190,7 @@ fun ItemDetailsBottomSheet(
                 item(key = "header") {
                     BottomSheetDetailsHeaderContent(
                         itemEntity = itemEntity,
+                        previewImageUrl = effectivePreviewUrl,
                         onClose = onClose,
                         onOpenViewer = openViewerFromKind
                     )
