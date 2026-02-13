@@ -125,7 +125,7 @@ fun ManualTypeStepScreen(
     }
 }
 
-private data class TypePalette(
+internal data class TypePalette(
     val bg0: Color,
     val bg1: Color,
     val accent: Color
@@ -226,7 +226,7 @@ fun drawableId(context: Context, name: String?): Int {
  * - laitages: bleu "frais" + accent crème
  * - restes: brun chaud + accent vert (brocoli)
  */
-private fun paletteForType(code: String): TypePalette {
+internal fun paletteForType(code: String): TypePalette {
     return when (code) {
 
         // 🌿 Légumes — vert forêt -> vert feuille, accent menthe
