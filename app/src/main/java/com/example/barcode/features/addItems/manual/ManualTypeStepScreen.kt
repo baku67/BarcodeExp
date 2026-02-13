@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManualTypeStepScreen(
-    onPick: (ManualType) -> Unit,
+    onPick: (String) -> Unit,
     onBack: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -113,11 +113,7 @@ fun ManualTypeStepScreen(
                         title = meta.title,
                         imageResId = imageResId,
                         palette = palette,
-                        onClick = {
-                            runCatching { ManualType.valueOf(meta.code) }
-                                .getOrNull()
-                                ?.let(onPick)
-                        }
+                        onClick = { onPick(meta.code) }
                     )
                 }
             }

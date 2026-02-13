@@ -1,8 +1,6 @@
 package com.example.barcode.features.addItems
 
 import android.os.Parcelable
-import com.example.barcode.features.addItems.manual.ManualSubType
-import com.example.barcode.features.addItems.manual.ManualType
 import kotlinx.parcelize.Parcelize
 
 
@@ -24,6 +22,6 @@ data class AddItemDraft(
     val imageCandidateIndex: Int = 0,
 
     // Propriété ajout produit manuel:
-    val manualType: ManualType? = null,
-    val manualSubtype: ManualSubType? = null
+    val manualTypeCode: String? = null,
+    val manualSubtypeCode: String? = null
 ) : Parcelable

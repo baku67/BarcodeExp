@@ -5,18 +5,19 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.barcode.core.SessionManager
 import com.example.barcode.data.LocalItemNoteRepository
+import com.example.barcode.data.LocalItemRepository
 import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
-import com.example.barcode.data.LocalItemRepository
 import com.example.barcode.data.local.entities.ItemNoteEntity
 import com.example.barcode.data.local.entities.PendingOperation
-import com.example.barcode.sync.SyncScheduler
 import com.example.barcode.data.local.entities.SyncState
+import com.example.barcode.sync.SyncScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class ItemsViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -46,10 +47,13 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
         nutriScore: String?,
         addMode: String,
         photoId: String? = null,
+        // ✅ ajout non-bloquant : utile si tu appelles encore addItem() pour du manuel
+        manualTypeCode: String? = null,
+        manualSubtypeCode: String? = null,
     ) = viewModelScope.launch {
 
         // 1) Toujours écrire en local
-        val itemId = java.util.UUID.randomUUID().toString()
+        val itemId = UUID.randomUUID().toString()
         val resolvedPhotoId = photoId ?: itemId
 
         val entity = ItemEntity(
@@ -65,6 +69,11 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
             imageNutritionUrl = imageNutritionUrl,
             nutriScore = nutriScore,
             addMode = addMode,
+
+            // ✅ manuel: on stocke les codes String (JSON source de vérité)
+            manualType = if (addMode == ItemAddMode.MANUAL.value) manualTypeCode else null,
+            manualSubtype = if (addMode == ItemAddMode.MANUAL.value) manualSubtypeCode else null,
+
             pendingOperation = PendingOperation.CREATE,
             syncState = SyncState.OK
         )
@@ -76,7 +85,6 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
             SyncScheduler.enqueueSync(getApplication())
         }
     }
-
 
     fun updateItem(
         id: String,
@@ -105,7 +113,6 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-
     fun deleteItem(id: String) = viewModelScope.launch {
         repo.delete(id) // ✅ devient un soft delete
 
@@ -114,8 +121,6 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
             SyncScheduler.enqueueSync(getApplication())
         }
     }
-
-
 
     // ✅ 1 seule source de vérité pour les badges (map itemId -> count)
     val notesCountByItemId: StateFlow<Map<String, Int>> =
@@ -135,12 +140,11 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
         if (session.isAuthenticated()) SyncScheduler.enqueueSync(getApplication())
     }
 
-
     fun addItemFromDraft(d: AddItemDraft) = viewModelScope.launch {
         val name = requireNotNull(d.name) { "name requis" }
 
         // ✅ Un seul ID pour l’item + photo
-        val itemId = d.photoId?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
+        val itemId = d.photoId?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
 
         val entity = ItemEntity(
             id = itemId,
@@ -158,9 +162,9 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
             imageNutritionUrl = if (d.addMode == ItemAddMode.BARCODE_SCAN) d.imageNutritionUrl else null,
             nutriScore = if (d.addMode == ItemAddMode.BARCODE_SCAN) d.nutriScore else null,
 
-            // manual uniquement
-            manualType = if (d.addMode == ItemAddMode.MANUAL) d.manualType?.name else null,
-            manualSubtype = if (d.addMode == ItemAddMode.MANUAL) d.manualSubtype?.name else null,
+            // ✅ manual uniquement (codes String)
+            manualType = if (d.addMode == ItemAddMode.MANUAL) d.manualTypeCode else null,
+            manualSubtype = if (d.addMode == ItemAddMode.MANUAL) d.manualSubtypeCode else null,
 
             pendingOperation = PendingOperation.CREATE,
             syncState = SyncState.OK
@@ -172,5 +176,4 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
             SyncScheduler.enqueueSync(getApplication())
         }
     }
-
 }

@@ -20,7 +20,9 @@ data class ManualTaxonomy(
 ) {
     private val typesByCode = types.associateBy { it.code }
     private val subtypesByParent = subtypes.groupBy { it.parentCode }
+    private val subtypesByCode = subtypes.associateBy { it.code }
 
-    fun typeMeta(type: ManualType): ManualTypeMeta? = typesByCode[type.name]
-    fun subtypesOf(type: ManualType): List<ManualSubtypeMeta> = subtypesByParent[type.name].orEmpty()
+    fun typeMeta(typeCode: String): ManualTypeMeta? = typesByCode[typeCode]
+    fun subtypeMeta(subtypeCode: String): ManualSubtypeMeta? = subtypesByCode[subtypeCode]
+    fun subtypesOf(typeCode: String): List<ManualSubtypeMeta> = subtypesByParent[typeCode].orEmpty()
 }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemDraft
@@ -16,9 +17,20 @@ fun ManualDetailsStepScreen(
     onBack: () -> Unit,
     onCancel: () -> Unit
 ) {
-    var name by remember(draft.name, draft.manualType) {
-        mutableStateOf(draft.name ?: draft.manualType?.label.orEmpty())
+    val context = LocalContext.current
+    val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
+
+    val suggestedName = remember(draft.name, draft.manualTypeCode, draft.manualSubtypeCode) {
+        draft.name
+            ?: draft.manualSubtypeCode?.let { taxonomy.subtypeMeta(it)?.title }
+            ?: draft.manualTypeCode?.let { taxonomy.typeMeta(it)?.title }
+            ?: ""
     }
+
+    var name by remember(draft.name, draft.manualTypeCode, draft.manualSubtypeCode) {
+        mutableStateOf(suggestedName)
+    }
+
     var brand by remember(draft.brand) { mutableStateOf(draft.brand.orEmpty()) }
 
     AddItemStepScaffold(

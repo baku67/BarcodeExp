@@ -52,16 +52,16 @@ import androidx.compose.ui.graphics.luminance
 @Composable
 fun ManualSubtypeStepScreen(
     draft: AddItemDraft,
-    onPick: (ManualSubType) -> Unit,
+    onPick: (String) -> Unit,
     onBack: () -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
     val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
 
-    val type: ManualType? = draft.manualType
-    val list = type?.let { taxonomy.subtypesOf(it) }.orEmpty()
-    val typeMeta = type?.let { taxonomy.typeMeta(it) }
+    val typeCode: String? = draft.manualTypeCode
+    val list = typeCode?.let { taxonomy.subtypesOf(it) }.orEmpty()
+    val typeMeta = typeCode?.let { taxonomy.typeMeta(it) }
 
     AddItemStepScaffold(
         step = 2,
@@ -74,11 +74,11 @@ fun ManualSubtypeStepScreen(
                 .fillMaxSize()
                 .padding(innerPadding) // ✅ collé sous la barre "Ajouter un produit (2/3)"
         ) {
-            if (type != null) {
+            if (typeCode != null) {
                 ManualSubtypeFullBleedHeader(
-                    typeTitle = typeMeta?.title ?: type.name,
+                    typeTitle = typeMeta?.title ?: typeCode,
                     typeImageResId = drawableId(context, typeMeta?.image),
-                    palette = paletteForType(type.name)
+                    palette = paletteForType(typeCode)
                 )
             }
 
@@ -89,7 +89,7 @@ fun ManualSubtypeStepScreen(
                     .padding(horizontal = 10.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (type == null) {
+                if (typeCode == null) {
                     Text(
                         text = "Sous-types",
                         style = MaterialTheme.typography.titleLarge,
@@ -101,7 +101,7 @@ fun ManualSubtypeStepScreen(
 
                 if (list.isEmpty()) {
                     Text(
-                        "Aucun sous-type disponible pour ${typeMeta?.title ?: type.name}.",
+                        "Aucun sous-type disponible pour ${typeMeta?.title ?: typeCode}.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     return@AddItemStepScaffold
@@ -129,14 +129,10 @@ fun ManualSubtypeStepScreen(
                                     .fillMaxWidth()
                                     .aspectRatio(1.05f),
                                 title = subMeta.title,
-                                parentTypeCode = type.name,
-                                selected = draft.manualSubtype?.name == subMeta.code,
                                 imageResId = imageRes,
-                                onClick = {
-                                    runCatching { ManualSubType.valueOf(subMeta.code) }
-                                        .getOrNull()
-                                        ?.let(onPick)
-                                }
+                                parentTypeCode = typeCode ?: "",
+                                selected = draft.manualSubtypeCode == subMeta.code,
+                                onClick = { onPick(subMeta.code) }
                             )
                         }
                     }

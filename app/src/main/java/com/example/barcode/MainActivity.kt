@@ -32,7 +32,6 @@ import com.example.barcode.features.addItems.ItemAddMode
 import com.example.barcode.features.addItems.manual.ManualDetailsStepScreen
 import com.example.barcode.features.addItems.manual.ManualExpiryStepScreen
 import com.example.barcode.features.addItems.manual.ManualSubtypeStepScreen
-import com.example.barcode.features.addItems.manual.ManualType
 import com.example.barcode.features.addItems.manual.ManualTypeStepScreen
 import com.example.barcode.features.auth.RegisterScreen
 import com.example.barcode.common.ui.navigation.MainTabsScreen
@@ -45,6 +44,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.AppBackground
 import com.example.barcode.common.ui.theme.Theme
+import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
 import com.example.barcode.sync.SyncScheduler
 
 
@@ -306,20 +306,24 @@ class MainActivity : ComponentActivity() {
                                     }
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
 
+                                    val context = LocalContext.current
+                                    val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
+
                                     ManualTypeStepScreen(
-                                        onPick = { type ->
-                                            addVm.setManualType(type)
+                                        onPick = { typeCode: String ->
+                                            addVm.setManualType(typeCode) // => doit setter manualTypeCode + reset manualSubtypeCode
 
-                                            when (type) {
+                                            val hasSubtypes = taxonomy.subtypesOf(typeCode).isNotEmpty()
 
-                                                ManualType.LEFTOVERS -> navController.navigate("addItem/manual/leftovers/details") // TODO
+                                            when {
+                                                typeCode == "LEFTOVERS" ->
+                                                    navController.navigate("addItem/manual/leftovers/details") // TODO
 
-                                                ManualType.VEGETABLES,
-                                                ManualType.MEAT,
-                                                ManualType.DAIRY
-                                                    -> navController.navigate("addItem/manual/subtype")
+                                                hasSubtypes ->
+                                                    navController.navigate("addItem/manual/subtype")
 
-                                                else -> navController.navigate("addItem/manual/details")
+                                                else ->
+                                                    navController.navigate("addItem/manual/details")
                                             }
                                         },
                                         onCancel = { close(addVm) },
