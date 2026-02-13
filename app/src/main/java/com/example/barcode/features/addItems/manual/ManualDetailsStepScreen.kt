@@ -1,6 +1,5 @@
 package com.example.barcode.features.addItems.manual
 
-import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -9,10 +8,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.barcode.common.ui.components.MonthWheelFormat
+import com.example.barcode.common.ui.components.WheelDatePickerDialog
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -47,23 +47,11 @@ fun ManualDetailsStepScreen(
     var brand by remember(draft.brand) { mutableStateOf(draft.brand.orEmpty()) }
 
     var expiryMs by remember(draft.expiryDate) { mutableStateOf(draft.expiryDate) }
+    var showWheel by remember { mutableStateOf(false) }
 
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
     val expiryLabel = remember(expiryMs) {
         expiryMs?.let { dateFormatter.format(Date(it)) } ?: "Choisir une date"
-    }
-
-    fun openDatePicker() {
-        val cal = Calendar.getInstance()
-        if (expiryMs != null) cal.timeInMillis = expiryMs!!
-
-        val y = cal.get(Calendar.YEAR)
-        val m = cal.get(Calendar.MONTH)
-        val d = cal.get(Calendar.DAY_OF_MONTH)
-
-        DatePickerDialog(context, { _, year, month, dayOfMonth ->
-            expiryMs = toNoonMillis(year, month, dayOfMonth)
-        }, y, m, d).show()
     }
 
     AddItemStepScaffold(
@@ -99,7 +87,34 @@ fun ManualDetailsStepScreen(
                     singleLine = true
                 )
 
-                // ✅ Sélection de date juste sous "Nom"
+                val storageLine = remember(
+                    subtypeMeta?.title,
+                    subtypeMeta?.storageDaysMin,
+                    subtypeMeta?.storageDaysMax
+                ) {
+                    val label = subtypeMeta?.title?.lowercase(Locale.getDefault())
+                    val min = subtypeMeta?.storageDaysMin
+                    val max = subtypeMeta?.storageDaysMax
+
+                    if (label == null || min == null) return@remember null
+
+                    val daysText = when {
+                        max != null && max != min -> "$min–$max jours"
+                        else -> "$min jours"
+                    }
+
+                    "Temps de conservation conseillé pour $label : $daysText"
+                }
+
+                if (storageLine != null) {
+                    Text(
+                        text = storageLine!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // ✅ Date limite via WheelDatePicker
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
                         text = "Date limite (optionnel)",
@@ -112,7 +127,7 @@ fun ManualDetailsStepScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { openDatePicker() },
+                            onClick = { showWheel = true },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
@@ -146,17 +161,19 @@ fun ManualDetailsStepScreen(
                 }
             }
         }
-    }
-}
 
-private fun toNoonMillis(year: Int, month0: Int, dayOfMonth: Int): Long {
-    return Calendar.getInstance().apply {
-        set(Calendar.YEAR, year)
-        set(Calendar.MONTH, month0)
-        set(Calendar.DAY_OF_MONTH, dayOfMonth)
-        set(Calendar.HOUR_OF_DAY, 12) // évite les edge cases DST
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
+        if (showWheel) {
+            WheelDatePickerDialog(
+                initialMillis = expiryMs,
+                onConfirm = { pickedMillis ->
+                    expiryMs = pickedMillis
+                    showWheel = false
+                },
+                onDismiss = { showWheel = false },
+                title = "Date limite",
+                monthFormat = MonthWheelFormat.ShortText,
+                showExpiredHint = true
+            )
+        }
+    }
 }

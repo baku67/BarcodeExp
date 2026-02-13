@@ -70,9 +70,19 @@ object ManualTaxonomyRepository {
                     parentCode = parent,
                     title = title,
                     image = o.optString("image").takeIf { it.isNotBlank() },
-                    goodToKnow = o.optString("goodToKnow").takeIf { it.isNotBlank() }
+                    goodToKnow = o.optString("goodToKnow").takeIf { it.isNotBlank() },
+
+                    // ✅ nouveaux champs
+                    storageDaysMin = o.optIntOrNull("storageDaysMin"),
+                    storageDaysMax = o.optIntOrNull("storageDaysMax"),
                 )
             )
         }
     }
+}
+
+
+private fun JSONObject.optIntOrNull(key: String): Int? {
+    if (!has(key) || isNull(key)) return null
+    return optInt(key)
 }

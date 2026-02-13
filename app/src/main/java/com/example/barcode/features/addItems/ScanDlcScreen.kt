@@ -224,16 +224,20 @@ fun ScanDlcScreen(
 
     if (showManualSheet) {
         WheelDatePickerBottomSheet(
-            initialDate = detectedLocalDate,
+            initialMillis = detectedDateMs,
             monthFormat = MonthWheelFormat.TwoDigits,
             onDismiss = {
                 showManualSheet = false
                 if (detectedDateMs == null) frozen = false
             },
-            onConfirm = { ld ->
+            onConfirm = { pickedMillis ->
+                val ld = Instant.ofEpochMilli(pickedMillis)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+
                 detectedLocalDate = ld
                 detectedDate = ld.format(dateFormatter)
-                detectedDateMs = localDateToEpochMs(ld)
+                detectedDateMs = localDateToEpochMs(ld) // garde ta convention (startOfDay)
                 lastDetectedDate = detectedDate
                 frozen = true
                 showManualSheet = false
