@@ -78,6 +78,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.androidx.ui.unit)
+    implementation(libs.androidx.foundation.layout.android)
     // Room (localStorage DB ?)
     val room = "2.6.1"
     implementation("androidx.room:room-runtime:$room")

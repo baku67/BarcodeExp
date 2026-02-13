@@ -18,6 +18,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -60,6 +61,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,11 +96,14 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.barcode.common.ui.components.HeaderBar
 import com.example.barcode.common.ui.components.MonthWheelFormat
 import com.example.barcode.common.ui.components.WheelDatePickerBottomSheet
+import com.example.barcode.core.UserPreferencesStore
 import com.example.barcode.domain.models.AppIcon
+import com.example.barcode.domain.models.ThemeMode
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.map
 import java.nio.ByteBuffer
 import java.time.Instant
 import java.time.LocalDate
@@ -119,6 +124,19 @@ fun ScanDlcScreen(
     modifier: Modifier = Modifier
 ) {
     val ctx = LocalContext.current
+
+    val prefsStore = remember(ctx) { UserPreferencesStore(ctx) }
+
+    val themeMode by prefsStore.preferences
+        .map { it.theme }
+        .collectAsState(initial = ThemeMode.SYSTEM)
+
+    val useDarkTheme = when (themeMode) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
+
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // ✅ ROI (UI + OCR) — ici tu assumes vraiment “scan uniquement dans le cadre”
@@ -224,20 +242,17 @@ fun ScanDlcScreen(
 
     if (showManualSheet) {
         WheelDatePickerBottomSheet(
-            initialMillis = detectedDateMs,
+            initialDate = detectedLocalDate,
+            useDarkTheme = useDarkTheme,
             monthFormat = MonthWheelFormat.TwoDigits,
             onDismiss = {
                 showManualSheet = false
                 if (detectedDateMs == null) frozen = false
             },
-            onConfirm = { pickedMillis ->
-                val ld = Instant.ofEpochMilli(pickedMillis)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
-
+            onConfirm = { ld ->
                 detectedLocalDate = ld
                 detectedDate = ld.format(dateFormatter)
-                detectedDateMs = localDateToEpochMs(ld) // garde ta convention (startOfDay)
+                detectedDateMs = localDateToEpochMs(ld)
                 lastDetectedDate = detectedDate
                 frozen = true
                 showManualSheet = false

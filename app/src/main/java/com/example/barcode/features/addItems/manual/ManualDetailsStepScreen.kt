@@ -1,5 +1,6 @@
 package com.example.barcode.features.addItems.manual
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,8 +11,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.barcode.common.ui.components.MonthWheelFormat
 import com.example.barcode.common.ui.components.WheelDatePickerDialog
+import com.example.barcode.core.UserPreferencesStore
+import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
+import kotlinx.coroutines.flow.map
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -24,7 +28,20 @@ fun ManualDetailsStepScreen(
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
+
     val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
+
+    val prefsStore = remember(context) { UserPreferencesStore(context) }
+
+    val themeMode by prefsStore.preferences
+        .map { it.theme }
+        .collectAsState(initial = ThemeMode.SYSTEM)
+
+    val useDarkTheme = when (themeMode) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
 
     val typeCode = draft.manualTypeCode
     val subtypeCode = draft.manualSubtypeCode
@@ -172,7 +189,8 @@ fun ManualDetailsStepScreen(
                 onDismiss = { showWheel = false },
                 title = "Date limite",
                 monthFormat = MonthWheelFormat.ShortText,
-                showExpiredHint = true
+                showExpiredHint = true,
+                useDarkTheme = useDarkTheme,
             )
         }
     }

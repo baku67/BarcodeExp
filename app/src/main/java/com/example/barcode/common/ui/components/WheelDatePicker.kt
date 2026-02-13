@@ -54,10 +54,12 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.platform.LocalContext
@@ -86,6 +88,7 @@ fun WheelDatePickerDialog(
     monthFormat: MonthWheelFormat = MonthWheelFormat.ShortText,
     showExpiredHint: Boolean = false,
     expiredHintText: String = "Déjà expiré",
+    useDarkTheme: Boolean,
 ) {
     val context = LocalContext.current
     val zone = ZoneId.systemDefault()
@@ -121,7 +124,7 @@ fun WheelDatePickerDialog(
     fun openCalendar() {
         DatePickerDialog(
             context,
-            darkDatePickerThemeRes(),
+            calendarThemeRes(useDarkTheme),
             { _, y, m0, d ->
                 year = y
                 month = m0 + 1
@@ -231,38 +234,34 @@ fun WheelDatePickerDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WheelDatePickerBottomSheet(
-    initialMillis: Long?,
-    onConfirm: (Long) -> Unit,
+    initialDate: LocalDate?,
+    useDarkTheme: Boolean,
     onDismiss: () -> Unit,
-    title: String = "Choisir une date",
+    onConfirm: (LocalDate) -> Unit,
+    title: String = "Saisie manuelle",
     itemHeight: Dp = 34.dp,
     visibleCount: Int = 5,
+    showExpiredHint: Boolean = true,
     monthFormat: MonthWheelFormat = MonthWheelFormat.ShortText,
-    showExpiredHint: Boolean = false,
-    expiredHintText: String = "Déjà expiré",
 ) {
-    val context = LocalContext.current
-    val zone = ZoneId.systemDefault()
-    val formatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
+    val ctx = LocalContext.current
 
-    val initialDate = remember(initialMillis) {
-        initialMillis?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
-    } ?: LocalDate.now(zone)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val zone = remember { ZoneId.systemDefault() }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
 
-    var year by rememberSaveable { mutableStateOf(initialDate.year) }
-    var month by rememberSaveable { mutableStateOf(initialDate.monthValue) } // 1..12
-    var day by rememberSaveable { mutableStateOf(initialDate.dayOfMonth) }   // 1..31
+    val initial = remember(initialDate) { initialDate ?: LocalDate.now(zone) }
+
+    var year by rememberSaveable { mutableStateOf(initial.year) }
+    var month by rememberSaveable { mutableStateOf(initial.monthValue) }
+    var day by rememberSaveable { mutableStateOf(initial.dayOfMonth) }
 
     val nowYear = LocalDate.now(zone).year
     val years = remember(nowYear) { (nowYear - 10..nowYear + 15).toList() }
-
     val monthOptions = remember(monthFormat) {
         when (monthFormat) {
             MonthWheelFormat.TwoDigits -> (1..12).map { it.toString().padStart(2, '0') }
-            MonthWheelFormat.ShortText -> listOf(
-                "Jan", "Fév", "Mar", "Avr", "Mai", "Juin",
-                "Juil", "Août", "Sep", "Oct", "Nov", "Déc"
-            )
+            MonthWheelFormat.ShortText -> listOf("Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc")
         }
     }
 
@@ -270,15 +269,16 @@ fun WheelDatePickerBottomSheet(
     if (day > maxDay) day = maxDay
 
     val selected = remember(year, month, day) { LocalDate.of(year, month, day) }
-    val expiredHint = remember(selected, showExpiredHint, expiredHintText) {
+
+    val expiredHint = remember(selected, showExpiredHint) {
         if (!showExpiredHint) null
-        else selected.takeIf { it.isBefore(LocalDate.now(zone)) }?.let { expiredHintText }
+        else selected.takeIf { it.isBefore(LocalDate.now(zone)) }?.let { "Déjà expiré" }
     }
 
     fun openCalendar() {
         DatePickerDialog(
-            context,
-            darkDatePickerThemeRes(),
+            ctx,
+            calendarThemeRes(useDarkTheme),
             { _, y, m0, d ->
                 year = y
                 month = m0 + 1
@@ -290,15 +290,11 @@ fun WheelDatePickerBottomSheet(
         ).show()
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState
-    ) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -308,16 +304,13 @@ fun WheelDatePickerBottomSheet(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
 
-                // ✅ mini-bouton "calendar"
-                IconButton(
-                    onClick = { openCalendar() },
-                    modifier = Modifier.size(36.dp)
-                ) {
+                // ✅ mini-bouton calendrier
+                IconButton(onClick = { openCalendar() }, modifier = Modifier.size(36.dp)) {
                     Icon(
                         imageVector = Icons.Outlined.DateRange,
                         contentDescription = "Calendrier",
@@ -326,6 +319,12 @@ fun WheelDatePickerBottomSheet(
                     )
                 }
             }
+
+            Text(
+                text = "Date sélectionnée : ${selected.format(dateFormatter)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -338,7 +337,7 @@ fun WheelDatePickerBottomSheet(
                     onIndexChanged = { day = it + 1 },
                     modifier = Modifier.weight(1f),
                     itemHeight = itemHeight,
-                    visibleCount = visibleCount
+                    visibleCount = visibleCount,
                 )
 
                 WheelPicker(
@@ -347,7 +346,7 @@ fun WheelDatePickerBottomSheet(
                     onIndexChanged = { month = it + 1 },
                     modifier = Modifier.weight(1f),
                     itemHeight = itemHeight,
-                    visibleCount = visibleCount
+                    visibleCount = visibleCount,
                 )
 
                 WheelPicker(
@@ -356,23 +355,21 @@ fun WheelDatePickerBottomSheet(
                     onIndexChanged = { year = years[it] },
                     modifier = Modifier.weight(1f),
                     itemHeight = itemHeight,
-                    visibleCount = visibleCount
+                    visibleCount = visibleCount,
                 )
             }
 
-            Text(
-                text = selected.format(formatter),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f),
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 12.dp)
+                ) {
                     if (expiredHint != null) {
                         Text(
                             text = expiredHint,
@@ -383,21 +380,15 @@ fun WheelDatePickerBottomSheet(
                     }
                 }
 
-                TextButton(onClick = onDismiss) { Text("Annuler") }
-
-                TextButton(
-                    onClick = {
-                        // ✅ midi pour éviter les edge cases DST
-                        val millis = selected.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
-                        onConfirm(millis)
-                    }
-                ) { Text("OK") }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    TextButton(onClick = onDismiss) { Text("Annuler") }
+                    Button(onClick = { onConfirm(selected) }) { Text("Valider") }
+                }
             }
-
-            Spacer(Modifier.height(6.dp))
         }
     }
 }
+
 
 
 
@@ -580,10 +571,12 @@ private fun parseDateInput(raw: String): LocalDate? {
 }
 
 
-private fun darkDatePickerThemeRes(): Int {
+private fun calendarThemeRes(useDark: Boolean): Int {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-        android.R.style.Theme_Material_Dialog // ✅ dark (API 21+)
+        if (useDark) android.R.style.Theme_Material_Dialog
+        else android.R.style.Theme_Material_Light_Dialog
     } else {
-        android.R.style.Theme_Holo_Dialog // ✅ dark (API <21)
+        if (useDark) android.R.style.Theme_Holo_Dialog
+        else android.R.style.Theme_Holo_Light_Dialog
     }
 }

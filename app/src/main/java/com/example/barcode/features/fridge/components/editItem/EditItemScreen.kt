@@ -69,18 +69,24 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import com.example.barcode.common.ui.components.WheelDatePickerDialog
+import com.example.barcode.core.UserPreferencesStore
+import com.example.barcode.domain.models.ThemeMode
 import java.time.YearMonth
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlin.math.abs
 
 
@@ -101,6 +107,8 @@ fun EditItemScreen(
     onSave: (EditItemResult) -> Unit,
     onCancel: () -> Unit,
 ) {
+    val context = LocalContext.current
+
     var name by rememberSaveable { mutableStateOf(itemEntity.name.orEmpty()) }
     var brand by rememberSaveable { mutableStateOf(itemEntity.brand.orEmpty()) }
     var expiry by rememberSaveable { mutableStateOf(itemEntity.expiryDate) }
@@ -117,6 +125,18 @@ fun EditItemScreen(
     val relative = remember(expiry) { expiry?.let { formatRelativeDaysAnyDistance(it) } ?: "—" }
     val absolute = remember(expiry) { expiry?.let { formatAbsoluteDate(it) } ?: "—" }
     val scrollState = rememberScrollState()
+
+    val prefsStore = remember(context) { UserPreferencesStore(context) }
+
+    val themeMode by prefsStore.preferences
+        .map { it.theme }
+        .collectAsState(initial = ThemeMode.SYSTEM)
+
+    val useDarkTheme = when (themeMode) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
 
     Scaffold(
         topBar = {
@@ -390,6 +410,7 @@ fun EditItemScreen(
                         },
                         onDismiss = { showDatePicker = false },
                         showExpiredHint = true,
+                        useDarkTheme = useDarkTheme,
                     )
                 }
 

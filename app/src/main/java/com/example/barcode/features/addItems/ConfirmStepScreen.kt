@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -39,6 +41,9 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.barcode.R
 import com.example.barcode.common.ui.components.MonthWheelFormat
 import com.example.barcode.common.ui.components.WheelDatePickerDialog
+import com.example.barcode.core.UserPreferencesStore
+import com.example.barcode.domain.models.ThemeMode
+import kotlinx.coroutines.flow.map
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,6 +56,8 @@ fun ConfirmStepScreen(
     onCycleImage: () -> Unit,
     onNutriScoreChange: (String?) -> Unit
 ) {
+    val ctx = LocalContext.current
+
     var name by remember { mutableStateOf(draft.name.orEmpty()) }
     var brand by remember { mutableStateOf(draft.brand.orEmpty()) }
     var expiry by remember { mutableStateOf(draft.expiryDate) }
@@ -61,6 +68,18 @@ fun ConfirmStepScreen(
     val scrollState = rememberScrollState()
 
     var showNutriPicker by remember { mutableStateOf(false) }
+
+    val prefsStore = remember(ctx) { UserPreferencesStore(ctx) }
+
+    val themeMode by prefsStore.preferences
+        .map { it.theme }
+        .collectAsState(initial = ThemeMode.SYSTEM)
+
+    val useDarkTheme = when (themeMode) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
 
 
     AddItemStepScaffold(
@@ -327,7 +346,8 @@ fun ConfirmStepScreen(
                         onDismiss = { showPicker = false },
                         monthFormat = MonthWheelFormat.TwoDigits,
                         showExpiredHint = true,
-                        expiredHintText = "Déjà expiré"
+                        expiredHintText = "Déjà expiré",
+                        useDarkTheme = useDarkTheme,
                     )
                 }
             }
