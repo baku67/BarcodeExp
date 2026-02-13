@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import android.os.Build
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -507,13 +508,20 @@ fun WheelPicker(
             }
         }
 
+        val selectionShape = RoundedCornerShape(12.dp)
+
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth()
                 .height(itemHeight)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(selectionShape)
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.70f),
+                    shape = selectionShape
+                )
         )
     }
 }

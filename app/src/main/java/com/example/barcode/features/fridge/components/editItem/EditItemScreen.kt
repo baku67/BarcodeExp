@@ -68,6 +68,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.PaddingValues
@@ -520,10 +521,17 @@ private fun NutriScorePickerDialog(
                     val label = opt ?: "Neutre"
                     val isSelected = (opt?.uppercase() == current?.uppercase()) || (opt == null && current == null)
 
+                    val shape = RoundedCornerShape(12.dp)
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.70f) else Color.Transparent,
+                                shape = shape
+                            )
+                            .clip(shape)
                             .background(
                                 if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
                                 else Color.Transparent
