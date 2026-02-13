@@ -9,17 +9,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -44,6 +46,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
@@ -91,19 +94,12 @@ fun ManualTypeStepScreen(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.ExtraBold
             )
-            Text(
-                text = "Les couleurs des cartes sont calées sur tes illustrations WebP (512×512).",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
-            )
 
             Spacer(Modifier.height(6.dp))
 
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 172.dp),
+            LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(bottom = 18.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(types, key = { it.code }) { meta ->
@@ -111,7 +107,9 @@ fun ManualTypeStepScreen(
                     val palette = paletteForType(meta.code)
 
                     BigTypeCard(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(112.dp),
                         title = meta.title,
                         imageResId = imageResId,
                         palette = palette,
@@ -147,10 +145,9 @@ private fun BigTypeCard(
 
     Surface(
         onClick = onClick,
-        modifier = modifier
-            .aspectRatio(1.10f),
+        modifier = modifier,
         shape = shape,
-        color = MaterialTheme.colorScheme.surface,
+        color = Color.Transparent,
         tonalElevation = 1.dp,
         shadowElevation = 4.dp,
         border = BorderStroke(1.dp, palette.accent.copy(alpha = 0.42f))
@@ -158,60 +155,59 @@ private fun BigTypeCard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(shape)
                 .background(palette.gradient)
         ) {
-            // léger "glow" pour donner du volume (sans casser les perfs)
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.14f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
+            // Dans BigTypeCard(...) -> à l'intérieur du Box(...) qui est déjà .fillMaxSize().background(...)
 
-            // bloc texte lisible même si la carte finit claire (ex: leftovers / dairy)
-            Column(
+            val imageSlot = 104.dp
+            val imageSize = 92.dp
+
+            Row(
                 modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(14.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color.Black.copy(alpha = 0.18f))
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "Appuie pour choisir",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.82f)
-                )
+                // Zone texte : centrée dans l'espace restant, mais texte aligné à gauche
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = title,
+                        modifier = Modifier
+                            .widthIn(max = 280.dp) // <-- donne l'effet "centré" (ajuste 260-320 selon ton feeling)
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Start // ✅ left align (même sur 2 lignes)
+                    )
+                }
+
+                // Slot image fixe : position identique pour tous les boutons
+                Box(
+                    modifier = Modifier
+                        .width(imageSlot)
+                        .fillMaxHeight(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (imageResId != 0) {
+                        Image(
+                            painter = painterResource(imageResId),
+                            contentDescription = null,
+                            modifier = Modifier.size(imageSize),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                }
             }
 
-            if (imageResId != 0) {
-                Image(
-                    painter = painterResource(imageResId),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 10.dp, bottom = 8.dp)
-                        // "big illustration" : plus présente, légèrement hors-centre
-                        .size(132.dp)
-                        .offset(x = 10.dp, y = 6.dp),
-                    contentScale = ContentScale.Fit
-                )
-            }
         }
     }
 }
@@ -232,40 +228,48 @@ fun drawableId(context: Context, name: String?): Int {
  */
 private fun paletteForType(code: String): TypePalette {
     return when (code) {
+
+        // 🌿 Légumes — vert forêt -> vert feuille, accent menthe
         "VEGETABLES" -> TypePalette(
-            bg0 = Color(0xFF0F2A12),
-            bg1 = Color(0xFF2E7D32),
-            accent = Color(0xFFE53935)
+            bg0 = Color(0xFF0B241A), // forêt profonde (plus doux que noir/vert pur)
+            bg1 = Color(0xFF2E8B57), // vert feuille nuancé
+            accent = Color(0xFFBFE7D3) // menthe légère (bordure propre)
         )
 
+        // 🥩 Viandes — bordeaux -> rouge profond, accent rosé “chair”
         "MEAT" -> TypePalette(
-            bg0 = Color(0xFF3B1418),
-            bg1 = Color(0xFFC62828),
-            accent = Color(0xFFFFB4A8)
+            bg0 = Color(0xFF2A0A0D), // bordeaux sombre
+            bg1 = Color(0xFFB11B2B), // rouge profond (moins “flashy”)
+            accent = Color(0xFFF2B8B5) // rosé doux
         )
 
+        // 🐟 Poissons / Fruits de mer — bleu nuit -> bleu océan, accent bleu-vert frais
         "FISH" -> TypePalette(
-            bg0 = Color(0xFF0B1E3A),
-            bg1 = Color(0xFF1565C0),
-            accent = Color(0xFFFF7043)
+            bg0 = Color(0xFF061A2D), // bleu nuit (très profond)
+            bg1 = Color(0xFF0F4C81), // bleu océan (nuancé)
+            accent = Color(0xFF8BE4D6) // aqua doux (rappelle “frais” sans orange)
         )
 
+        // 🥛 Produits laitiers — blanc bleuté -> bleu poudre, accent blanc/ice
         "DAIRY" -> TypePalette(
-            bg0 = Color(0xFF123A63),
-            bg1 = Color(0xFF4FC3F7),
+            bg0 = Color(0xFF16436E),
+            bg1 = Color(0xFF9FE3FF),
             accent = Color(0xFFFFF1D6)
         )
 
+        // 🍱 Restes / Tupperware — proposition la plus jolie (à mon avis) :
+        // “plastique teal” + “vert sauge” (propre, moderne, et distinct des autres catégories)
         "LEFTOVERS" -> TypePalette(
-            bg0 = Color(0xFF3E2723),
-            bg1 = Color(0xFFD7A86E),
-            accent = Color(0xFF43A047)
+            bg0 = Color(0xFF0E3B43), // teal sombre
+            bg1 = Color(0xFF2C6E77), // teal moyen
+            accent = Color(0xFFCFE8D6) // sauge / menthe claire
         )
 
         else -> TypePalette(
-            bg0 = Color(0xFF263238),
-            bg1 = Color(0xFF607D8B),
-            accent = Color(0xFFB0BEC5)
+            bg0 = Color(0xFF243038),
+            bg1 = Color(0xFF516773),
+            accent = Color(0xFFB6C2CA)
         )
     }
 }
+

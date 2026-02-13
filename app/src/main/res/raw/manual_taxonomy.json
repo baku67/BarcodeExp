@@ -12,7 +12,7 @@
     },
     {
       "code": "FISH",
-      "title": "Poissons / Fruits de mer",
+      "title": "Poissons\nFruits de mer",
       "image": "manual_type_fish"
     },
     {
@@ -22,7 +22,7 @@
     },
     {
       "code": "LEFTOVERS",
-      "title": "Restes / Tupperware",
+      "title": "Restes\nTupperware",
       "image": "manual_type_leftovers"
     }
   ],
