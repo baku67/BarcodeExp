@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,6 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.graphics.luminance
 
 @Composable
 fun ManualSubtypeStepScreen(
@@ -69,80 +72,146 @@ fun ManualSubtypeStepScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(innerPadding) // ✅ collé sous la barre "Ajouter un produit (2/3)"
         ) {
-            Text(
-                text = "Sous-types",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Text(
-                text = typeMeta?.title ?: type?.name.orEmpty(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            if (type == null) {
-                Spacer(Modifier.height(8.dp))
-                AssistChip(
-                    onClick = onBack,
-                    label = { Text("Revenir au choix du type") }
+            if (type != null) {
+                ManualSubtypeFullBleedHeader(
+                    typeTitle = typeMeta?.title ?: type.name,
+                    typeImageResId = drawableId(context, typeMeta?.image),
+                    palette = paletteForType(type.name)
                 )
-                return@AddItemStepScaffold
             }
 
-            if (list.isEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Aucun sous-type disponible pour ${typeMeta?.title ?: type.name}.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                return@AddItemStepScaffold
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            // Grille pleine largeur + petit gap
-            BoxWithConstraints(
+            // ✅ tout le reste garde ton padding “page”
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                val cols = if (maxWidth >= 340.dp) 3 else 2
+                if (type == null) {
+                    Text(
+                        text = "Sous-types",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    AssistChip(onClick = onBack, label = { Text("Revenir au choix du type") })
+                    return@AddItemStepScaffold
+                }
 
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(cols),
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    contentPadding = PaddingValues(bottom = 2.dp)
+                if (list.isEmpty()) {
+                    Text(
+                        "Aucun sous-type disponible pour ${typeMeta?.title ?: type.name}.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    return@AddItemStepScaffold
+                }
+
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
                 ) {
-                    items(list, key = { it.code }) { subMeta ->
-                        val imageRes = drawableId(context, subMeta.image)
+                    val cols = if (maxWidth >= 340.dp) 3 else 2
 
-                        SubtypeTileCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1.05f),
-                            title = subMeta.title,
-                            parentTypeCode = type.name,
-                            selected = draft.manualSubtype?.name == subMeta.code,
-                            imageResId = imageRes,
-                            onClick = {
-                                runCatching { ManualSubType.valueOf(subMeta.code) }
-                                    .getOrNull()
-                                    ?.let(onPick)
-                            }
-                        )
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(cols),
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        contentPadding = PaddingValues(bottom = 2.dp)
+                    ) {
+                        items(list, key = { it.code }) { subMeta ->
+                            val imageRes = drawableId(context, subMeta.image)
+
+                            SubtypeTileCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1.05f),
+                                title = subMeta.title,
+                                parentTypeCode = type.name,
+                                selected = draft.manualSubtype?.name == subMeta.code,
+                                imageResId = imageRes,
+                                onClick = {
+                                    runCatching { ManualSubType.valueOf(subMeta.code) }
+                                        .getOrNull()
+                                        ?.let(onPick)
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
+
+
+
+
+@Composable
+private fun ManualSubtypeFullBleedHeader(
+    typeTitle: String,
+    typeImageResId: Int,
+    palette: TypePalette
+) {
+    // ✅ Gradient plus “visible” en haut (plus saturé + alpha max)
+    val topColor = lerp(palette.bg0, palette.accent, 0.35f)
+
+    val gradient = Brush.verticalGradient(
+        colorStops = arrayOf(
+            0.00f to topColor.copy(alpha = 1.00f),
+            0.45f to topColor.copy(alpha = 0.80f),
+            1.00f to topColor.copy(alpha = 0.00f)
+        )
+    )
+
+    val isLight = topColor.luminance() > 0.65f
+    val titleColor = if (isLight) Color(0xFF0F172A) else Color.White
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(138.dp) // un peu plus compact vu qu’on n’a qu’un label
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(gradient)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // ✅ Label seul (ex: "Légumes")
+            Text(
+                text = typeTitle,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Black,
+                color = titleColor,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            // ✅ Image sans fond
+            if (typeImageResId != 0) {
+                Image(
+                    painter = painterResource(typeImageResId),
+                    contentDescription = null,
+                    modifier = Modifier.size(92.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
+    }
+}
+
+
 
 
 
@@ -173,7 +242,7 @@ private fun SubtypeTileCard(
 
     Surface(
         onClick = onClick,
-        modifier = modifier, // ✅ sinon pas de contraintes => image “disparaît”
+        modifier = modifier,
         shape = shape,
         color = Color.Transparent,
         tonalElevation = 0.dp,
@@ -184,7 +253,7 @@ private fun SubtypeTileCard(
             modifier = Modifier
                 .fillMaxSize()
                 .background(gradient)
-                .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 3.dp) // ✅ moins d’espace en bas
+                .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 3.dp)
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -242,4 +311,3 @@ private fun SubtypeTileCard(
         }
     }
 }
-
