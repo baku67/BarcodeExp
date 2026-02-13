@@ -40,6 +40,14 @@
     { "code": "VEG_ONION", "parent": "VEGETABLES", "title": "Oignons", "image": "manual_subtype_veg_onion", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
     { "code": "VEG_POTATO", "parent": "VEGETABLES", "title": "Pommes de terre", "image": "manual_subtype_veg_potato", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
 
+    { "code": "VEG_LEEK", "parent": "VEGETABLES", "title": "Poireau", "image": "manual_subtype_veg_leek", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_EGGPLANT", "parent": "VEGETABLES", "title": "Aubergine", "image": "manual_subtype_veg_eggplant", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_RADISH", "parent": "VEGETABLES", "title": "Radis", "image": "manual_subtype_veg_radish", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_AVOCADO", "parent": "VEGETABLES", "title": "Avocat", "image": "manual_subtype_veg_avocado", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_BEETROOT", "parent": "VEGETABLES", "title": "Betterave rouge", "image": "manual_subtype_veg_beetroot", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_TURNIP", "parent": "VEGETABLES", "title": "Navet", "image": "manual_subtype_veg_turnip", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+    { "code": "VEG_CELERY", "parent": "VEGETABLES", "title": "Celeri", "image": "manual_subtype_veg_celery", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
+
     { "code": "MEAT_CHICKEN", "parent": "MEAT", "title": "Poulet", "image": "manual_subtype_meat_chicken", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
     { "code": "MEAT_BEEF", "parent": "MEAT", "title": "Bœuf", "image": "manual_subtype_meat_beef", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
     { "code": "MEAT_PORK", "parent": "MEAT", "title": "Porc", "image": "manual_subtype_meat_pork", "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à" },
