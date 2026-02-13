@@ -5,7 +5,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
@@ -20,17 +19,27 @@ fun ManualDetailsStepScreen(
     val context = LocalContext.current
     val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
 
+    val typeCode = draft.manualTypeCode
+    val subtypeCode = draft.manualSubtypeCode
+
+    val typeMeta = typeCode?.let { taxonomy.typeMeta(it) }
+    val subtypeMeta = subtypeCode?.let { taxonomy.subtypeMeta(it) }
+
+    // ✅ Header = SubType (fallback = Type si pas de subtype)
+    val headerTitle = subtypeMeta?.title ?: typeMeta?.title ?: ""
+    val headerImageResId = drawableId(context, subtypeMeta?.image ?: typeMeta?.image)
+    val headerPaletteCode = typeCode ?: subtypeMeta?.parentCode ?: ""
+
     val suggestedName = remember(draft.name, draft.manualTypeCode, draft.manualSubtypeCode) {
         draft.name
-            ?: draft.manualSubtypeCode?.let { taxonomy.subtypeMeta(it)?.title }
-            ?: draft.manualTypeCode?.let { taxonomy.typeMeta(it)?.title }
+            ?: subtypeMeta?.title
+            ?: typeMeta?.title
             ?: ""
     }
 
     var name by remember(draft.name, draft.manualTypeCode, draft.manualSubtypeCode) {
         mutableStateOf(suggestedName)
     }
-
     var brand by remember(draft.brand) { mutableStateOf(draft.brand.orEmpty()) }
 
     AddItemStepScaffold(
@@ -38,49 +47,49 @@ fun ManualDetailsStepScreen(
         onBack = onBack,
         onCancel = onCancel
     ) { innerPadding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(innerPadding) // ✅ header collé sous la topbar
         ) {
-            Text(
-                "Détails",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
+            if (headerTitle.isNotBlank() && headerPaletteCode.isNotBlank()) {
+                ManualSubtypeFullBleedHeader(
+                    typeTitle = headerTitle,
+                    typeImageResId = headerImageResId,
+                    palette = paletteForType(headerPaletteCode)
+                )
+            }
 
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Nom") },
-                placeholder = { Text("ex: Blanc de poulet, Carottes, Omelette...") },
-                singleLine = true
-            )
-
-            OutlinedTextField(
-                value = brand,
-                onValueChange = { brand = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Marque (optionnel)") },
-                singleLine = true
-            )
-
-            Spacer(Modifier.weight(1f))
-
-            Button(
-                onClick = {
-                    val cleanedName = name.trim()
-                    if (cleanedName.isNotEmpty()) {
-                        onNext(cleanedName, brand.trim().ifBlank { null })
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = name.trim().isNotEmpty()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Continuer", fontWeight = FontWeight.SemiBold)
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Nom") },
+                    placeholder = { Text("ex: Blanc de poulet, Carottes, Omelette...") },
+                    singleLine = true
+                )
+
+                Spacer(Modifier.weight(1f))
+
+                Button(
+                    onClick = {
+                        val cleanedName = name.trim()
+                        if (cleanedName.isNotEmpty()) {
+                            onNext(cleanedName, brand.trim().ifBlank { null })
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = name.trim().isNotEmpty()
+                ) {
+                    Text("Continuer")
+                }
             }
         }
     }

@@ -147,18 +147,18 @@ fun ManualSubtypeStepScreen(
 
 
 @Composable
-private fun ManualSubtypeFullBleedHeader(
+internal fun ManualSubtypeFullBleedHeader(
     typeTitle: String,
     typeImageResId: Int,
     palette: TypePalette
 ) {
-    // ✅ Gradient plus “visible” en haut (plus saturé + alpha max)
-    val topColor = lerp(palette.bg0, palette.accent, 0.35f)
+    // ✅ un peu moins “agressif”
+    val topColor = lerp(palette.bg0, palette.accent, 0.28f)
 
     val gradient = Brush.verticalGradient(
         colorStops = arrayOf(
-            0.00f to topColor.copy(alpha = 1.00f),
-            0.45f to topColor.copy(alpha = 0.80f),
+            0.00f to topColor.copy(alpha = 0.92f),
+            0.42f to topColor.copy(alpha = 0.62f),
             1.00f to topColor.copy(alpha = 0.00f)
         )
     )
@@ -169,21 +169,20 @@ private fun ManualSubtypeFullBleedHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(138.dp) // un peu plus compact vu qu’on n’a qu’un label
+            .height(118.dp) // ✅ plus fin
     ) {
         Box(
             modifier = Modifier
-                .matchParentSize()
+                .fillMaxSize()
                 .background(gradient)
         )
 
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp), // ✅ moins de padding vertical
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // ✅ Label seul (ex: "Légumes")
             Text(
                 text = typeTitle,
                 modifier = Modifier.weight(1f),
@@ -194,18 +193,18 @@ private fun ManualSubtypeFullBleedHeader(
                 overflow = TextOverflow.Ellipsis
             )
 
-            // ✅ Image sans fond
             if (typeImageResId != 0) {
                 Image(
                     painter = painterResource(typeImageResId),
                     contentDescription = null,
-                    modifier = Modifier.size(92.dp),
+                    modifier = Modifier.size(96.dp), // ✅ image un poil plus grande
                     contentScale = ContentScale.Fit
                 )
             }
         }
     }
 }
+
 
 
 
