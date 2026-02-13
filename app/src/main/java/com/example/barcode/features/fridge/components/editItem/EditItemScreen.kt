@@ -27,9 +27,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -61,35 +61,17 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import com.example.barcode.R
+import com.example.barcode.common.ui.components.WheelDatePickerDialog
+import com.example.barcode.core.UserPreferencesStore
 import com.example.barcode.data.local.entities.ItemEntity
+import com.example.barcode.domain.models.ThemeMode
+import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
-import com.example.barcode.common.ui.components.WheelDatePickerDialog
-import com.example.barcode.core.UserPreferencesStore
-import com.example.barcode.domain.models.ThemeMode
-import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
-import java.time.YearMonth
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlin.math.abs
 
 private val MANUAL_TYPES_WITH_SUBTYPE_IMAGE = setOf("VEGETABLES", "MEAT", "FISH", "DAIRY")
 
@@ -101,6 +83,12 @@ data class EditItemResult(
     val nutriScore: String?,
     val imageIngredientsUrl: String?,
     val imageNutritionUrl: String?,
+)
+
+private data class PreviewImageInfo(
+    val url: String,
+    val isAuto: Boolean,
+    val label: String? // "Illustration (sous-type)" / "Illustration (type)" / null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -129,34 +117,57 @@ fun EditItemScreen(
     val absolute = remember(expiry) { expiry?.let { formatAbsoluteDate(it) } ?: "—" }
     val scrollState = rememberScrollState()
 
-    // --- Preview image : si manual + type (veg/meat/fish/dairy) => image = subtype (manual_taxonomy.json) ---
-    val usesSubtypeIllustration = remember(itemEntity.addMode, itemEntity.manualType, itemEntity.manualSubtype) {
-            itemEntity.addMode == "manual" &&
-                        itemEntity.manualType != null &&
-                        itemEntity.manualType in MANUAL_TYPES_WITH_SUBTYPE_IMAGE &&
-                        !itemEntity.manualSubtype.isNullOrBlank()
+    // ✅ Preview image :
+    // 1) manual + (VEGETABLES/MEAT/FISH/DAIRY) + subtype => image sous-type
+    // 2) manual + type (ex: LEFTOVERS) => image type
+    // 3) fallback => imageUrl (modifiable)
+    val previewInfo = remember(
+        itemEntity.addMode,
+        itemEntity.manualType,
+        itemEntity.manualSubtype,
+        imageUrl,
+        context.packageName
+    ) {
+        val fallback = imageUrl.trim()
+        if (itemEntity.addMode != "manual") {
+            return@remember PreviewImageInfo(url = fallback, isAuto = false, label = null)
         }
 
-    val previewImageUrl = remember(
-        usesSubtypeIllustration,
-        itemEntity.manualSubtype,
-        imageUrl
-            ) {
-        if (!usesSubtypeIllustration) return@remember imageUrl.trim()
-
+        val type = itemEntity.manualType?.trim().orEmpty()
         val subtype = itemEntity.manualSubtype?.trim().orEmpty()
-        if (subtype.isBlank()) return@remember imageUrl.trim()
+        val pkg = context.packageName
 
-        val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(
-                context = context,
-                subtypeCode = subtype
-                    )
+        // 1) Sous-type
+        if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(context, subtype)
+            if (resId != 0) {
+                return@remember PreviewImageInfo(
+                    url = "android.resource://$pkg/$resId",
+                    isAuto = true,
+                    label = "Illustration (sous-type)"
+                )
+            }
+        }
 
-        // fallback (au cas où subtype inconnu / drawable manquant) => l’URL existante
-        if (resId == 0) imageUrl.trim()
-        else "android.resource://${context.packageName}/$resId"
+        // 2) Type (ex: LEFTOVERS)
+        if (type.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(context, type)
+            if (resId != 0) {
+                return@remember PreviewImageInfo(
+                    url = "android.resource://$pkg/$resId",
+                    isAuto = true,
+                    label = "Illustration (type)"
+                )
+            }
+        }
+
+        // 3) Fallback
+        PreviewImageInfo(url = fallback, isAuto = false, label = null)
     }
 
+    val previewImageUrl = previewInfo.url
+    val isAutoIllustration = previewInfo.isAuto
+    val previewLabel = previewInfo.label
 
     val prefsStore = remember(context) { UserPreferencesStore(context) }
 
@@ -167,7 +178,7 @@ fun EditItemScreen(
     val useDarkTheme = when (themeMode) {
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
     }
 
     Scaffold(
@@ -213,7 +224,7 @@ fun EditItemScreen(
                     .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // --- IMAGE (même vibe que DetailsStepScreen) ---
+                // --- IMAGE ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -300,35 +311,35 @@ fun EditItemScreen(
                     ) {
                         Text(
                             text = when {
-                                    previewImageUrl.isBlank() -> "Aucune image"
-                                    usesSubtypeIllustration -> "Illustration (sous-type)"
-                                    else -> "Image actuelle"
-                                },
+                                previewImageUrl.isBlank() -> "Aucune image"
+                                isAutoIllustration -> previewLabel ?: "Illustration"
+                                else -> "Image actuelle"
+                            },
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.92f)
                         )
 
                         Spacer(Modifier.weight(1f))
 
-                        // Pour l’instant : si l’image est gérée via sous-type => on ne branche pas l’édition
+                        // ✅ Pour l’instant : si l’image est gérée via type/sous-type => pas d’édition
                         FilledTonalIconButton(
                             onClick = { showImageDialog = true },
-                            enabled = !usesSubtypeIllustration
+                            enabled = !isAutoIllustration
                         ) {
                             Icon(Icons.Filled.Image, contentDescription = "Modifier l'image")
                         }
                     }
                 }
 
-                if (showImageDialog && !usesSubtypeIllustration) {
+                if (showImageDialog && !isAutoIllustration) {
                     EditImageUrlDialog(
-                            initial = imageUrl,
-                            onConfirm = {
-                                imageUrl = it
-                                showImageDialog = false
-                            },
-                            onDismiss = { showImageDialog = false }
-                        )
+                        initial = imageUrl,
+                        onConfirm = {
+                            imageUrl = it
+                            showImageDialog = false
+                        },
+                        onDismiss = { showImageDialog = false }
+                    )
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -354,7 +365,7 @@ fun EditItemScreen(
 
                     Spacer(Modifier.width(20.dp))
 
-                    // --- NutriScore (copié de DetailsStepScreen) ---
+                    // --- NutriScore ---
                     Box(
                         modifier = Modifier
                             .width(84.dp)
@@ -395,7 +406,7 @@ fun EditItemScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // --- EXPIRATION (copié de DetailsStepScreen) ---
+                // --- EXPIRATION ---
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -453,36 +464,8 @@ fun EditItemScreen(
                         useDarkTheme = useDarkTheme,
                     )
                 }
-
-                // --- OPTIONNEL : images ingrédients / nutrition (pratique si tu les modifies aussi) ---
-                /*Spacer(Modifier.height(18.dp))
-                HorizontalDivider()
-
-                Text(
-                    text = "Images (optionnel)",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 10.dp)
-                )
-
-                OutlinedTextField(
-                    value = ingredientsUrl,
-                    onValueChange = { ingredientsUrl = it },
-                    label = { Text("URL image ingrédients") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = nutritionUrl,
-                    onValueChange = { nutritionUrl = it },
-                    label = { Text("URL image nutrition") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(Modifier.height(10.dp))*/
             }
 
-            // Footer bouton (tu peux le garder si tu préfères au TopBar)
             Button(
                 onClick = {
                     onSave(
@@ -518,24 +501,18 @@ private fun EditImageUrlDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Modifier l'image") },
+        title = { Text("Modifier l’URL de l’image") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    "Colle une URL d'image (http/https). Laisse vide pour supprimer.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
-                )
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = { value = it },
-                    label = { Text("URL image produit") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                label = { Text("URL") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(value) }) { Text("OK") }
+            TextButton(onClick = { onConfirm(value.trim()) }) { Text("OK") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Annuler") }
@@ -549,27 +526,23 @@ private fun NutriScorePickerDialog(
     onSelect: (String?) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val options = listOf("A", "B", "C", "D", "E", null)
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Nutri-Score") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val options: List<String?> = listOf("A","B","C","D","E", null)
-
                 options.forEach { opt ->
                     val label = opt ?: "Neutre"
-                    val isSelected = (opt?.uppercase() == current?.uppercase()) || (opt == null && current == null)
+                    val isSelected =
+                        (opt?.uppercase() == current?.uppercase()) || (opt == null && current == null)
 
                     val shape = RoundedCornerShape(12.dp)
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(
-                                width = 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.70f) else Color.Transparent,
-                                shape = shape
-                            )
                             .clip(shape)
                             .background(
                                 if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
@@ -609,8 +582,6 @@ private fun NutriScorePickerDialog(
     )
 }
 
-
-
 // --- Utils (copiés de DetailsStepScreen) ---
 
 @Composable
@@ -623,11 +594,6 @@ private fun expiryRelativeColor(expiry: Long?): Color {
         expiry <= System.currentTimeMillis() + 24 * 60 * 60 * 1000 -> Color(0xFFFFC107)
         else -> cs.primary
     }
-}
-
-private fun utcMillisToLocalMidnight(utcMillis: Long): Long {
-    val localDate = Instant.ofEpochMilli(utcMillis).atZone(ZoneId.systemDefault()).toLocalDate()
-    return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 }
 
 private fun formatAbsoluteDate(ms: Long): String =

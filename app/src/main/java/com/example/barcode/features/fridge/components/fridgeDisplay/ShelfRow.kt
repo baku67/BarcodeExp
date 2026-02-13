@@ -57,6 +57,7 @@ import com.example.barcode.common.expiry.expiryLevel
 import com.example.barcode.common.ui.expiry.expiryGlowColor
 import com.example.barcode.common.ui.expiry.expirySelectionBorderColor
 import com.example.barcode.common.ui.theme.ItemNote
+import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -171,32 +172,6 @@ fun ShelfRow(
 
                 val noteCount = notesCountByItemId[item.id] ?: 0
 
-
-                val context = LocalContext.current
-
-                val effectiveImageUrl = remember(
-                    item.addMode,
-                    item.manualType,
-                    item.manualSubtype,
-                    item.imageUrl
-                ) {
-                    val manualTypes = setOf("VEGETABLES", "MEAT", "FISH", "DAIRY")
-                    val shouldUseSubtypeImage =
-                        item.addMode == "manual" &&
-                                item.manualType != null &&
-                                item.manualType in manualTypes &&
-                                !item.manualSubtype.isNullOrBlank()
-
-                    if (!shouldUseSubtypeImage) return@remember item.imageUrl
-
-                    val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(
-                        context = context,
-                        subtypeCode = item.manualSubtype!!.trim()
-                    )
-
-                    if (resId == 0) item.imageUrl else "android.resource://${context.packageName}/$resId"
-                }
-
                 Box(
                     modifier = Modifier
                         .size(productSize),
@@ -218,13 +193,6 @@ fun ShelfRow(
                         animationSpec = tween(durationMillis = 260),
                         label = "selectedScale"
                     )
-
-                    val itemAlpha =
-                        when {
-                            isSheetSelected -> 1f
-                            selectionMode -> multiAlpha
-                            else -> sheetOtherAlpha
-                        }
 
                     val density = LocalDensity.current
                     val liftTargetPx = with(density) { 2.dp.toPx() } // décalage vers le haut lors selectItem (pour compenser MID border bottom)
@@ -258,6 +226,8 @@ fun ShelfRow(
                         contentAlignment = Alignment.BottomCenter
                     ) {
                         Box(modifier = wrapperModifier) {
+
+                            val effectiveImageUrl = rememberEffectiveItemImageUrl(item)
 
                             ItemThumbnail(
                                 imageUrl = effectiveImageUrl,
@@ -455,5 +425,43 @@ private fun Modifier.giggleEvery(
         translationY = ty.value
         scaleX = scale.value
         scaleY = scale.value
+    }
+}
+
+@Composable
+private fun rememberEffectiveItemImageUrl(item: ItemEntity): String? {
+    val context = LocalContext.current
+    val pkg = context.packageName
+
+    return remember(
+        item.addMode,
+        item.manualType,
+        item.manualSubtype,
+        item.imageUrl,
+        pkg
+    ) {
+        // Par défaut
+        val fallback = item.imageUrl
+
+        // On ne touche qu'aux ajouts "manual"
+        if (item.addMode != "manual") return@remember fallback
+
+        val type = item.manualType?.toString()?.trim().orEmpty()
+        val subtype = item.manualSubtype?.toString()?.trim().orEmpty()
+
+        // 1) Sous-type pour VEGETABLES/MEAT/FISH/DAIRY
+        if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(context, subtype)
+            if (resId != 0) return@remember "android.resource://$pkg/$resId"
+        }
+
+        // 2) Type (ex: LEFTOVERS n'a pas de sous-type)
+        if (type.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(context, type)
+            if (resId != 0) return@remember "android.resource://$pkg/$resId"
+        }
+
+        // 3) Fallback sur imageUrl (si subtype/type non résolus)
+        fallback
     }
 }

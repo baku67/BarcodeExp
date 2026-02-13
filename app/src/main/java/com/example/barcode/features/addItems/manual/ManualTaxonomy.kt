@@ -6,6 +6,8 @@ import com.example.barcode.R
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
+val MANUAL_TYPES_WITH_SUBTYPE_IMAGE = setOf("VEGETABLES", "MEAT", "FISH", "DAIRY")
+
 data class ManualTypeMeta(
     val code: String,
     val title: String,
@@ -41,56 +43,93 @@ object ManualTaxonomyImageResolver {
     private const val TAG = "ManualTaxonomyImage"
 
     @Volatile
+    private var typeToImageName: Map<String, String>? = null
+
+    @Volatile
     private var subtypeToImageName: Map<String, String>? = null
 
     private val imageNameToResId = ConcurrentHashMap<String, Int>()
 
     fun resolveSubtypeDrawableResId(context: Context, subtypeCode: String): Int {
         val imageName = getSubtypeImageName(context, subtypeCode) ?: return 0
-        if (imageName.isBlank()) return 0
+        return resolveImageNameToResId(context, imageName)
+    }
 
-        return imageNameToResId.getOrPut(imageName) {
-            context.resources.getIdentifier(imageName, "drawable", context.packageName)
+    fun resolveTypeDrawableResId(context: Context, typeCode: String): Int {
+        val imageName = getTypeImageName(context, typeCode) ?: return 0
+        return resolveImageNameToResId(context, imageName)
+    }
+
+    private fun resolveImageNameToResId(context: Context, imageName: String): Int {
+        val key = imageName.trim()
+        if (key.isBlank()) return 0
+
+        return imageNameToResId.getOrPut(key) {
+            context.resources.getIdentifier(key, "drawable", context.packageName)
         }
     }
 
     private fun getSubtypeImageName(context: Context, subtypeCode: String): String? {
         val key = subtypeCode.trim()
         if (key.isEmpty()) return null
+        ensureLoaded(context)
+        return subtypeToImageName.orEmpty()[key]
+    }
 
-        val cached = subtypeToImageName
-        if (cached != null) return cached[key]
+    private fun getTypeImageName(context: Context, typeCode: String): String? {
+        val key = typeCode.trim()
+        if (key.isEmpty()) return null
+        ensureLoaded(context)
+        return typeToImageName.orEmpty()[key]
+    }
+
+    private fun ensureLoaded(context: Context) {
+        if (typeToImageName != null && subtypeToImageName != null) return
 
         synchronized(this) {
-            val again = subtypeToImageName
-            if (again != null) return again[key]
+            if (typeToImageName != null && subtypeToImageName != null) return
 
-            val map = runCatching {
-                val json = context.resources
-                    .openRawResource(R.raw.manual_taxonomy)
-                    .bufferedReader()
-                    .use { it.readText() }
+            val pair: Pair<Map<String, String>, Map<String, String>> =
+                runCatching {
+                    val json = context.resources
+                        .openRawResource(R.raw.manual_taxonomy)
+                        .bufferedReader()
+                        .use { it.readText() }
 
-                val root = JSONObject(json)
-                val arr = root.getJSONArray("subtypes")
+                    val root = JSONObject(json)
+                    val typesArr = root.optJSONArray("types")
+                    val subtypesArr = root.optJSONArray("subtypes")
 
-                HashMap<String, String>(arr.length()).apply {
-                    for (i in 0 until arr.length()) {
-                        val obj = arr.getJSONObject(i)
-                        val code = obj.optString("code").trim()
-                        val image = obj.optString("image").trim()
-                        if (code.isNotEmpty() && image.isNotEmpty()) {
-                            put(code, image)
+                    val tm = HashMap<String, String>(typesArr?.length() ?: 0)
+                    if (typesArr != null) {
+                        for (i in 0 until typesArr.length()) {
+                            val obj = typesArr.getJSONObject(i)
+                            val code = obj.optString("code").trim()
+                            val image = obj.optString("image").trim()
+                            if (code.isNotEmpty() && image.isNotEmpty()) tm[code] = image
                         }
                     }
-                }
-            }.getOrElse { e ->
-                Log.e(TAG, "Impossible de lire R.raw.manual_taxonomy", e)
-                emptyMap()
-            }
 
-            subtypeToImageName = map
-            return map[key]
+                    val sm = HashMap<String, String>(subtypesArr?.length() ?: 0)
+                    if (subtypesArr != null) {
+                        for (i in 0 until subtypesArr.length()) {
+                            val obj = subtypesArr.getJSONObject(i)
+                            val code = obj.optString("code").trim()
+                            val image = obj.optString("image").trim()
+                            if (code.isNotEmpty() && image.isNotEmpty()) sm[code] = image
+                        }
+                    }
+
+                    tm as Map<String, String> to (sm as Map<String, String>)
+                }.getOrElse { e ->
+                    Log.e(TAG, "Impossible de lire R.raw.manual_taxonomy", e)
+                    emptyMap<String, String>() to emptyMap<String, String>()
+                }
+
+            val (typesMap, subtypesMap) = pair
+
+            typeToImageName = typesMap
+            subtypeToImageName = subtypesMap
         }
     }
 }

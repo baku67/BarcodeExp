@@ -51,6 +51,7 @@ import com.example.barcode.common.expiry.expiryLevel
 import com.example.barcode.common.ui.expiry.expiryStrokeColor
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.entities.ItemNoteEntity
+import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 
 @Composable
@@ -79,29 +80,34 @@ fun ItemDetailsBottomSheet(
         label = "sheetStrokeColor"
     )
 
-        val context = LocalContext.current
+    val context = LocalContext.current
+    val pkg = context.packageName
 
         val effectivePreviewUrl = remember(
             itemEntity.addMode,
             itemEntity.manualType,
             itemEntity.manualSubtype,
-            itemEntity.imageUrl
+            itemEntity.imageUrl,
+            pkg
                 ) {
-            val manualTypes = setOf("VEGETABLES", "MEAT", "FISH", "DAIRY")
-            val shouldUseSubtypeImage =
-                    itemEntity.addMode == "manual" &&
-                                itemEntity.manualType != null &&
-                                itemEntity.manualType in manualTypes &&
-                                !itemEntity.manualSubtype.isNullOrBlank()
+            if (itemEntity.addMode != "manual") return@remember itemEntity.imageUrl
 
-            if (!shouldUseSubtypeImage) return@remember itemEntity.imageUrl
+            val type = itemEntity.manualType?.trim().orEmpty()
+            val subtype = itemEntity.manualSubtype?.trim().orEmpty()
 
-            val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(
-                    context = context,
-                    subtypeCode = itemEntity.manualSubtype!!.trim()
-                        )
+            // 1) Sous-type (VEGETABLES/MEAT/FISH/DAIRY)
+            if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
+                    val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(context, subtype)
+                    if (resId != 0) return@remember "android.resource://$pkg/$resId"
+                }
 
-            if (resId == 0) itemEntity.imageUrl else "android.resource://${context.packageName}/$resId"
+            // 2) Type (ex: LEFTOVERS n’a pas de sous-type)
+            if (type.isNotBlank()) {
+                    val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(context, type)
+                    if (resId != 0) return@remember "android.resource://$pkg/$resId"
+                }
+
+            itemEntity.imageUrl
         }
 
     val viewerImages = remember(

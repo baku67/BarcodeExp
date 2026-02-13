@@ -44,10 +44,9 @@ import com.example.barcode.common.expiry.formatRelativeDaysCompact
 import com.example.barcode.common.ui.expiry.expiryAccentColor
 import com.example.barcode.common.ui.theme.ItemNote
 import com.example.barcode.data.local.entities.ItemEntity
+import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import com.example.barcode.features.fridge.components.shared.ItemThumbnail
-
-private val MANUAL_TYPES_WITH_SUBTYPE_IMAGE = setOf("VEGETABLES", "MEAT", "FISH", "DAIRY")
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
