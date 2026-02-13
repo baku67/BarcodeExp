@@ -5,20 +5,20 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -70,7 +70,7 @@ fun ManualSubtypeStepScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
+                .padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
@@ -105,35 +105,49 @@ fun ManualSubtypeStepScreen(
 
             Spacer(Modifier.height(6.dp))
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            // Grille pleine largeur + petit gap
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             ) {
-                items(list, key = { it.code }) { subMeta ->
-                    val imageRes = drawableId(context, subMeta.image)
+                val cols = if (maxWidth >= 340.dp) 3 else 2
 
-                    SmallSubtypeCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(84.dp),
-                        title = subMeta.title,
-                        parentTypeCode = type.name,
-                        selected = draft.manualSubtype?.name == subMeta.code,
-                        imageResId = imageRes,
-                        onClick = {
-                            runCatching { ManualSubType.valueOf(subMeta.code) }
-                                .getOrNull()
-                                ?.let(onPick)
-                        }
-                    )
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(cols),
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    contentPadding = PaddingValues(bottom = 2.dp)
+                ) {
+                    items(list, key = { it.code }) { subMeta ->
+                        val imageRes = drawableId(context, subMeta.image)
+
+                        SubtypeTileCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1.05f),
+                            title = subMeta.title,
+                            parentTypeCode = type.name,
+                            selected = draft.manualSubtype?.name == subMeta.code,
+                            imageResId = imageRes,
+                            onClick = {
+                                runCatching { ManualSubType.valueOf(subMeta.code) }
+                                    .getOrNull()
+                                    ?.let(onPick)
+                            }
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+
+
 @Composable
-private fun SmallSubtypeCard(
+private fun SubtypeTileCard(
     modifier: Modifier = Modifier,
     title: String,
     parentTypeCode: String,
@@ -141,10 +155,6 @@ private fun SmallSubtypeCard(
     imageResId: Int,
     onClick: () -> Unit
 ) {
-    // Même layout que ManualTypeStepScreen, mais visiblement “sous-niveau” :
-    // - bordure plus fine
-    // - image plus petite
-    // - label plus petit
     val basePalette = paletteForType(parentTypeCode)
 
     val surface = MaterialTheme.colorScheme.surface
@@ -159,13 +169,11 @@ private fun SmallSubtypeCard(
 
     val shape = RoundedCornerShape(22.dp)
     val gradient: Brush = Brush.linearGradient(listOf(bg0, bg1))
-
-    val imageSlot = 88.dp
-    val imageSize = 62.dp
+    val imageSize = 60.dp
 
     Surface(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier, // ✅ sinon pas de contraintes => image “disparaît”
         shape = shape,
         color = Color.Transparent,
         tonalElevation = 0.dp,
@@ -176,40 +184,16 @@ private fun SmallSubtypeCard(
             modifier = Modifier
                 .fillMaxSize()
                 .background(gradient)
+                .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 3.dp) // ✅ moins d’espace en bas
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Texte: aligné à gauche avec un “effet centré”
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = title,
-                        modifier = Modifier
-                            .widthIn(max = 280.dp)
-                            .fillMaxWidth()
-                            .padding(horizontal = 10.dp),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Start
-                    )
-                }
-
-                // Slot image fixe -> image exactement au même endroit pour toutes les lignes
-                Box(
-                    modifier = Modifier
-                        .width(imageSlot)
-                        .fillMaxHeight(),
+                        .fillMaxWidth()
+                        .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
                     if (imageResId != 0) {
@@ -220,28 +204,42 @@ private fun SmallSubtypeCard(
                             contentScale = ContentScale.Fit
                         )
                     }
+                }
 
-                    // Check overlay (ne décale rien)
-                    if (selected) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = (-6).dp, y = 6.dp)
-                                .size(22.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
-                    }
+                Text(
+                    text = title,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 6.dp, end = 6.dp, bottom = 0.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    minLines = 2,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (selected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = (-6).dp, y = 6.dp)
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp)
+                    )
                 }
             }
         }
     }
 }
+
