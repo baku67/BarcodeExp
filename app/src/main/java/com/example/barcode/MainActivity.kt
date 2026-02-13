@@ -185,11 +185,16 @@ class MainActivity : ComponentActivity() {
                             // Parcours addItem (choix -> ScanBarCode -> ScanDate -> Confirm) ou (choix -> type -> selection/remplissage)
                             navigation(startDestination = "addItem/choose", route = "addItem") {
 
-                                fun close(addVm: AddItemViewModel) {
-                                    addVm.reset()
-                                    navController.navigate("tabs") {
-                                        popUpTo("addItem") { inclusive = true } // ✅ kill tout le graph addItem
-                                        launchSingleTop = true
+                                fun close() {
+                                    // ✅ Si "tabs" est déjà dans la backstack (cas normal), on pop directement.
+                                    val popped = navController.popBackStack("tabs", inclusive = false)
+
+                                    // ✅ Fallback si pour une raison quelconque tabs n'est pas dans la stack
+                                    if (!popped) {
+                                        navController.navigate("tabs") {
+                                            popUpTo("addItem") { inclusive = true }
+                                            launchSingleTop = true
+                                        }
                                     }
                                 }
 
@@ -209,7 +214,7 @@ class MainActivity : ComponentActivity() {
                                             addVm.setAddMode(ItemAddMode.MANUAL)
                                             navController.navigate("addItem/manual/type")
                                         },
-                                        onCancel = { close(addVm) }
+                                        onCancel = { close() }
                                     )
                                 }
 
@@ -233,7 +238,7 @@ class MainActivity : ComponentActivity() {
                                             addVm.setNutriScore(product.nutriScore)
                                             navController.navigate("addItem/scan/expiry")
                                         },
-                                        onCancel = { close(addVm) }
+                                        onCancel = { close() }
                                     )
                                 }
 
@@ -254,7 +259,7 @@ class MainActivity : ComponentActivity() {
                                             navController.navigate("addItem/scan/confirm")
                                         },
                                         onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) }
+                                        onCancel = { close() }
                                     )
                                 }
 
@@ -289,10 +294,10 @@ class MainActivity : ComponentActivity() {
                                                 addMode = draft.addMode.value
                                             )
 
-                                            close(addVm)
+                                            close()
                                         },
                                         onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) },
+                                        onCancel = { close() },
                                         onCycleImage = { addVm.cycleNextImage() },
                                         onNutriScoreChange = { addVm.setNutriScore(it)}
                                     )
@@ -327,7 +332,7 @@ class MainActivity : ComponentActivity() {
                                                     navController.navigate("addItem/manual/details")
                                             }
                                         },
-                                        onCancel = { close(addVm) },
+                                        onCancel = { close() },
                                         onBack = { navController.popBackStack() }
                                     )
                                 }
@@ -347,7 +352,7 @@ class MainActivity : ComponentActivity() {
                                             navController.navigate("addItem/manual/details")
                                         },
                                         onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) }
+                                        onCancel = { close() }
                                     )
                                 }
 
@@ -375,9 +380,6 @@ class MainActivity : ComponentActivity() {
                                     ManualDetailsStepScreen(
                                         draft = draft,
                                         onNext = { name, brandOrNull, expiryMs ->
-                                            addVm.setDetails(name, brandOrNull)
-                                            addVm.setExpiryDate(expiryMs)
-
                                             val finalDraft = draft.copy(
                                                 name = name,
                                                 brand = brandOrNull,
@@ -385,10 +387,10 @@ class MainActivity : ComponentActivity() {
                                             )
 
                                             itemsVm.addItemFromDraft(finalDraft)
-                                            close(addVm)
+                                            close()
                                         },
                                         onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) }
+                                        onCancel = { close() }
                                     )
                                 }
                             }
