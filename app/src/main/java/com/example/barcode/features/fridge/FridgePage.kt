@@ -4,13 +4,11 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -27,7 +25,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -38,8 +35,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.LocalAppTopBarState
 import com.example.barcode.core.AppMode
@@ -49,8 +44,6 @@ import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.UserPreferences
 import com.example.barcode.features.addItems.ItemsViewModel
 import com.example.barcode.features.addItems.manual.MANUAL_TYPES_DRAWER
-import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
-import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.features.fridge.components.bottomSheetDetails.ImageViewerDialog
 import com.example.barcode.features.fridge.components.bottomSheetDetails.ItemDetailsBottomSheet
@@ -61,7 +54,7 @@ import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfRow
 import com.example.barcode.features.fridge.components.fridgeDisplay.VegetableDrawerCube3D
 import com.example.barcode.features.fridge.components.listDisplay.ItemListCard
 import com.example.barcode.features.fridge.components.shared.FridgeDisplayIconToggle
-import com.example.barcode.features.fridge.components.shared.rememberEffectiveItemImageUrl
+import com.example.barcode.features.fridge.components.shared.FridgeItemThumbnail
 import com.example.barcode.sync.SyncScheduler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -889,87 +882,23 @@ private fun VegDrawerManualItemsGrid(
             visibleRows.forEach { rowItems ->
                 Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
                     rowItems.forEach { item ->
-                        VegDrawerManualItemThumb(
+                        FridgeItemThumbnail(
                             item = item,
-                            size = thumbSize,
+                            size = 50.dp,
                             selected = selectedIds.contains(item.id),
                             selectionMode = selectionMode,
                             dimAlpha = dimAlpha,
                             onClick = { onClickItem(item) },
-                            onLongPress = { onLongPressItem(item) }
+                            onLongPress = { onLongPressItem(item) },
+                            compact = true
                         )
+
                     }
                 }
             }
         }
     }
 }
-
-@Composable
-private fun VegDrawerManualItemThumb(
-    item: ItemEntity,
-    size: Dp,
-    selected: Boolean,
-    selectionMode: Boolean,
-    dimAlpha: Float,
-    onClick: () -> Unit,
-    onLongPress: () -> Unit,
-) {
-    val cs = MaterialTheme.colorScheme
-    val context = LocalContext.current
-
-    val borderW by animateDpAsState(
-        targetValue = if (selected) 2.dp else 1.dp,
-        animationSpec = tween(durationMillis = 140),
-        label = "vegDrawerThumbBorder"
-    )
-
-    val borderColor = when {
-        selected -> cs.primary
-        selectionMode -> cs.outline.copy(alpha = 0.5f)
-        else -> cs.outlineVariant.copy(alpha = 0.55f)
-    }
-
-    val contentAlpha = (1f - (dimAlpha * 0.9f)).coerceIn(0.35f, 1f)
-
-    val effectiveImageUrl = rememberEffectiveItemImageUrl(item)
-
-    Surface(
-        modifier = Modifier
-            .size(size)
-            .alpha(contentAlpha)
-            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
-        shape = RoundedCornerShape(10.dp), // ✅ plus “thumbnail produit” que CircleShape
-        color = cs.surfaceVariant.copy(alpha = 0.55f),
-        border = BorderStroke(borderW, borderColor),
-        shadowElevation = if (selected) 2.dp else 0.dp
-    ) {
-        if (!effectiveImageUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(effectiveImageUrl)
-                    .crossfade(false)
-                    .build(),
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            // fallback (rare) si rien à afficher
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = (item.name ?: "?").take(2).uppercase(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = cs.onSurfaceVariant.copy(alpha = 0.9f),
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
-    }
-}
-
-
-
 
 
 

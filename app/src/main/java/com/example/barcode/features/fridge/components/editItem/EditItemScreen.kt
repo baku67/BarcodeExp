@@ -65,6 +65,7 @@ import com.example.barcode.common.ui.components.WheelDatePickerDialog
 import com.example.barcode.core.UserPreferencesStore
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.domain.models.ThemeMode
+import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import java.time.Instant
 import java.time.LocalDate
@@ -72,8 +73,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.flow.map
-
-private val MANUAL_TYPES_WITH_SUBTYPE_IMAGE = setOf("VEGETABLES", "MEAT", "FISH", "DAIRY")
 
 data class EditItemResult(
     val name: String?,

@@ -2,14 +2,19 @@ package com.example.barcode.features.fridge.components.shared
 
 import android.content.Context
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material.icons.outlined.TimerOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +47,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
+import com.example.barcode.common.expiry.ExpiryLevel
+import com.example.barcode.common.expiry.ExpiryPolicy
+import com.example.barcode.common.expiry.expiryLevel
+import com.example.barcode.common.ui.expiry.expiryGlowColor
+import com.example.barcode.common.ui.expiry.expirySelectionBorderColor
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
@@ -76,12 +86,17 @@ fun ItemThumbnail(
     cornerIconTint: Color? = null,
     cornerIcon: ImageVector? = null,
     onImageLoaded: (Boolean) -> Unit = {},
-    dimAlpha: Float = 0f, // assombrissement uniquement sur l'image
+    dimAlpha: Float = 0f,
     showImageBorder: Boolean = false,
     imageBorderColor: Color = MaterialTheme.colorScheme.primary,
     imageBorderWidth: Dp = 2.dp,
     topRightOverlayOnImage: (@Composable () -> Unit)? = null,
     topRightOverlaySize: Dp = 16.dp,
+
+    // ✅ NEW (defaults = comportement actuel)
+    cornerBadgeSize: Dp = 15.dp,
+    cornerBadgeIconSize: Dp = 11.dp,
+    cornerBadgeOffset: Dp = 4.dp,
 ) {
     val shape = RoundedCornerShape(3.dp)
 
@@ -198,14 +213,14 @@ fun ItemThumbnail(
 
                 // ✅ bulle icône (coin haut-gauche de l'image rendue)
                 if (cornerIconTint != null && cornerIcon != null) {
-                    val xDp = with(density) { fitted.left.toDp() } - 4.dp
-                    val yDp = with(density) { fitted.top.toDp() } - 4.dp
+                    val xDp = with(density) { fitted.left.toDp() } - cornerBadgeOffset
+                    val yDp = with(density) { fitted.top.toDp() } - cornerBadgeOffset
 
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .offset(x = xDp, y = yDp)
-                            .size(15.dp)
+                            .size(cornerBadgeSize)
                             .clip(CircleShape)
                             .background(cornerIconTint.copy(alpha = overlayAlpha)),
                         contentAlignment = Alignment.Center
@@ -214,7 +229,7 @@ fun ItemThumbnail(
                             imageVector = cornerIcon,
                             contentDescription = null,
                             tint = Color.White.copy(alpha = overlayAlpha),
-                            modifier = Modifier.size(11.dp)
+                            modifier = Modifier.size(cornerBadgeIconSize)
                         )
                     }
                 }
@@ -244,6 +259,79 @@ fun ItemThumbnail(
         }
     }
 }
+
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun FridgeItemThumbnail(
+    item: ItemEntity,
+    size: Dp = 56.dp,
+    modifier: Modifier = Modifier,
+    selectionMode: Boolean = false,
+    selected: Boolean = false,
+    dimAlpha: Float = 0f,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit = {},
+    alignBottom: Boolean = true,
+    soonDays: Int = 2,
+    compact: Boolean = false,
+) {
+    val expiryPolicy = remember(soonDays) { ExpiryPolicy(soonDays = soonDays) }
+
+    val level = remember(item.id, item.expiryDate, expiryPolicy.soonDays) {
+        expiryLevel(item.expiryDate, expiryPolicy)
+    }
+
+    val glowColor = expiryGlowColor(level)
+    val selectionBorderColor = expirySelectionBorderColor(level)
+
+    val cornerIcon = when (level) {
+        ExpiryLevel.EXPIRED -> Icons.Filled.WarningAmber
+        ExpiryLevel.SOON -> Icons.Outlined.TimerOff
+        else -> null
+    }
+
+    val multiDimOverlay = if (selectionMode && !selected) 0.55f else 0f
+    val finalDimAlpha = maxOf(dimAlpha, multiDimOverlay)
+
+    val effectiveImageUrl = rememberEffectiveItemImageUrl(item)
+
+    val cornerBadgeSize = if (compact) 12.dp else 15.dp
+    val cornerBadgeIconSize = if (compact) 9.dp else 11.dp
+    val cornerBadgeOffset = if (compact) 3.dp else 4.dp
+    val borderW = if (compact) 1.5.dp else 2.dp
+
+    Box(
+        modifier = modifier
+            .size(size)
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
+        contentAlignment = Alignment.Center
+    ) {
+        ItemThumbnail(
+            imageUrl = effectiveImageUrl,
+            modifier = Modifier.fillMaxSize(),
+            alignBottom = alignBottom,
+            cornerIconTint = glowColor,
+            cornerIcon = cornerIcon,
+            dimAlpha = if (selected) 0f else finalDimAlpha,
+            showImageBorder = selected,
+            imageBorderColor = selectionBorderColor,
+            imageBorderWidth = borderW,
+            cornerBadgeSize = cornerBadgeSize,
+            cornerBadgeIconSize = cornerBadgeIconSize,
+            cornerBadgeOffset = cornerBadgeOffset,
+            topRightOverlayOnImage = null
+        )
+    }
+}
+
+
+
+
+
+
+
 
 
 fun effectiveItemImageUrl(
