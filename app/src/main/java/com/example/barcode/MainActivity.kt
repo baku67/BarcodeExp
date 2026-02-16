@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.AppBackground
 import com.example.barcode.common.ui.theme.Theme
+import com.example.barcode.features.addItems.manual.ManualLeftoversDetailsStepScreen
 import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
 import com.example.barcode.sync.SyncScheduler
 
@@ -384,6 +385,40 @@ class MainActivity : ComponentActivity() {
                                                 name = name,
                                                 brand = brandOrNull,
                                                 expiryDate = expiryMs
+                                            )
+
+                                            itemsVm.addItemFromDraft(finalDraft)
+                                            close()
+                                        },
+                                        onBack = { navController.popBackStack() },
+                                        onCancel = { close() }
+                                    )
+                                }
+
+
+                                // ✅ Manuel - Branch LEFTOVERS : détails spécifiques + confirm
+                                composable("addItem/manual/leftovers/details") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addItem")
+                                    }
+                                    val addVm: AddItemViewModel = viewModel(parentEntry)
+                                    val draft by addVm.draft.collectAsState()
+
+                                    val homeEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("tabs")
+                                    }
+                                    val itemsVm: ItemsViewModel = viewModel(homeEntry)
+
+                                    ManualLeftoversDetailsStepScreen(
+                                        draft = draft,
+                                        onMetaChange = { addVm.setManualMetaJson(it) },
+                                        onConfirm = { dishName, expiryMs, metaJson ->
+                                            val finalDraft = draft.copy(
+                                                name = dishName,
+                                                brand = null,
+                                                expiryDate = expiryMs,
+                                                manualSubtypeCode = null,     // ✅ pas de subtype pour LEFTOVERS
+                                                manualMetaJson = metaJson     // ✅ on stocke les toggles ici
                                             )
 
                                             itemsVm.addItemFromDraft(finalDraft)

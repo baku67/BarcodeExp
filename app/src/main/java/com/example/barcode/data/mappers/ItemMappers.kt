@@ -15,7 +15,7 @@ private fun String.toEpochMillisFromAtom(): Long =
 
 fun ItemDto.toEntity(): ItemEntity {
     val scanResolved = scan
-    val barcodeResolved = scanResolved?.barcode ?: barcode
+    val barcodeResolved = scanResolved?.barcode
 
     val addModeResolved = addMode ?: "barcode_scan"
 
@@ -28,13 +28,13 @@ fun ItemDto.toEntity(): ItemEntity {
         expiryDate = expiryDate.toEpochMillisFromIsoDate(),
         addMode = addModeResolved,
 
-        // scan (depuis scan.* si présent, sinon fallback flat)
+        // scan
         barcode = barcodeResolved,
-        brand = scanResolved?.brand ?: brand,
-        imageUrl = scanResolved?.imageUrl ?: imageUrl,
-        imageIngredientsUrl = scanResolved?.imageIngredientsUrl ?: imageIngredientsUrl,
-        imageNutritionUrl = scanResolved?.imageNutritionUrl ?: imageNutritionUrl,
-        nutriScore = scanResolved?.nutriScore ?: nutriScore,
+        brand = scanResolved?.brand,
+        imageUrl = scanResolved?.imageUrl,
+        imageIngredientsUrl = scanResolved?.imageIngredientsUrl,
+        imageNutritionUrl = scanResolved?.imageNutritionUrl,
+        nutriScore = scanResolved?.nutriScore,
 
         // manual
         manualType = manual?.type,

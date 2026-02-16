@@ -166,6 +166,9 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
             manualType = if (d.addMode == ItemAddMode.MANUAL) d.manualTypeCode else null,
             manualSubtype = if (d.addMode == ItemAddMode.MANUAL) d.manualSubtypeCode else null,
 
+            // Propriétés ajout LEFTOVERS uniquement
+            manualMetaJson = d.manualMetaJson,
+
             pendingOperation = PendingOperation.CREATE,
             syncState = SyncState.OK
         )

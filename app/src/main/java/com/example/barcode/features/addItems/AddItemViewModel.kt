@@ -86,4 +86,11 @@ class AddItemViewModel(
             imageUrl = list[next]
         )
     }
+
+
+    // *** Propriétés ajout manuel (meta JSON: champs spécifiques, ex: leftovers)
+    fun setManualMetaJson(json: String?) {
+        _draft.update { it.copy(manualMetaJson = json) }
+    }
+
 }

@@ -16,14 +16,6 @@ data class ItemDto(
     val scan: ScanDto? = null,
     val manual: ManualDto? = null,
 
-    // ✅ Ancien (backend v1) - on garde pour compat
-        val barcode: String? = null,
-    val brand: String? = null,
-    val imageUrl: String? = null,
-    val imageIngredientsUrl: String? = null,
-    val imageNutritionUrl: String? = null,
-    val nutriScore: String? = null,
-
     val addedAt: String?,        // ATOM
     val updatedAt: String,
     val deletedAt: String?,

@@ -23,5 +23,8 @@ data class AddItemDraft(
 
     // Propriété ajout produit manuel:
     val manualTypeCode: String? = null,
-    val manualSubtypeCode: String? = null
+    val manualSubtypeCode: String? = null,
+
+    // Propriétés ajout LEFTOVERS
+    val manualMetaJson: String? = null
 ) : Parcelable

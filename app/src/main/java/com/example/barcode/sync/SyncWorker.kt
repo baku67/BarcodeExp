@@ -300,18 +300,47 @@ class SyncWorker(
                     ?: if (dto.isDeleted) serverUpdatedAt else null
                 if (serverDeletedAt != null) newWatermarkMs = max(newWatermarkMs, serverDeletedAt)
 
-                val entity = ItemEntity(
+                val scan = dto.scan
+                val manual = dto.manual
+
+                val remoteBarcode = scan?.barcode
+                val remoteBrand = scan?.brand
+                val remoteImageUrl = scan?.imageUrl
+                val remoteImgIng = scan?.imageIngredientsUrl
+                val remoteImgNut = scan?.imageNutritionUrl
+                val remoteNutri = scan?.nutriScore
+
+                val inferredAddMode = dto.addMode ?: when {
+                    manual != null -> "manual"
+                    scan != null -> "barcode_scan"
+                    else -> local?.addMode ?: "barcode_scan"
+                }
+
+                val merged = (local ?: ItemEntity(id = clientId)).copy(
                     id = clientId,
-                    barcode = dto.barcode,
-                    name = dto.name,
-                    brand = dto.brand,
-                    imageUrl = dto.imageUrl,
-                    imageIngredientsUrl = dto.imageIngredientsUrl,
-                    imageNutritionUrl = dto.imageNutritionUrl,
-                    nutriScore = dto.nutriScore,
-                    addedAt = dto.addedAt?.let { parseAtomToEpochMs(it) },
-                    expiryDate = dto.expiryDate?.let { parseYyyyMmDdToEpochMs(it) },
-                    addMode = dto.addMode ?: "barcode_scan",
+
+                    // champs communs
+                    name = dto.name ?: local?.name,
+                    addedAt = dto.addedAt?.let { parseAtomToEpochMs(it) } ?: local?.addedAt,
+                    expiryDate = dto.expiryDate?.let { parseYyyyMmDdToEpochMs(it) } ?: local?.expiryDate,
+                    addMode = inferredAddMode,
+
+                    // scan (nested)
+                    barcode = remoteBarcode ?: local?.barcode,
+                    brand = remoteBrand ?: local?.brand,
+                    imageUrl = remoteImageUrl ?: local?.imageUrl,
+                    imageIngredientsUrl = remoteImgIng ?: local?.imageIngredientsUrl,
+                    imageNutritionUrl = remoteImgNut ?: local?.imageNutritionUrl,
+                    nutriScore = remoteNutri ?: local?.nutriScore,
+
+                    // ✅ manual (ne plus perdre l’image taxonomy)
+                    manualType = if (inferredAddMode == "manual") (manual?.type ?: local?.manualType) else null,
+                    manualSubtype = if (inferredAddMode == "manual") (manual?.subtype ?: local?.manualSubtype) else null,
+                    manualMetaJson = if (inferredAddMode == "manual") (local?.manualMetaJson) else null, // optionnel
+
+                    photoId = dto.photoId ?: local?.photoId,
+
+                    // sync
                     pendingOperation = PendingOperation.NONE,
                     syncState = SyncState.OK,
                     lastSyncError = null,
@@ -321,7 +350,7 @@ class SyncWorker(
                     deletedAt = serverDeletedAt
                 )
 
-                itemDao.upsert(entity)
+                itemDao.upsert(merged)
             }
 
         } catch (e: Exception) {
