@@ -150,7 +150,7 @@ fun ItemThumbnail(
                 }
 
                 is AsyncImagePainter.State.Error -> {
-                    Text("🧴", fontSize = 20.sp)
+                    Text("\uD83C\uDF71", fontSize = 20.sp)
                 }
 
                 else -> Unit
@@ -235,7 +235,7 @@ fun ItemThumbnail(
                 }
             }
         } else {
-            Text("🧴", fontSize = 20.sp)
+            Text("\uD83C\uDF71", fontSize = 20.sp)
         }
     }
 }

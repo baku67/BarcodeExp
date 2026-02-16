@@ -707,7 +707,7 @@ private fun ResultCard(
                     }
 
                     if (state is AsyncImagePainter.State.Error) {
-                        Text("🧴", fontSize = 20.sp)
+                        Text("\uD83C\uDF71", fontSize = 20.sp)
                     }
                 }
 
