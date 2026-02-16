@@ -1,6 +1,14 @@
 package com.example.barcode.features.fridge.components.bottomSheetDetails
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,9 +26,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.FactCheck
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,10 +39,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -53,6 +68,9 @@ import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.entities.ItemNoteEntity
 import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
+import org.json.JSONObject
+import java.time.Instant
+import java.time.ZoneId
 
 @Composable
 fun ItemDetailsBottomSheet(
@@ -85,6 +103,10 @@ fun ItemDetailsBottomSheet(
 
     val isManual = remember(itemEntity.addMode) {
         itemEntity.addMode.equals("manual", ignoreCase = true)
+    }
+
+    val isManualLeftovers = remember(isManual, itemEntity.manualType) {
+        isManual && itemEntity.manualType?.equals("LEFTOVERS", ignoreCase = true) == true
     }
 
     val effectivePreviewUrl = remember(
@@ -217,14 +239,25 @@ fun ItemDetailsBottomSheet(
                     }
                 }
 
-                // ✅ Manual => GoodToKnow
-                if (isManual) {
+                // ✅ Manual + NOT leftovers => GoodToKnow
+                if (isManual && !isManualLeftovers) {
                     item(key = "good_to_know") {
                         GoodToKnowCollapsibleSection(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
+
+                // ✅ Manual + leftovers => Infos plat (manualMetaJson)
+                if (isManualLeftovers) {
+                    item(key = "leftovers_meta") {
+                        LeftoversMetaCollapsibleSection(
+                            manualMetaJson = itemEntity.manualMetaJson,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
 
                 item(key = "notes") {
                     NotesCollapsibleSection(
@@ -462,3 +495,196 @@ private fun buildViewerImages(
 
     return out
 }
+
+
+private const val DAY_MS = 24L * 60L * 60L * 1000L
+
+private data class LeftoversMeta(
+    val cookedAtMs: Long?,
+    val storageDays: Int?,
+    val containsMeat: Boolean,
+    val containsCream: Boolean,
+    val containsRice: Boolean,
+    val containsFish: Boolean,
+    val containsEggs: Boolean,
+    val portions: Int?,
+    val notes: String?
+)
+
+@Composable
+private fun LeftoversMetaCollapsibleSection(
+    manualMetaJson: String?,
+    modifier: Modifier = Modifier
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    val meta = remember(manualMetaJson) { parseLeftoversMeta(manualMetaJson) }
+
+    val shape = RoundedCornerShape(18.dp)
+    val accent = MaterialTheme.colorScheme.primary
+    val surface = MaterialTheme.colorScheme.surface
+
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (expanded) 90f else 0f,
+        label = "goodToKnowChevronRotation"
+    )
+
+    val borderColor by animateColorAsState(
+        targetValue = if (expanded) accent.copy(alpha = 0.55f) else accent.copy(alpha = 0.28f),
+        label = "leftoversBorder"
+    )
+
+    val bgBrush = Brush.verticalGradient(
+        0f to accent.copy(alpha = 0.12f),
+        1f to surface
+    )
+
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .background(bgBrush)
+            .border(1.dp, borderColor, shape)
+            .animateContentSize()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(Modifier.width(10.dp))
+
+            Text(
+                text = "Infos du plat",
+                fontWeight = FontWeight.SemiBold,
+                color = accent
+            )
+
+            Spacer(Modifier.weight(1f))
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = accent.copy(alpha = 0.95f),
+                modifier = Modifier
+                    .size(22.dp)
+                    .rotate(chevronRotation)
+            )
+        }
+
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(animationSpec = tween(220)) + fadeIn(animationSpec = tween(220)),
+            exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(animationSpec = tween(180))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp)
+                    .padding(bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (meta == null) {
+                    Text(
+                        text = "Aucune information enregistrée.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                    return@Column
+                }
+
+                val cooked = meta.cookedAtMs
+                val expiry = if (meta.cookedAtMs != null && meta.storageDays != null) {
+                    meta.cookedAtMs + meta.storageDays.toLong() * DAY_MS
+                } else null
+
+                InfoLine("Cuisson", cooked?.let(::formatDate) ?: "—")
+                InfoLine("DLC estimée", if (meta.storageDays != null && expiry != null) "J+${meta.storageDays} → ${formatDate(expiry)}" else "—")
+
+                if (meta.portions != null) {
+                    InfoLine("Portions", meta.portions.toString())
+                }
+
+                val composition = buildList {
+                    if (meta.containsMeat) add("Viande")
+                    if (meta.containsFish) add("Poisson")
+                    if (meta.containsEggs) add("Œufs")
+                    if (meta.containsCream) add("Crème")
+                    if (meta.containsRice) add("Riz")
+                }.joinToString(", ").ifBlank { "—" }
+
+                InfoLine("Composition", composition)
+
+                if (!meta.notes.isNullOrBlank()) {
+                    InfoLine("Notes", meta.notes)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoLine(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "$label : ",
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
+        )
+        Text(
+            text = value,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f),
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+private fun parseLeftoversMeta(json: String?): LeftoversMeta? {
+    val s = json?.trim().orEmpty()
+    if (s.isBlank()) return null
+
+    return runCatching {
+        val o = JSONObject(s)
+
+        // On tolère l'absence de "kind", mais si présent et pas leftovers => on ignore
+        val kind = o.optString("kind", "")
+        if (kind.isNotBlank() && kind != "leftovers") return@runCatching null
+
+        val cookedAtMs = if (o.has("cookedAt")) o.optLong("cookedAt") else null
+        val storageDays = if (o.has("storageDays")) o.optInt("storageDays") else null
+
+        LeftoversMeta(
+            cookedAtMs = cookedAtMs,
+            storageDays = storageDays,
+            containsMeat = o.optBoolean("containsMeat", false),
+            containsCream = o.optBoolean("containsCream", false),
+            containsRice = o.optBoolean("containsRice", false),
+            containsFish = o.optBoolean("containsFish", false),
+            containsEggs = o.optBoolean("containsEggs", false),
+            portions = if (o.has("portions")) o.optInt("portions") else null,
+            notes = o.optString("notes", "").takeIf { it.isNotBlank() }
+        )
+    }.getOrNull()
+}
+
+private fun formatDate(ms: Long): String {
+    val zone = ZoneId.systemDefault()
+    val d = Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()
+    return "%02d/%02d/%04d".format(d.dayOfMonth, d.monthValue, d.year)
+}
+

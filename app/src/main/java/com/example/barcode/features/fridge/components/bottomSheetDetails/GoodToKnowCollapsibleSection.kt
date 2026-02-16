@@ -1,6 +1,7 @@
 package com.example.barcode.features.fridge.components.bottomSheetDetails
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -12,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -35,53 +38,70 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun GoodToKnowCollapsibleSection(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
 
-    val containerShape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(18.dp)
+    val accent = MaterialTheme.colorScheme.primary
+    val surface = MaterialTheme.colorScheme.surface
+
+    val borderColor by animateColorAsState(
+        targetValue = if (expanded) accent.copy(alpha = 0.55f) else accent.copy(alpha = 0.28f),
+        label = "goodToKnowBorder"
+    )
 
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 90f else 0f,
         label = "goodToKnowChevronRotation"
     )
 
-    val contentTint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
-    val borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f)
+    val bgBrush = Brush.verticalGradient(
+        0f to accent.copy(alpha = 0.12f),
+        1f to surface
+    )
 
     Column(
         modifier = modifier
-            .clip(containerShape)
-            .background(MaterialTheme.colorScheme.surface)
-            .border(width = 1.dp, color = borderColor, shape = containerShape)
+            .clip(shape)
+            .background(bgBrush)
+            .border(1.dp, borderColor, shape)
             .animateContentSize()
+            .clickable(enabled = enabled) { expanded = !expanded }
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded }
-                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = null,
-                tint = contentTint,
-                modifier = Modifier.size(18.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
 
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(10.dp))
 
             Text(
                 text = "Bon à savoir",
                 fontWeight = FontWeight.SemiBold,
-                color = contentTint
+                color = accent
             )
 
             Spacer(Modifier.weight(1f))
@@ -89,9 +109,9 @@ fun GoodToKnowCollapsibleSection(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = contentTint,
+                tint = accent.copy(alpha = if (enabled) 0.95f else 0.35f),
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(22.dp)
                     .rotate(chevronRotation)
             )
         }
@@ -104,19 +124,17 @@ fun GoodToKnowCollapsibleSection(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp)
-                    .padding(bottom = 14.dp),
+                    .padding(top = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                GoodToKnowBullet("Riche en oligo-éléments : participe au bon fonctionnement du cœur et du système immunitaire (selon les apports journaliers).")
-                GoodToKnowBullet("Source de protéines : utile après une séance de sport, mais évite d’en abuser si tu surveilles tes apports.")
-                GoodToKnowBullet("Peut être salé : attention si tu as tendance à faire de la rétention d’eau ou si tu limites le sel.")
-                GoodToKnowBullet("Le soir : si le produit est stimulant (caféine / théine / épices), privilégie une petite portion pour ne pas gêner le sommeil.")
-                GoodToKnowBullet("Après ouverture : conserve au frais, referme bien l’emballage et consomme rapidement pour limiter l’oxydation et la perte d’arômes.")
+                GoodToKnowBulletModern("Riche en oligo-éléments : participe au bon fonctionnement du cœur et du système immunitaire (selon les apports journaliers).")
+                GoodToKnowBulletModern("Source de protéines : utile après une séance de sport, mais évite d’en abuser si tu surveilles tes apports.")
+                GoodToKnowBulletModern("Peut être salé : attention si tu limites le sel.")
+                GoodToKnowBulletModern("Après ouverture : conserve au frais, referme bien l’emballage et consomme rapidement.")
 
                 Text(
-                    text = "(Infos indicatives — à personnaliser plus tard selon le produit.)",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                    text = "(Infos indicatives — à personnaliser plus tard.)",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
                     fontStyle = FontStyle.Italic
                 )
             }
@@ -125,21 +143,21 @@ fun GoodToKnowCollapsibleSection(
 }
 
 @Composable
-private fun GoodToKnowBullet(text: String) {
+private fun GoodToKnowBulletModern(text: String) {
+    val accent = MaterialTheme.colorScheme.primary
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
         Text(
             text = "•",
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(end = 8.dp)
+            color = accent,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier.padding(end = 10.dp)
         )
-
         Text(
             text = text,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.84f),
             style = MaterialTheme.typography.bodyMedium
         )
     }

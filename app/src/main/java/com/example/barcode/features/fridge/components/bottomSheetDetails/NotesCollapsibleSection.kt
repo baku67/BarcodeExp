@@ -87,6 +87,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.key
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontStyle
 
 const val NOTE_MAX_LEN = 100
@@ -133,6 +134,27 @@ fun NotesCollapsibleSection(
 
     val containerShape = RoundedCornerShape(16.dp)
 
+    val hasNotes = notes.isNotEmpty()
+    val surface = MaterialTheme.colorScheme.surface
+
+    // ✅ même “jaune” que ton compteur (ItemNote) + dégradé subtil
+    val notesBrush = remember(surface) {
+        Brush.verticalGradient(
+            0f to ItemNote.copy(alpha = 0.12f),
+            1f to surface
+        )
+    }
+
+    // ✅ bordure + lisible, qui ressort un peu plus quand ouvert
+    val borderColor by animateColorAsState(
+        targetValue = if (hasNotes) {
+            if (expanded) ItemNote.copy(alpha = 0.55f) else ItemNote.copy(alpha = 0.30f)
+        } else {
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f)
+        },
+        label = "notesBorderColor"
+    )
+
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 90f else 0f,
         label = "notesChevronRotation"
@@ -150,12 +172,11 @@ fun NotesCollapsibleSection(
     Column(
         modifier = modifier
             .clip(containerShape)
-            .background(MaterialTheme.colorScheme.surface)
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f),
-                shape = containerShape
+            .then(
+                if (hasNotes) Modifier.background(notesBrush)
+                else Modifier.background(MaterialTheme.colorScheme.surface)
             )
+            .border(1.dp, borderColor, containerShape)
             .animateContentSize()
     ) {
         Row(
@@ -168,7 +189,7 @@ fun NotesCollapsibleSection(
             Icon(
                 imageVector = Icons.Outlined.StickyNote2,
                 contentDescription = null,
-                tint = labelTint,
+                tint = accentTint,
                 modifier = Modifier.size(18.dp)
             )
 
