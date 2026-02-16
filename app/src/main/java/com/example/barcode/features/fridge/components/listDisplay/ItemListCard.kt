@@ -47,6 +47,7 @@ import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import com.example.barcode.features.fridge.components.shared.ItemThumbnail
+import com.example.barcode.features.fridge.components.shared.rememberEffectiveItemImageUrl
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -64,48 +65,11 @@ fun ItemListCard(
     val surface = cs.surface
     val onSurface = cs.onSurface
 
-    val context = LocalContext.current
-
     val name = item.name ?: "(sans nom)"
     val brand = item.brand
     val expiry = item.expiryDate
 
-    val effectiveImageUrl = remember(
-        item.addMode,
-        item.manualType,
-        item.manualSubtype,
-        item.imageUrl,
-        context.packageName
-    ) {
-        val fallback = item.imageUrl
-
-        if (item.addMode != "manual") return@remember fallback
-
-        val type = item.manualType?.trim().orEmpty()
-        val subtype = item.manualSubtype?.trim().orEmpty()
-        val pkg = context.packageName
-
-        // 1) Sous-type (VEGETABLES/MEAT/FISH/DAIRY)
-        if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
-            val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(
-                context = context,
-                subtypeCode = subtype
-            )
-            if (resId != 0) return@remember "android.resource://$pkg/$resId"
-        }
-
-        // 2) Type (ex: LEFTOVERS n'a pas de sous-type)
-        if (type.isNotBlank()) {
-            val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(
-                context = context,
-                typeCode = type
-            )
-            if (resId != 0) return@remember "android.resource://$pkg/$resId"
-        }
-
-        // 3) Fallback
-        fallback
-    }
+    val effectiveImageUrl = rememberEffectiveItemImageUrl(item)
 
     // TODO: branche soonDays sur tes Settings
     val expiryPolicy = remember { ExpiryPolicy(soonDays = 2) }
@@ -123,8 +87,6 @@ fun ItemListCard(
         hasNotes -> 1
         else -> 0
     }
-
-    val warning = androidx.compose.ui.graphics.Color(0xFFFFC107)
 
     val cardBorder = when {
         selected -> BorderStroke(2.dp, cs.primary)

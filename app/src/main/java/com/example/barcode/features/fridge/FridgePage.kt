@@ -61,6 +61,7 @@ import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfRow
 import com.example.barcode.features.fridge.components.fridgeDisplay.VegetableDrawerCube3D
 import com.example.barcode.features.fridge.components.listDisplay.ItemListCard
 import com.example.barcode.features.fridge.components.shared.FridgeDisplayIconToggle
+import com.example.barcode.features.fridge.components.shared.rememberEffectiveItemImageUrl
 import com.example.barcode.sync.SyncScheduler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -973,36 +974,6 @@ private fun VegDrawerManualItemThumb(
 
 
 /* ——— Utils ——— */
-
-
-@Composable
-private fun rememberEffectiveItemImageUrl(item: ItemEntity): String? {
-    val context = LocalContext.current
-    val pkg = context.packageName
-
-    return remember(item.addMode, item.manualType, item.manualSubtype, item.imageUrl, pkg) {
-        val fallback = item.imageUrl
-        if (item.addMode != "manual") return@remember fallback
-
-        val type = item.manualType?.trim().orEmpty()
-        val subtype = item.manualSubtype?.trim().orEmpty()
-
-        // ✅ Subtype (si applicable)
-        if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
-            val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(context, subtype)
-            if (resId != 0) return@remember "android.resource://$pkg/$resId"
-        }
-
-        // ✅ Sinon image de type (VEGETABLES / FRUITS / …)
-        if (type.isNotBlank()) {
-            val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(context, type)
-            if (resId != 0) return@remember "android.resource://$pkg/$resId"
-        }
-
-        fallback
-    }
-}
-
 
 // Template ligne/étape contenu Modal d'aide (click "?"):
 @Composable

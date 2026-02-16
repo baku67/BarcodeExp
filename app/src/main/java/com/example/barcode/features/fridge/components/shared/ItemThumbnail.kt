@@ -1,5 +1,6 @@
 package com.example.barcode.features.fridge.components.shared
 
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -34,12 +35,16 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
+import com.example.barcode.data.local.entities.ItemEntity
+import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
+import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 
 private data class FittedRectPx(
     val left: Float,
@@ -237,5 +242,52 @@ fun ItemThumbnail(
         } else {
             Text("\uD83C\uDF71", fontSize = 20.sp)
         }
+    }
+}
+
+
+fun effectiveItemImageUrl(
+    context: Context,
+    item: ItemEntity,
+): String? {
+    val fallback = item.imageUrl
+
+    // On ne touche qu'aux ajouts "manual"
+    if (item.addMode != "manual") return fallback
+
+    val type = item.manualType?.trim().orEmpty()
+    val subtype = item.manualSubtype?.trim().orEmpty()
+    val pkg = context.packageName
+
+    // 1) Sous-type (si applicable)
+    if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
+        val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(
+            context = context,
+            subtypeCode = subtype
+        )
+        if (resId != 0) return "android.resource://$pkg/$resId"
+    }
+
+    // 2) Type
+    if (type.isNotBlank()) {
+        val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(
+            context = context,
+            typeCode = type
+        )
+        if (resId != 0) return "android.resource://$pkg/$resId"
+    }
+
+    // 3) Fallback
+    return fallback
+}
+
+@Composable
+fun rememberEffectiveItemImageUrl(item: ItemEntity): String? {
+    val context = LocalContext.current
+    val pkg = context.packageName
+
+    // ✅ mêmes keys que tes 3 implémentations → mêmes triggers de recalcul
+    return remember(item.addMode, item.manualType, item.manualSubtype, item.imageUrl, pkg) {
+        effectiveItemImageUrl(context, item)
     }
 }
