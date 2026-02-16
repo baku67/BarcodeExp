@@ -1,5 +1,6 @@
 package com.example.barcode.features.fridge.components.fridgeDisplay
 
+import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -45,6 +46,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.Canvas
 import androidx.compose.material.icons.outlined.StickyNote2
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.key
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
@@ -59,6 +61,7 @@ import com.example.barcode.common.ui.expiry.expirySelectionBorderColor
 import com.example.barcode.common.ui.theme.ItemNote
 import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
+import kotlinx.coroutines.isActive
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -102,6 +105,9 @@ fun ShelfRow(
 
     val cs = MaterialTheme.colorScheme
 
+    // ✅ horloge commune (utile si tu veux le recalage “propre”)
+    val giggleEpochMs = remember { SystemClock.elapsedRealtime() }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -116,77 +122,48 @@ fun ShelfRow(
                 .padding(horizontal = 12.dp)
                 .offset(y = productDrop)
                 .zIndex(if (productsOnTop) 1f else 0f),
-            horizontalArrangement = Arrangement.spacedBy(3.dp), // espacement produits
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
             verticalAlignment = Alignment.Bottom
         ) {
             itemEntities.forEachIndexed { itemIndex, item ->
+                key(item.id) {
+                    val level = remember(item.id, item.expiryDate, expiryPolicy.soonDays) {
+                        expiryLevel(item.expiryDate, expiryPolicy)
+                    }
 
-                val level = remember(item.id, item.expiryDate, expiryPolicy.soonDays) {
-                    expiryLevel(item.expiryDate, expiryPolicy)
-                }
+                    val isSheetSelected =
+                        selectedSheetId != null && item.id == selectedSheetId
 
-                val isSheetSelected =
-                    selectedSheetId != null && item.id == selectedSheetId // surbrillance pendant BottomSheetDetails
+                    val hasSheetSelection = selectedSheetId != null
+                    val dimOthers = hasSheetSelection && !isSheetSelected
 
-                val hasSheetSelection = selectedSheetId != null
-                val dimOthers = hasSheetSelection && !isSheetSelected
+                    val isMultiSelected = selectionMode && selectedIds.contains(item.id)
+                    val isVisuallySelected = isSheetSelected || isMultiSelected
 
+                    val sheetDimOverlay by animateFloatAsState(
+                        targetValue = if (dimOthers) 0.50f else 0f,
+                        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                        label = "sheetDimOverlay"
+                    )
 
+                    val multiDimOverlay by animateFloatAsState(
+                        targetValue = if (selectionMode && !isMultiSelected) 0.55f else 0f,
+                        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                        label = "multiDimOverlay"
+                    )
 
-                val isMultiSelected = selectionMode && selectedIds.contains(item.id)
-                // ✅ Même rendu que la sélection “single” (BottomSheet) : bordure calée à l'image
-                val isVisuallySelected = isSheetSelected || isMultiSelected
+                    val finalDimAlpha = maxOf(dimAlpha, sheetDimOverlay, multiDimOverlay)
 
-                val sheetOtherAlpha by animateFloatAsState(
-                    targetValue = if (dimOthers) 0.55f else 1f,
-                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
-                    label = "sheetOtherAlpha"
-                )
+                    val glowColor = expiryGlowColor(level)
+                    val selectionBorderColor = expirySelectionBorderColor(level)
 
-                val sheetDimOverlay by animateFloatAsState(
-                    targetValue = if (dimOthers) 0.50f else 0f,
-                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
-                    label = "sheetDimOverlay"
-                )
+                    val noteCount = notesCountByItemId[item.id] ?: 0
 
-                val multiDimOverlay by animateFloatAsState(
-                    targetValue = if (selectionMode && !isMultiSelected) 0.55f else 0f,
-                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
-                    label = "multiDimOverlay"
-                )
-
-// ✅ dim global frigo (allumage) + dim “sheet” + dim “multi”
-                val finalDimAlpha = maxOf(dimAlpha, sheetDimOverlay, multiDimOverlay)
-
-                val dimForMultiSelect = selectionMode && !isMultiSelected
-                val multiAlpha by animateFloatAsState(
-                    targetValue = if (dimForMultiSelect) 0.45f else 1f,
-                    animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
-                    label = "multiSelectAlpha"
-                )
-
-                val glowColor = expiryGlowColor(level)
-                val selectionBorderColor = expirySelectionBorderColor(level)
-
-                var imageLoaded by remember(item.id) { mutableStateOf(false) }
-
-                val noteCount = notesCountByItemId[item.id] ?: 0
-
-                Box(
-                    modifier = Modifier
-                        .size(productSize),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
                     val cornerIcon = when (level) {
                         ExpiryLevel.EXPIRED -> Icons.Filled.WarningAmber
                         ExpiryLevel.SOON -> Icons.Outlined.TimerOff
                         else -> null
                     }
-
-                    val shouldGiggle =
-                        !selectionMode &&
-                                imageLoaded &&
-                                (level == ExpiryLevel.EXPIRED || level == ExpiryLevel.SOON)
 
                     val selectedScale by animateFloatAsState(
                         targetValue = if (isSheetSelected) 1.07f else 1f,
@@ -195,12 +172,22 @@ fun ShelfRow(
                     )
 
                     val density = LocalDensity.current
-                    val liftTargetPx = with(density) { 2.dp.toPx() } // décalage vers le haut lors selectItem (pour compenser MID border bottom)
+                    val liftTargetPx = with(density) { 2.dp.toPx() }
                     val liftPx by animateFloatAsState(
                         targetValue = if (isVisuallySelected) liftTargetPx else 0f,
                         animationSpec = tween(durationMillis = 260),
                         label = "liftPx"
                     )
+
+                    // ✅ B) imageLoaded reset quand l’URL change
+                    val effectiveImageUrl = rememberEffectiveItemImageUrl(item)
+                    var imageLoaded by remember(item.id, effectiveImageUrl) { mutableStateOf(false) }
+
+                    val shouldGiggle =
+                        !selectionMode &&
+                                !isSheetSelected &&
+                                imageLoaded &&
+                                (level == ExpiryLevel.EXPIRED || level == ExpiryLevel.SOON)
 
                     val wrapperModifier = Modifier
                         .fillMaxSize()
@@ -212,9 +199,11 @@ fun ShelfRow(
                             translationY = -liftPx
                         }
                         .giggleEvery(
-                            enabled = shouldGiggle && !isSheetSelected,
+                            enabled = shouldGiggle,
                             intervalMs = 4_200L,
-                            initialDelayMs = 500L + itemIndex * 90L
+                            initialDelayMs = 500L + itemIndex * 90L,
+                            epochMs = giggleEpochMs,
+                            phaseKey = itemIndex
                         )
                         .combinedClickable(
                             onClick = { onClickItem(item) },
@@ -222,13 +211,11 @@ fun ShelfRow(
                         )
 
                     Box(
-                        modifier = Modifier.size(productSize),
+                        modifier = Modifier
+                            .size(productSize),
                         contentAlignment = Alignment.BottomCenter
                     ) {
                         Box(modifier = wrapperModifier) {
-
-                            val effectiveImageUrl = rememberEffectiveItemImageUrl(item)
-
                             ItemThumbnail(
                                 imageUrl = effectiveImageUrl,
                                 alignBottom = true,
@@ -240,16 +227,13 @@ fun ShelfRow(
                                 imageBorderColor = selectionBorderColor,
                                 imageBorderWidth = 2.dp,
                                 modifier = Modifier.fillMaxSize(),
-
-                                // ✅ DogEar notes
                                 topRightOverlayOnImage = if (noteCount > 0) {
                                     {
                                         NotesDogEarIndicator(
                                             modifier = Modifier
-                                                // ✅ fait dépasser un peu à l'extérieur (droite + haut)
                                                 .offset(x = 2.dp, y = (-2).dp)
                                                 .zIndex(5f),
-                                            showPenIcon = true
+                                            showIcon = true
                                         )
                                     }
                                 } else null
@@ -259,7 +243,9 @@ fun ShelfRow(
                 }
             }
 
-            repeat(5 - itemEntities.size) { Spacer(Modifier.size(productSize)) }
+            repeat((5 - itemEntities.size).coerceAtLeast(0)) {
+                Spacer(Modifier.size(productSize))
+            }
         }
 
         // --- Étagère
@@ -306,7 +292,7 @@ private val NotesDogEarShape = GenericShape { size, _ ->
 @Composable
 private fun NotesDogEarIndicator(
     modifier: Modifier = Modifier,
-    showPenIcon: Boolean = true,
+    showIcon: Boolean = true,
 ) {
     val baseColor = ItemNote
 
@@ -342,7 +328,7 @@ private fun NotesDogEarIndicator(
             )
         }
 
-        if (showPenIcon) {
+        if (showIcon) {
             Icon(
                 imageVector = Icons.Outlined.StickyNote2,
                 contentDescription = "Notes",
@@ -358,11 +344,14 @@ private fun NotesDogEarIndicator(
 
 
 
+
 @Composable
 private fun Modifier.giggleEvery(
     enabled: Boolean,
     intervalMs: Long = 5_000L,
-    initialDelayMs: Long = 320L, // micro délai pour laisser l’onglet “se poser”
+    initialDelayMs: Long = 320L,
+    epochMs: Long,
+    phaseKey: Any? = null,
 ): Modifier {
     if (!enabled) return this
 
@@ -372,9 +361,7 @@ private fun Modifier.giggleEvery(
     val scale = remember { Animatable(1f) }
 
     suspend fun burst() = coroutineScope {
-        val d = 110 // ✅ plus long (au lieu de 70)
-
-        // ✅ rotation plus intense
+        val d = 110
         launch {
             rotation.animateTo(3.4f, tween(d))
             rotation.animateTo(-3.0f, tween(d))
@@ -382,39 +369,35 @@ private fun Modifier.giggleEvery(
             rotation.animateTo(-1.6f, tween(d))
             rotation.animateTo(0f, tween(d + 40))
         }
-
-        // ✅ micro shake un peu plus visible (toujours discret)
         launch {
             tx.animateTo(2.4f, tween(d))
             tx.animateTo(-2.0f, tween(d))
             tx.animateTo(1.2f, tween(d))
             tx.animateTo(0f, tween(d + 20))
         }
-
         launch {
             ty.animateTo(-1.6f, tween(d))
             ty.animateTo(1.1f, tween(d))
             ty.animateTo(-0.7f, tween(d))
             ty.animateTo(0f, tween(d + 20))
         }
-
-        // ✅ scale plus intense + plus long, en même temps
         launch {
             scale.animateTo(1.055f, tween(d + 10))
             scale.animateTo(1f, tween(d + 110))
         }
     }
 
-    LaunchedEffect(enabled) {
-        if (!enabled) return@LaunchedEffect
-
-        // ✅ burst au spawn (après micro délai)
-        delay(initialDelayMs)
-        burst()
-
-        // ✅ ensuite cadence fixe
-        while (true) {
-            delay(intervalMs)
+    LaunchedEffect(enabled, intervalMs, initialDelayMs, epochMs, phaseKey) {
+        val phaseStart = epochMs + initialDelayMs
+        while (isActive) {
+            val now = SystemClock.elapsedRealtime()
+            val next = if (now <= phaseStart) {
+                phaseStart
+            } else {
+                val k = ((now - phaseStart) / intervalMs) + 1
+                phaseStart + k * intervalMs
+            }
+            delay((next - now).coerceAtLeast(0))
             burst()
         }
     }
