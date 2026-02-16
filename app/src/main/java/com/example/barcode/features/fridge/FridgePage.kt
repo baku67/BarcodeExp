@@ -4,11 +4,13 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -25,8 +27,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -34,6 +38,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.LocalAppTopBarState
 import com.example.barcode.core.AppMode
@@ -42,6 +48,7 @@ import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.UserPreferences
 import com.example.barcode.features.addItems.ItemsViewModel
+import com.example.barcode.features.addItems.manual.MANUAL_TYPES_DRAWER
 import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import com.example.barcode.features.auth.AuthViewModel
@@ -154,12 +161,6 @@ fun FridgePage(
     // ✅ Étape intermédiaire : étagère juste après la dernière occupée
     val nextAfterLastOccupiedOpacity = 0.45f
 
-
-
-    // TODO plus tard : calculer via une vraie source (enum zone, tags, etc.)
-    val vegDrawerEmpty = true
-    val vegDrawerOpacity = if (vegDrawerEmpty) ghostOpacity else 1f
-
     // Ecran d'édition Item:
     var editItemEntity by remember { mutableStateOf<ItemEntity?>(null) }
 
@@ -190,12 +191,42 @@ fun FridgePage(
         )
     }
 
+
+    // ✅ Bac à légumes : on place ici les ajouts manuels dont le type a une image de sous-type
+    // (pour l'instant : on n'affiche que ce qui rentre dans la zone visuelle)
+    val vegDrawerItems = remember(sorted) {
+        sorted.filter { item ->
+            // ⚠️ adapte les noms de champs si besoin selon ton ItemEntity
+            item.addMode == "manual" &&
+                    item.manualType != null &&
+                    MANUAL_TYPES_DRAWER.contains(item.manualType)
+        }
+    }
+    val vegDrawerIds = remember(vegDrawerItems) { vegDrawerItems.map { it.id }.toSet() }
+
+    // ✅ En mode Fridge : on retire ces items des étagères pour éviter le doublon
+    val shelfSourceItems = remember(sorted, selectedViewMode, vegDrawerIds) {
+        if (selectedViewMode == ViewMode.Fridge) {
+            sorted.filterNot { it.id in vegDrawerIds }
+        } else {
+            sorted
+        }
+    }
+
+    val vegDrawerEmpty = vegDrawerItems.isEmpty()
+
     // ✅ Message d'état centré quand la liste est vide (LIST et FRIDGE)
+    // En mode Fridge : on considère aussi le bac à légumes.
+    val hasAnyItemForCurrentView = when (selectedViewMode) {
+        ViewMode.List -> sorted.isNotEmpty()
+        ViewMode.Fridge -> shelfSourceItems.isNotEmpty() || vegDrawerItems.isNotEmpty()
+    }
     val emptyCenterLabel: String? = when {
-        sorted.isNotEmpty() -> null
+        hasAnyItemForCurrentView -> null
         isSyncing -> "Synchronisation…"
         else -> "Aucun produit"
     }
+
 
     // --- Sélection multiple (IDs = String)
     var selectionMode by rememberSaveable { mutableStateOf(false) }
@@ -221,16 +252,12 @@ fun FridgePage(
     // ✅ Etageres grid: TOUJOURS au moins 5 rangées en mode Fridge
     val itemsPerShelf = 5
     val minShelvesCount = 5
-    val shelves = remember(sorted, selectedViewMode) {
-        val base = sorted.chunked(itemsPerShelf).toMutableList()
-
+    val shelves = remember(shelfSourceItems, selectedViewMode) {
+        val base = shelfSourceItems.chunked(itemsPerShelf).toMutableList()
         val isFridge = selectedViewMode == ViewMode.Fridge
         if (isFridge) {
-            while (base.size < minShelvesCount) {
-                base.add(emptyList())
-            }
+            while (base.size < minShelvesCount) base.add(emptyList())
         }
-
         base
     }
 
@@ -670,6 +697,19 @@ fun FridgePage(
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                                                     )
+                                                } else {
+                                                    VegDrawerManualItemsGrid(
+                                                        items = vegDrawerItems,
+                                                        selectionMode = selectionMode,
+                                                        selectedIds = selectedIds,
+                                                        dimAlpha = dimAlpha,
+                                                        onClickItem = { item ->
+                                                            if (selectionMode) toggleSelect(item.id) else sheetItemEntity = item
+                                                        },
+                                                        onLongPressItem = { item ->
+                                                            if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id)
+                                                        }
+                                                    )
                                                 }
                                             }
                                         } else {
@@ -781,6 +821,15 @@ fun FridgePage(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                                         )
+                                    } else {
+                                        VegDrawerManualItemsGrid(
+                                            items = vegDrawerItems,
+                                            selectionMode = selectionMode,
+                                            selectedIds = selectedIds,
+                                            dimAlpha = dimAlpha,
+                                            onClickItem = { item -> sheetItemEntity = item },
+                                            onLongPressItem = { item -> enterSelectionWith(item.id) }
+                                        )
                                     }
                                 }
                                 Spacer(Modifier.height(10.dp))
@@ -805,7 +854,155 @@ fun FridgePage(
     }
 }
 
+
+
+@Composable
+private fun VegDrawerManualItemsGrid(
+    items: List<ItemEntity>,
+    selectionMode: Boolean,
+    selectedIds: Set<String>,
+    dimAlpha: Float,
+    onClickItem: (ItemEntity) -> Unit,
+    onLongPressItem: (ItemEntity) -> Unit,
+    thumbSize: Dp = 28.dp,
+    gap: Dp = 6.dp,
+) {
+    if (items.isEmpty()) return
+
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val cols = ((maxWidth.value + gap.value) / (thumbSize.value + gap.value))
+            .toInt()
+            .coerceAtLeast(1)
+        val rows = ((maxHeight.value + gap.value) / (thumbSize.value + gap.value))
+            .toInt()
+            .coerceAtLeast(1)
+
+        val capacity = (cols * rows).coerceAtLeast(1)
+        val visible = remember(items, capacity) { items.take(capacity) }
+        val visibleRows = remember(visible, cols, rows) { visible.chunked(cols).take(rows) }
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(gap, Alignment.Bottom)
+        ) {
+            visibleRows.forEach { rowItems ->
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    rowItems.forEach { item ->
+                        VegDrawerManualItemThumb(
+                            item = item,
+                            size = thumbSize,
+                            selected = selectedIds.contains(item.id),
+                            selectionMode = selectionMode,
+                            dimAlpha = dimAlpha,
+                            onClick = { onClickItem(item) },
+                            onLongPress = { onLongPressItem(item) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VegDrawerManualItemThumb(
+    item: ItemEntity,
+    size: Dp,
+    selected: Boolean,
+    selectionMode: Boolean,
+    dimAlpha: Float,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val context = LocalContext.current
+
+    val borderW by animateDpAsState(
+        targetValue = if (selected) 2.dp else 1.dp,
+        animationSpec = tween(durationMillis = 140),
+        label = "vegDrawerThumbBorder"
+    )
+
+    val borderColor = when {
+        selected -> cs.primary
+        selectionMode -> cs.outline.copy(alpha = 0.5f)
+        else -> cs.outlineVariant.copy(alpha = 0.55f)
+    }
+
+    val contentAlpha = (1f - (dimAlpha * 0.9f)).coerceIn(0.35f, 1f)
+
+    val effectiveImageUrl = rememberEffectiveItemImageUrl(item)
+
+    Surface(
+        modifier = Modifier
+            .size(size)
+            .alpha(contentAlpha)
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
+        shape = RoundedCornerShape(10.dp), // ✅ plus “thumbnail produit” que CircleShape
+        color = cs.surfaceVariant.copy(alpha = 0.55f),
+        border = BorderStroke(borderW, borderColor),
+        shadowElevation = if (selected) 2.dp else 0.dp
+    ) {
+        if (!effectiveImageUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(effectiveImageUrl)
+                    .crossfade(false)
+                    .build(),
+                contentDescription = item.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            // fallback (rare) si rien à afficher
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = (item.name ?: "?").take(2).uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = cs.onSurfaceVariant.copy(alpha = 0.9f),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+
+
+
+
+
 /* ——— Utils ——— */
+
+
+@Composable
+private fun rememberEffectiveItemImageUrl(item: ItemEntity): String? {
+    val context = LocalContext.current
+    val pkg = context.packageName
+
+    return remember(item.addMode, item.manualType, item.manualSubtype, item.imageUrl, pkg) {
+        val fallback = item.imageUrl
+        if (item.addMode != "manual") return@remember fallback
+
+        val type = item.manualType?.trim().orEmpty()
+        val subtype = item.manualSubtype?.trim().orEmpty()
+
+        // ✅ Subtype (si applicable)
+        if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(context, subtype)
+            if (resId != 0) return@remember "android.resource://$pkg/$resId"
+        }
+
+        // ✅ Sinon image de type (VEGETABLES / FRUITS / …)
+        if (type.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(context, type)
+            if (resId != 0) return@remember "android.resource://$pkg/$resId"
+        }
+
+        fallback
+    }
+}
+
 
 // Template ligne/étape contenu Modal d'aide (click "?"):
 @Composable

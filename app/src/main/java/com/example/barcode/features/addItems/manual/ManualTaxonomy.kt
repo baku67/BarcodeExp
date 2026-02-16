@@ -7,6 +7,7 @@ import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
 val MANUAL_TYPES_WITH_SUBTYPE_IMAGE = setOf("VEGETABLES", "FRUITS", "MEAT", "FISH", "DAIRY")
+val MANUAL_TYPES_DRAWER = setOf("VEGETABLES", "FRUITS")
 
 data class ManualTypeMeta(
     val code: String,
