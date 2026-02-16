@@ -74,22 +74,37 @@ fun ItemListCard(
         item.addMode,
         item.manualType,
         item.manualSubtype,
-        item.imageUrl
+        item.imageUrl,
+        context.packageName
     ) {
-        val shouldUseSubtypeImage =
-            item.addMode == "manual" &&
-                    item.manualType != null &&
-                    item.manualType in MANUAL_TYPES_WITH_SUBTYPE_IMAGE &&
-                    !item.manualSubtype.isNullOrBlank()
+        val fallback = item.imageUrl
 
-        if (!shouldUseSubtypeImage) return@remember item.imageUrl
+        if (item.addMode != "manual") return@remember fallback
 
-        val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(
-            context = context,
-            subtypeCode = item.manualSubtype!!.trim()
-        )
+        val type = item.manualType?.trim().orEmpty()
+        val subtype = item.manualSubtype?.trim().orEmpty()
+        val pkg = context.packageName
 
-        if (resId == 0) item.imageUrl else "android.resource://${context.packageName}/$resId"
+        // 1) Sous-type (VEGETABLES/MEAT/FISH/DAIRY)
+        if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(
+                context = context,
+                subtypeCode = subtype
+            )
+            if (resId != 0) return@remember "android.resource://$pkg/$resId"
+        }
+
+        // 2) Type (ex: LEFTOVERS n'a pas de sous-type)
+        if (type.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(
+                context = context,
+                typeCode = type
+            )
+            if (resId != 0) return@remember "android.resource://$pkg/$resId"
+        }
+
+        // 3) Fallback
+        fallback
     }
 
     // TODO: branche soonDays sur tes Settings

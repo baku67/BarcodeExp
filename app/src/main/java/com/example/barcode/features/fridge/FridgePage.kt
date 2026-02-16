@@ -590,33 +590,6 @@ fun FridgePage(
                                         Box(modifier = Modifier.alpha(rowAlpha)) {
                                             val pkg = appContext.packageName
 
-                                            val effectiveImageUrl = remember(
-                                                    it.addMode,
-                                                    it.manualType,
-                                                    it.manualSubtype,
-                                                    it.imageUrl,
-                                                    pkg
-                                                        ) {
-                                                    if (it.addMode != "manual") return@remember it.imageUrl
-
-                                                    val type = it.manualType?.trim().orEmpty()
-                                                    val subtype = it.manualSubtype?.trim().orEmpty()
-
-                                                    // 1) Sous-type (VEGETABLES/MEAT/FISH/DAIRY)
-                                                    if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
-                                                            val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(appContext, subtype)
-                                                            if (resId != 0) return@remember "android.resource://$pkg/$resId"
-                                                        }
-
-                                                    // 2) Type (ex: LEFTOVERS n’a pas de sous-type)
-                                                    if (type.isNotBlank()) {
-                                                            val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(appContext, type)
-                                                            if (resId != 0) return@remember "android.resource://$pkg/$resId"
-                                                       }
-
-                                                    it.imageUrl
-                                                }
-
                                             ItemListCard(
                                                 item = it,
                                                 notesCount = noteCount,
