@@ -49,6 +49,10 @@ import com.example.barcode.common.expiry.expiryLevel
 import com.example.barcode.common.expiry.formatRelativeDaysCompact
 import com.example.barcode.common.ui.expiry.expiryAccentColor
 import com.example.barcode.data.local.entities.ItemEntity
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 @DrawableRes
 private fun nutriScoreRes(score: String?): Int? = when (score?.trim()?.uppercase()) {
@@ -72,7 +76,6 @@ private fun headerExpiryChipStyle(expiryMillis: Long?, policy: ExpiryPolicy): He
     val cs = MaterialTheme.colorScheme
     val level = expiryLevel(expiryMillis, policy)
 
-    // ✅ neutre si pas de date
     if (level == ExpiryLevel.NONE) {
         return HeaderExpiryChipStyle(
             container = cs.surfaceVariant.copy(alpha = 0.55f),
@@ -81,8 +84,6 @@ private fun headerExpiryChipStyle(expiryMillis: Long?, policy: ExpiryPolicy): He
         )
     }
 
-    // ✅ couleur centralisée dans ExpiryUi.kt
-    // (et donc EXPIRED => tertiary si c’est ton choix global)
     val accent = expiryAccentColor(level)
 
     return HeaderExpiryChipStyle(
@@ -92,10 +93,6 @@ private fun headerExpiryChipStyle(expiryMillis: Long?, policy: ExpiryPolicy): He
     )
 }
 
-/**
- * ✅ Nom volontairement différent pour éviter le conflit si tu as une autre fonction
- * BottomSheetDetailsHeader(...) ailleurs.
- */
 @Composable
 fun BottomSheetDetailsHeaderContent(
     itemEntity: ItemEntity,
@@ -103,11 +100,18 @@ fun BottomSheetDetailsHeaderContent(
     onClose: () -> Unit,
     onOpenViewer: (ViewerImageKind) -> Unit
 ) {
-    // TODO: branche soonDays sur tes Settings
     val expiryPolicy = remember { ExpiryPolicy(soonDays = 2) }
+
+    val isManual = remember(itemEntity.addMode) {
+        itemEntity.addMode.equals("manual", ignoreCase = true)
+    }
 
     val name = itemEntity.name?.takeIf { it.isNotBlank() } ?: "(sans nom)"
     val brand = itemEntity.brand?.takeIf { it.isNotBlank() } ?: "—"
+    val addedText = remember(itemEntity.addedAt) {
+        formatAddedRelative(itemEntity.addedAt)
+    }
+
     val daysText = itemEntity.expiryDate?.let { formatRelativeDaysCompact(it, expiryPolicy) } ?: "—"
 
     val chip = headerExpiryChipStyle(itemEntity.expiryDate, expiryPolicy)
@@ -203,10 +207,15 @@ fun BottomSheetDetailsHeaderContent(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                // ✅ Manual => on affiche "Ajouté …" à la place du brand
                 Text(
-                    text = brand,
+                    text = if (isManual) addedText else brand,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                    color = if (isManual) {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f) // gris
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -215,25 +224,30 @@ fun BottomSheetDetailsHeaderContent(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val nutriRes = nutriScoreRes(itemEntity.nutriScore)
+                    // ✅ Manual => pas de NutriScore
+                    if (!isManual) {
+                        val nutriRes = nutriScoreRes(itemEntity.nutriScore)
 
-                    if (nutriRes != null) {
-                        Image(
-                            painter = painterResource(nutriRes),
-                            contentDescription = "Nutri-Score ${itemEntity.nutriScore}",
-                            modifier = Modifier.height(22.dp)
-                        )
+                        if (nutriRes != null) {
+                            Image(
+                                painter = painterResource(nutriRes),
+                                contentDescription = "Nutri-Score ${itemEntity.nutriScore}",
+                                modifier = Modifier.height(22.dp)
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(R.drawable.nutri_score_neutre),
+                                contentDescription = "Nutri-Score indisponible",
+                                modifier = Modifier
+                                    .height(22.dp)
+                                    .alpha(0.35f)
+                            )
+                        }
+
+                        Spacer(Modifier.weight(1f))
                     } else {
-                        Image(
-                            painter = painterResource(R.drawable.nutri_score_neutre),
-                            contentDescription = "Nutri-Score indisponible",
-                            modifier = Modifier
-                                .height(22.dp)
-                                .alpha(0.35f)
-                        )
+                        Spacer(Modifier.weight(1f))
                     }
-
-                    Spacer(Modifier.weight(1f))
 
                     AssistChip(
                         onClick = {},
@@ -248,5 +262,30 @@ fun BottomSheetDetailsHeaderContent(
                 }
             }
         }
+    }
+}
+
+
+private fun formatAddedRelative(
+    createdAtMillis: Long?,
+    nowMillis: Long = System.currentTimeMillis(),
+    zoneId: ZoneId = ZoneId.systemDefault()
+): String {
+    if (createdAtMillis == null) return "Ajouté —"
+
+    val createdDate: LocalDate = Instant.ofEpochMilli(createdAtMillis)
+        .atZone(zoneId)
+        .toLocalDate()
+
+    val today: LocalDate = Instant.ofEpochMilli(nowMillis)
+        .atZone(zoneId)
+        .toLocalDate()
+
+    val days = ChronoUnit.DAYS.between(createdDate, today).toInt()
+
+    return when {
+        days <= 0 -> "Ajouté aujourd'hui"
+        days == 1 -> "Ajouté hier"
+        else -> "Ajouté il y a ${days}j."
     }
 }

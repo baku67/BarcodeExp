@@ -83,32 +83,36 @@ fun ItemDetailsBottomSheet(
     val context = LocalContext.current
     val pkg = context.packageName
 
-        val effectivePreviewUrl = remember(
-            itemEntity.addMode,
-            itemEntity.manualType,
-            itemEntity.manualSubtype,
-            itemEntity.imageUrl,
-            pkg
-                ) {
-            if (itemEntity.addMode != "manual") return@remember itemEntity.imageUrl
+    val isManual = remember(itemEntity.addMode) {
+        itemEntity.addMode.equals("manual", ignoreCase = true)
+    }
 
-            val type = itemEntity.manualType?.trim().orEmpty()
-            val subtype = itemEntity.manualSubtype?.trim().orEmpty()
+    val effectivePreviewUrl = remember(
+        itemEntity.addMode,
+        itemEntity.manualType,
+        itemEntity.manualSubtype,
+        itemEntity.imageUrl,
+        pkg
+    ) {
+        if (!isManual) return@remember itemEntity.imageUrl
 
-            // 1) Sous-type (VEGETABLES/MEAT/FISH/DAIRY)
-            if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
-                    val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(context, subtype)
-                    if (resId != 0) return@remember "android.resource://$pkg/$resId"
-                }
+        val type = itemEntity.manualType?.trim().orEmpty()
+        val subtype = itemEntity.manualSubtype?.trim().orEmpty()
 
-            // 2) Type (ex: LEFTOVERS n’a pas de sous-type)
-            if (type.isNotBlank()) {
-                    val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(context, type)
-                    if (resId != 0) return@remember "android.resource://$pkg/$resId"
-                }
-
-            itemEntity.imageUrl
+        // 1) Sous-type (VEGETABLES/MEAT/FISH/DAIRY)
+        if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(context, subtype)
+            if (resId != 0) return@remember "android.resource://$pkg/$resId"
         }
+
+        // 2) Type (ex: LEFTOVERS n’a pas de sous-type)
+        if (type.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(context, type)
+            if (resId != 0) return@remember "android.resource://$pkg/$resId"
+        }
+
+        itemEntity.imageUrl
+    }
 
     val viewerImages = remember(
         itemEntity.imageUrl,
@@ -202,19 +206,24 @@ fun ItemDetailsBottomSheet(
                     )
                 }
 
-                item(key = "open_images") {
-                    DetailsOpenImageButtons(
-                        ingredientsUrl = itemEntity.imageIngredientsUrl,
-                        nutritionUrl = itemEntity.imageNutritionUrl,
-                        onOpenViewer = openViewerFromUrl
-                    )
+                // ✅ Barcode_scan (et autres) => boutons images
+                if (!isManual) {
+                    item(key = "open_images") {
+                        DetailsOpenImageButtons(
+                            ingredientsUrl = itemEntity.imageIngredientsUrl,
+                            nutritionUrl = itemEntity.imageNutritionUrl,
+                            onOpenViewer = openViewerFromUrl
+                        )
+                    }
                 }
 
-                item(key = "good_to_know") {
-                    GoodToKnowCollapsibleSection(
-                        enabled = !itemEntity.barcode.isNullOrBlank(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                // ✅ Manual => GoodToKnow
+                if (isManual) {
+                    item(key = "good_to_know") {
+                        GoodToKnowCollapsibleSection(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 item(key = "notes") {
