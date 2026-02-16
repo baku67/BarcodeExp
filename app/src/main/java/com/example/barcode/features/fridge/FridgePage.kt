@@ -4,8 +4,12 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -99,16 +103,18 @@ fun FridgePage(
         }
     }
 
+    var showVegDrawerAll by remember { mutableStateOf(false) }
+
     // ✅ Pull-to-refresh state (pour avoir l'icône qui descend pendant le geste)
     val pullState = rememberPullToRefreshState()
 
-// ✅ "On a déclenché un refresh" (masque l'icône dès que l'utilisateur relâche)
+    // ✅ "On a déclenché un refresh" (masque l'icône dès que l'utilisateur relâche)
     var pullRefreshRequested by remember { mutableStateOf(false) }
 
-// ✅ L’état de refresh réellement utilisé par le pull-to-refresh UI
+    // ✅ L’état de refresh réellement utilisé par le pull-to-refresh UI
     val isRefreshing = pullRefreshRequested || isSyncing
 
-// ✅ Barre fine : anti-flicker (n'apparaît que si ça dure un peu)
+    // ✅ Barre fine : anti-flicker (n'apparaît que si ça dure un peu)
     var showTopProgress by remember { mutableStateOf(false) }
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
@@ -119,7 +125,7 @@ fun FridgePage(
         }
     }
 
-// ✅ Quand la sync se termine, on reset le flag pull
+    // ✅ Quand la sync se termine, on reset le flag pull
     LaunchedEffect(isSyncing) {
         if (!isSyncing) pullRefreshRequested = false
     }
@@ -397,6 +403,50 @@ fun FridgePage(
                     SnackbarBus.show("Ajouté à la liste de courses : \"${item.name ?: "(sans nom)"}\" (à venir)")
                 }
             )
+        }
+    }
+
+
+    if (showVegDrawerAll) {
+        ModalBottomSheet(
+            onDismissRequest = { showVegDrawerAll = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        ) {
+            Text(
+                text = "Bac à légumes (${vegDrawerItems.size})",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 72.dp),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(vegDrawerItems, key = { it.id }) { item ->
+                    FridgeItemThumbnail(
+                        item = item,
+                        size = 72.dp,
+                        compact = true,
+                        selectionMode = selectionMode,
+                        selected = selectedIds.contains(item.id),
+                        dimAlpha = dimAlpha,
+                        onClick = {
+                            showVegDrawerAll = false
+                            if (selectionMode) toggleSelect(item.id) else sheetItemEntity = item
+                        },
+                        onLongPress = {
+                            showVegDrawerAll = false
+                            if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id)
+                        }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
         }
     }
 
@@ -692,7 +742,7 @@ fun FridgePage(
                                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                                                     )
                                                 } else {
-                                                    VegDrawerManualItemsGrid(
+                                                    VegDrawerPreviewRow(
                                                         items = vegDrawerItems,
                                                         selectionMode = selectionMode,
                                                         selectedIds = selectedIds,
@@ -702,7 +752,8 @@ fun FridgePage(
                                                         },
                                                         onLongPressItem = { item ->
                                                             if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id)
-                                                        }
+                                                        },
+                                                        onOpenAll = { showVegDrawerAll = true }
                                                     )
                                                 }
                                             }
@@ -899,6 +950,91 @@ private fun VegDrawerManualItemsGrid(
         }
     }
 }
+
+
+
+@Composable
+private fun VegDrawerPreviewRow(
+    items: List<ItemEntity>,
+    selectionMode: Boolean,
+    selectedIds: Set<String>,
+    dimAlpha: Float,
+    onClickItem: (ItemEntity) -> Unit,
+    onLongPressItem: (ItemEntity) -> Unit,
+    onOpenAll: () -> Unit,
+    visibleSlots: Int = 5,
+    gap: Dp = 6.dp,
+) {
+    if (items.isEmpty()) return
+
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // ✅ taille calculée pour que ~5 thumbs tiennent sans clamp
+        val size = ((maxWidth - gap * (visibleSlots - 1)) / visibleSlots)
+            .coerceIn(26.dp, 40.dp)
+
+        val visible = remember(items) { items.take(visibleSlots) }
+        val remaining = (items.size - visible.size).coerceAtLeast(0)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(gap),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            visible.forEach { item ->
+                FridgeItemThumbnail(
+                    item = item,
+                    size = size,
+                    compact = true,
+                    selectionMode = selectionMode,
+                    selected = selectedIds.contains(item.id),
+                    dimAlpha = dimAlpha,
+                    onClick = { onClickItem(item) },
+                    onLongPress = { onLongPressItem(item) }
+                )
+            }
+
+            if (remaining > 0) {
+                VegDrawerMoreTile(
+                    size = size,
+                    remaining = remaining,
+                    dimAlpha = dimAlpha,
+                    onClick = onOpenAll
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VegDrawerMoreTile(
+    size: Dp,
+    remaining: Int,
+    dimAlpha: Float,
+    onClick: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val contentAlpha = (1f - (dimAlpha * 0.9f)).coerceIn(0.35f, 1f)
+
+    Surface(
+        modifier = Modifier
+            .size(size)
+            .alpha(contentAlpha)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(10.dp),
+        color = cs.surfaceVariant.copy(alpha = 0.45f),
+        border = BorderStroke(1.dp, cs.outlineVariant.copy(alpha = 0.55f)),
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = "+$remaining",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = cs.onSurfaceVariant.copy(alpha = 0.9f)
+            )
+        }
+    }
+}
+
 
 
 
