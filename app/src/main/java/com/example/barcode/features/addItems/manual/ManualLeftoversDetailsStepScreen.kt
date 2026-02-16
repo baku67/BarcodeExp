@@ -1,6 +1,7 @@
 package com.example.barcode.features.addItems.manual
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -20,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -127,7 +130,8 @@ fun ManualLeftoversDetailsStepScreen(
     }
 
     AddItemStepScaffold(
-        step = 3,
+        step = 2,
+        totalSteps = 2,
         onBack = onBack,
         onCancel = onCancel
     ) { innerPadding ->
@@ -150,127 +154,145 @@ fun ManualLeftoversDetailsStepScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 val scrollState = rememberScrollState()
+                val showTopScrim by remember { derivedStateOf { scrollState.value > 0 } }
 
-                Column(
+                Box(
                     modifier = Modifier
                         .weight(1f)
-                        .verticalScroll(scrollState),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(scrollState),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        OutlinedTextField(
-                            value = dishName,
-                            onValueChange = { dishName = it },
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Nom du plat") },
-                            singleLine = true
-                        )
-
-                        OutlinedTextField(
-                            value = portionsText,
-                            onValueChange = { portionsText = it.filter { ch -> ch.isDigit() }.take(2) },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Portions restantes") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true
-                        )
-
-                        OutlinedTextField(
-                            value = notes,
-                            onValueChange = { notes = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Notes") },
-                            minLines = 2
-                        )
-                    }
-
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = "Date de cuisson / préparation",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ChipLike(
-                                label = "Aujourd’hui",
-                                selected = cookedOffsetDays == 0,
-                                onClick = { cookedOffsetDays = 0 }
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = dishName,
+                                onValueChange = { dishName = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Nom du plat") },
+                                singleLine = true
                             )
-                            ChipLike(
-                                label = "Hier",
-                                selected = cookedOffsetDays == 1,
-                                onClick = { cookedOffsetDays = 1 }
+
+                            OutlinedTextField(
+                                value = portionsText,
+                                onValueChange = { portionsText = it.filter { ch -> ch.isDigit() }.take(2) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Portions restantes") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true
                             )
-                            ChipLike(
-                                label = "Avant-hier",
-                                selected = cookedOffsetDays == 2,
-                                onClick = { cookedOffsetDays = 2 }
+
+                            OutlinedTextField(
+                                value = notes,
+                                onValueChange = { notes = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Notes") },
+                                minLines = 2
                             )
                         }
 
-                        Text(
-                            text = "Cuisson : ${formatDate(cookedAtMs)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        HorizontalDivider()
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Date de cuisson / préparation",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ChipLike(
+                                    label = "Aujourd’hui",
+                                    selected = cookedOffsetDays == 0,
+                                    onClick = { cookedOffsetDays = 0 }
+                                )
+                                ChipLike(
+                                    label = "Hier",
+                                    selected = cookedOffsetDays == 1,
+                                    onClick = { cookedOffsetDays = 1 }
+                                )
+                                ChipLike(
+                                    label = "Avant-hier",
+                                    selected = cookedOffsetDays == 2,
+                                    onClick = { cookedOffsetDays = 2 }
+                                )
+                            }
+
+                            Text(
+                                text = "Cuisson : ${formatDate(cookedAtMs)}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = "DLC estimée",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = { storageDays = (storageDays - 1).coerceAtLeast(1) }) {
+                                    Text("–", style = MaterialTheme.typography.titleLarge)
+                                }
+                                Text(
+                                    text = "J + $storageDays  →  ${formatDate(expiryMs)}",
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                IconButton(onClick = { storageDays = (storageDays + 1).coerceAtMost(10) }) {
+                                    Text("+", style = MaterialTheme.typography.titleLarge)
+                                }
+                            }
+
+                            Text(
+                                text = "Astuce: viande/riz/crème = plutôt J+2.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        HorizontalDivider()
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Composition",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            ToggleRow("Contient de la viande", containsMeat) { containsMeat = it }
+                            ToggleRow("Contient de la crème", containsCream) { containsCream = it }
+                            ToggleRow("Contient du riz", containsRice) { containsRice = it }
+                            ToggleRow("Contient du poisson", containsFish) { containsFish = it }
+                            ToggleRow("Contient des œufs", containsEggs) { containsEggs = it }
+                        }
 
                         Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = "DLC estimée",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(onClick = { storageDays = (storageDays - 1).coerceAtLeast(1) }) {
-                                Text("–", style = MaterialTheme.typography.titleLarge)
-                            }
-                            Text(
-                                text = "J + $storageDays  →  ${formatDate(expiryMs)}",
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            IconButton(onClick = { storageDays = (storageDays + 1).coerceAtMost(10) }) {
-                                Text("+", style = MaterialTheme.typography.titleLarge)
-                            }
-                        }
-
-                        Text(
-                            text = "Astuce: viande/riz/crème = plutôt J+2.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
 
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = "Composition",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold
+                    if (showTopScrim) {
+                        TopEdgeFadeScrim(
+                            modifier = Modifier.align(Alignment.TopCenter),
+                            height = 18.dp
                         )
-
-                        ToggleRow("Contient de la viande", containsMeat) { containsMeat = it }
-                        ToggleRow("Contient de la crème", containsCream) { containsCream = it }
-                        ToggleRow("Contient du riz", containsRice) { containsRice = it }
-                        ToggleRow("Contient du poisson", containsFish) { containsFish = it }
-                        ToggleRow("Contient des œufs", containsEggs) { containsEggs = it }
                     }
-
-                    Spacer(modifier = Modifier.height(6.dp))
                 }
 
                 Button(

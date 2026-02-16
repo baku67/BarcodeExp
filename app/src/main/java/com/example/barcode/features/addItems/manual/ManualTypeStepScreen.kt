@@ -15,31 +15,24 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -62,6 +55,13 @@ fun ManualTypeStepScreen(
     val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
     val types = taxonomy.types
 
+    val listState = rememberLazyListState()
+    val showTopScrim by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+        }
+    }
+
     AddItemStepScaffold(
         step = 1,
         onBack = onBack,
@@ -82,23 +82,37 @@ fun ManualTypeStepScreen(
 
             Spacer(Modifier.height(6.dp))
 
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(bottom = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             ) {
-                items(types, key = { it.code }) { meta ->
-                    val imageResId = drawableId(context, meta.image)
-                    val palette = paletteForType(meta.code)
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(types, key = { it.code }) { meta ->
+                        val imageResId = drawableId(context, meta.image)
+                        val palette = paletteForType(meta.code)
 
-                    BigTypeCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(112.dp),
-                        title = meta.title,
-                        imageResId = imageResId,
-                        palette = palette,
-                        onClick = { onPick(meta.code) }
+                        BigTypeCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(112.dp),
+                            title = meta.title,
+                            imageResId = imageResId,
+                            palette = palette,
+                            onClick = { onPick(meta.code) }
+                        )
+                    }
+                }
+
+                if (showTopScrim) {
+                    TopEdgeFadeScrim(
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        height = 18.dp
                     )
                 }
             }
@@ -215,6 +229,13 @@ internal fun paletteForType(code: String): TypePalette {
             bg0 = Color(0xFF0B241A), // forêt profonde (plus doux que noir/vert pur)
             bg1 = Color(0xFF2E8B57), // vert feuille nuancé
             accent = Color(0xFFBFE7D3) // menthe légère (bordure propre)
+        )
+
+        // 🍎 Fruits — prune -> framboise, accent pêche/vanille (bien distinct des autres)
+        "FRUITS" -> TypePalette(
+            bg0 = Color(0xFF2A0F3C), // prune profond
+            bg1 = Color(0xFFC02A6B), // framboise / baie (moins “rouge viande”)
+            accent = Color(0xFFFFE1C7) // pêche/vanille (bordure clean)
         )
 
         // 🥩 Viandes — bordeaux -> rouge profond, accent rosé “chair”

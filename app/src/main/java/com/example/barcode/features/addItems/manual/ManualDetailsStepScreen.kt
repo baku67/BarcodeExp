@@ -1,9 +1,12 @@
 package com.example.barcode.features.addItems.manual
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -95,74 +98,95 @@ fun ManualDetailsStepScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Nom") },
-                    placeholder = { Text("ex: Blanc de poulet, Carottes, Omelette...") },
-                    singleLine = true
-                )
-
-                val storageLine = remember(
-                    subtypeMeta?.title,
-                    subtypeMeta?.storageDaysMin,
-                    subtypeMeta?.storageDaysMax
-                ) {
-                    val label = subtypeMeta?.title?.lowercase(Locale.getDefault())
-                    val min = subtypeMeta?.storageDaysMin
-                    val max = subtypeMeta?.storageDaysMax
-
-                    if (label == null || min == null) return@remember null
-
-                    val daysText = when {
-                        max != null && max != min -> "$min–$max jours"
-                        else -> "$min jours"
-                    }
-
-                    "Temps de conservation conseillé pour $label : $daysText"
+                val scrollState = rememberScrollState()
+                val showTopScrim by remember {
+                    derivedStateOf { scrollState.value > 0 }
                 }
 
-                if (storageLine != null) {
-                    Text(
-                        text = storageLine!!,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // ✅ Date limite via WheelDatePicker
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = "Date limite (optionnel)",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Box(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(scrollState),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        OutlinedButton(
-                            onClick = { showWheel = true },
-                            modifier = Modifier.weight(1f)
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Nom") },
+                            placeholder = { Text("ex: Blanc de poulet, Carottes, Omelette...") },
+                            singleLine = true
+                        )
+
+                        val storageLine = remember(
+                            subtypeMeta?.title,
+                            subtypeMeta?.storageDaysMin,
+                            subtypeMeta?.storageDaysMax
                         ) {
+                            val label = subtypeMeta?.title?.lowercase(Locale.getDefault())
+                            val min = subtypeMeta?.storageDaysMin
+                            val max = subtypeMeta?.storageDaysMax
+
+                            if (label == null || min == null) return@remember null
+
+                            val daysText = when {
+                                max != null && max != min -> "$min–$max jours"
+                                else -> "$min jours"
+                            }
+
+                            "Temps de conservation conseillé pour $label : $daysText"
+                        }
+
+                        if (storageLine != null) {
                             Text(
-                                text = expiryLabel,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                text = storageLine!!,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
-                        if (expiryMs != null) {
-                            TextButton(onClick = { expiryMs = null }) {
-                                Text("Effacer")
+                        // ✅ Date limite via WheelDatePicker
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Date limite (optionnel)",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { showWheel = true },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = expiryLabel,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                if (expiryMs != null) {
+                                    TextButton(onClick = { expiryMs = null }) {
+                                        Text("Effacer")
+                                    }
+                                }
                             }
                         }
+
+                        Spacer(Modifier.height(12.dp))
+                    }
+
+                    if (showTopScrim) {
+                        TopEdgeFadeScrim(
+                            modifier = Modifier.align(Alignment.TopCenter),
+                            height = 18.dp
+                        )
                     }
                 }
-
-                Spacer(Modifier.weight(1f))
 
                 Button(
                     onClick = {

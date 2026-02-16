@@ -6,7 +6,7 @@ import com.example.barcode.R
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
-val MANUAL_TYPES_WITH_SUBTYPE_IMAGE = setOf("VEGETABLES", "MEAT", "FISH", "DAIRY")
+val MANUAL_TYPES_WITH_SUBTYPE_IMAGE = setOf("VEGETABLES", "FRUITS", "MEAT", "FISH", "DAIRY")
 
 data class ManualTypeMeta(
     val code: String,

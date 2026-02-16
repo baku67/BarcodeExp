@@ -47,6 +47,9 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.luminance
 
 @Composable
@@ -114,25 +117,42 @@ fun ManualSubtypeStepScreen(
                 ) {
                     val cols = if (maxWidth >= 340.dp) 3 else 2
 
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(cols),
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        contentPadding = PaddingValues(bottom = 2.dp)
-                    ) {
-                        items(list, key = { it.code }) { subMeta ->
-                            val imageRes = drawableId(context, subMeta.image)
+                    val gridState = rememberLazyGridState()
+                    val showTopScrim by remember {
+                        derivedStateOf {
+                            gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0
+                        }
+                    }
 
-                            SubtypeTileCard(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(1.05f),
-                                title = subMeta.title,
-                                imageResId = imageRes,
-                                parentTypeCode = typeCode ?: "",
-                                selected = draft.manualSubtypeCode == subMeta.code,
-                                onClick = { onPick(subMeta.code) }
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyVerticalGrid(
+                            state = gridState,
+                            columns = GridCells.Fixed(cols),
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            contentPadding = PaddingValues(bottom = 2.dp)
+                        ) {
+                            items(list, key = { it.code }) { subMeta ->
+                                val imageRes = drawableId(context, subMeta.image)
+
+                                SubtypeTileCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(1.05f),
+                                    title = subMeta.title,
+                                    imageResId = imageRes,
+                                    parentTypeCode = typeCode ?: "",
+                                    selected = draft.manualSubtypeCode == subMeta.code,
+                                    onClick = { onPick(subMeta.code) }
+                                )
+                            }
+                        }
+
+                        if (showTopScrim) {
+                            TopEdgeFadeScrim(
+                                modifier = Modifier.align(Alignment.TopCenter),
+                                height = 18.dp
                             )
                         }
                     }
