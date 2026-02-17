@@ -25,10 +25,15 @@ val LocalIsDarkTheme = staticCompositionLocalOf { true }
 private val DarkColorScheme = darkColorScheme(
     primary = AppPrimary,
     tertiary = AppRed,
-    onPrimary = Color(0xFF0B1220), // Text dans bouton primary
-    background = Color(0xFF0B1220), // inutile car AppBackground au dessus ?
-    surface = Color(0xFF121418), // Bleu anthracite surface/cards UN PEU TRANSPARENT
-    // JAUNE/expiré: Color(0xFFF9A825)
+    onPrimary = Color(0xFF0B1220),
+    background = Color(0xFF0B1220),
+
+    // ✅ surface “glass”
+    surface = Color(0xB3121418), // ~70% d’opacité (ajuste B3 -> CC si tu veux plus opaque)
+
+    // ✅ IMPORTANT : sinon l’élévation recolore les surfaces et crée des différences visibles
+    surfaceTint = Color.Transparent,
+
     onBackground = Color.White
 )
 

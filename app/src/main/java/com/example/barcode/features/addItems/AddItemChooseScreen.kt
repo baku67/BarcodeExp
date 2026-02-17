@@ -1,18 +1,40 @@
 package com.example.barcode.features.addItems
 
+import androidx.annotation.RawRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.EditNote
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -22,6 +44,11 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.barcode.R
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+
+private val LeadingBoxSize = 86.dp
+private val LottieSize = 74.dp
 
 @Composable
 fun AddItemChooseScreen(
@@ -29,6 +56,23 @@ fun AddItemChooseScreen(
     onPickManual: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    val primary = MaterialTheme.colorScheme.primary
+
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val sheen = if (isDark) Color.White else Color.Black
+
+    // ✅ Reflet neutre (pas de couleur “verte/primary”)
+    val sharedGradient = Brush.linearGradient(
+        colors = listOf(
+            sheen.copy(alpha = if (isDark) 0.14f else 0.07f),
+            sheen.copy(alpha = if (isDark) 0.06f else 0.03f),
+            sheen.copy(alpha = if (isDark) 0.02f else 0.01f) // garde un léger “sheen”, pas 0f
+        )
+    )
+
+    // ✅ Base un peu plus opaque (même si ton theme.surface est translucide)
+    val cardBase = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -36,7 +80,6 @@ fun AddItemChooseScreen(
             .padding(horizontal = 18.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Header
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "Ajouter un aliment",
@@ -57,47 +100,33 @@ fun AddItemChooseScreen(
 
         Spacer(Modifier.height(6.dp))
 
-        val scanAccent = MaterialTheme.colorScheme.primary
-        val manualAccent = MaterialTheme.colorScheme.tertiary
-
-        // Option 1: Scan (avec Lottie)
+        // Card 1 : Scan (boucle normale)
         ChooseBigCard(
             title = "Scanner un code-barres",
             subtitle = "Rapide pour les produits emballés",
-            accent = scanAccent,
-            backgroundBrush = Brush.verticalGradient(
-                listOf(
-                    scanAccent.copy(alpha = 0.30f),
-                    scanAccent.copy(alpha = 0.12f),
-                    Color.Transparent
-                )
-            ),
+            containerColor = cardBase,
+            backgroundBrush = sharedGradient,
             leading = {
-                BarcodeScannerLottie(
-                    modifier = Modifier
-                        .size(44.dp)
+                LottieIconRaw(
+                    resId = R.raw.lottie_barcode_scanner,
+                    modifier = Modifier.size(LottieSize)
                 )
             },
             onClick = onPickScan
         )
 
-        // Option 2: Manual
+        // Card 2 : Manuel (ralenti + pause en fin)
         ChooseBigCard(
             title = "Ajouter sans code-barres",
             subtitle = "Légumes, viande, restes, vrac…",
-            accent = manualAccent,
-            backgroundBrush = Brush.verticalGradient(
-                listOf(
-                    manualAccent.copy(alpha = 0.28f),
-                    manualAccent.copy(alpha = 0.10f),
-                    Color.Transparent
-                )
-            ),
+            containerColor = cardBase,
+            backgroundBrush = sharedGradient,
             leading = {
-                Icon(
-                    imageVector = Icons.Outlined.EditNote,
-                    contentDescription = null,
-                    tint = manualAccent
+                LottieIconRawWithPause(
+                    resId = R.raw.lottie_select,
+                    modifier = Modifier.size(LottieSize),
+                    pauseMs = 1500L,
+                    slowFactor = 1.5f
                 )
             },
             onClick = onPickManual
@@ -117,17 +146,12 @@ fun AddItemChooseScreen(
 private fun ChooseBigCard(
     title: String,
     subtitle: String,
-    accent: Color,
+    containerColor: Color,
     backgroundBrush: Brush,
     leading: @Composable () -> Unit,
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(18.dp)
-
-    // Rend la card lisible même si ton theme.surface est semi-transparent
-    val baseSurface = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f)
-    val onSurface = MaterialTheme.colorScheme.onSurface
-    val onSurfaceSub = MaterialTheme.colorScheme.onSurfaceVariant
 
     Card(
         onClick = onClick,
@@ -136,40 +160,37 @@ private fun ChooseBigCard(
             .height(118.dp),
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = baseSurface,
-            contentColor = onSurface
+            containerColor = containerColor,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                // Gradient PAR-DESSUS une base opaque (sinon tu “vois rien”)
-                .background(backgroundBrush)
-                .padding(16.dp)
-        ) {
+        Box(Modifier.fillMaxSize()) {
+
+
+
             Row(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = accent.copy(alpha = 0.16f),                 // + visible
-                    border = BorderStroke(1.dp, accent.copy(alpha = 0.22f)),
-                    tonalElevation = 0.dp,
-                    modifier = Modifier.size(62.dp)
+                // ✅ PLUS de fond / border : juste une zone de layout plus grande
+                Box(
+                    modifier = Modifier.size(LeadingBoxSize),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center) { leading() }
+                    leading()
                 }
 
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(12.dp))
 
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = title,
                         fontWeight = FontWeight.SemiBold,
-                        color = onSurface,                               // ✅ plus de titre noir
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -177,7 +198,7 @@ private fun ChooseBigCard(
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = onSurfaceSub.copy(alpha = 0.92f),         // ✅ cohérent & lisible
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.92f),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -187,19 +208,63 @@ private fun ChooseBigCard(
     }
 }
 
-
-
 @Composable
-private fun BarcodeScannerLottie(modifier: Modifier = Modifier) {
-    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.barcode_scanner))
+private fun LottieIconRaw(
+    @RawRes resId: Int,
+    modifier: Modifier = Modifier
+) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(resId))
     val progress by animateLottieCompositionAsState(
         composition = composition,
         iterations = LottieConstants.IterateForever
     )
 
-    LottieAnimation(
-        composition = composition,
-        progress = progress,
-        modifier = modifier
-    )
+    if (composition != null) {
+        LottieAnimation(
+            composition = composition,
+            progress = progress,
+            modifier = modifier
+        )
+    }
+}
+
+/**
+ * Lottie : lecture 0->1, puis pause en gardant la dernière frame.
+ * slowFactor > 1 = plus lent (ex: 1.7f)
+ */
+@Composable
+private fun LottieIconRawWithPause(
+    @RawRes resId: Int,
+    modifier: Modifier = Modifier,
+    pauseMs: Long = 1500L,
+    slowFactor: Float = 1.5f
+) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(resId))
+    val anim = remember { Animatable(0f) }
+
+    LaunchedEffect(composition) {
+        val c = composition ?: return@LaunchedEffect
+
+        // duration (ms) * slowFactor
+        val base = c.duration.toInt().coerceAtLeast(300)
+        val durationMs = (base * slowFactor).toInt().coerceAtLeast(300)
+
+        while (isActive) {
+            anim.snapTo(0f)
+            anim.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = durationMs, easing = LinearEasing)
+            )
+            // hold last frame
+            delay(pauseMs)
+        }
+    }
+
+    if (composition != null) {
+        LottieAnimation(
+            composition = composition,
+            progress = anim.value,
+            modifier = modifier
+        )
+    }
 }
