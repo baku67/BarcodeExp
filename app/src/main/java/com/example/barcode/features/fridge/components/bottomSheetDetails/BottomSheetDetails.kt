@@ -69,6 +69,7 @@ import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.entities.ItemNoteEntity
 import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
+import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
 import org.json.JSONObject
 import java.time.Instant
 import java.time.ZoneId
@@ -245,20 +246,21 @@ fun ItemDetailsBottomSheet(
                 // ✅ Manual + NOT leftovers => Bon à savoir (teaser -> page dédiée)
                 if (isManual && !isManualLeftovers) {
                     item(key = "good_to_know") {
-                        val nameForGoodToKnow = remember(
-                            itemEntity.manualSubtype,
-                            itemEntity.manualType
-                        ) {
-                            prettifyTaxonomyCodeForUi(
-                                itemEntity.manualSubtype?.takeIf { it.isNotBlank() }
-                                    ?: itemEntity.manualType?.takeIf { it.isNotBlank() }
-                                    ?: "Cet aliment"
-                            )
+                        val goodToKnowCode =
+                            itemEntity.manualSubtype?.trim().takeIf { !it.isNullOrBlank() }
+                                ?: itemEntity.manualType?.trim().takeIf { !it.isNullOrBlank() }
+                                ?: ""
+
+                        val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
+                        val displayTitle = remember(goodToKnowCode) {
+                            taxonomy.subtypeMeta(goodToKnowCode)?.title
+                                ?: taxonomy.typeMeta(goodToKnowCode)?.title
+                                ?: prettifyTaxonomyCodeForUi(goodToKnowCode)
                         }
 
                         GoodToKnowTeaserCard(
-                            itemName = nameForGoodToKnow,
-                            onOpen = { onOpenGoodToKnow(nameForGoodToKnow) },
+                            itemName = displayTitle,              // ✅ joli dans le teaser
+                            onOpen = { onOpenGoodToKnow(goodToKnowCode) }, // ✅ on navigate toujours avec le code
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
