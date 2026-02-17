@@ -1,5 +1,6 @@
 package com.example.barcode.features.fridge
 
+import android.net.Uri
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.example.barcode.common.bus.SnackbarBus
@@ -72,6 +74,7 @@ enum class ViewMode { List, Fridge }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FridgePage(
+    navController: NavHostController,
     innerPadding: PaddingValues,
     authVm: AuthViewModel,
     onAddItem: () -> Unit,
@@ -385,6 +388,13 @@ fun FridgePage(
                 onOpenViewer = { images, startIndex ->
                     viewerImages = images
                     viewerStartIndex = startIndex
+                },
+                onOpenGoodToKnow = { name ->
+                    scope.launch {
+                        sheetState.hide()
+                        sheetItemEntity = null
+                        navController.navigate("good_to_know/${Uri.encode(name)}")
+                    }
                 },
                 onEdit = { item ->
                     scope.launch {

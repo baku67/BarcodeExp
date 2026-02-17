@@ -45,6 +45,7 @@ import com.example.barcode.common.ui.components.AppBackground
 import com.example.barcode.common.ui.theme.Theme
 import com.example.barcode.features.addItems.manual.ManualLeftoversDetailsStepScreen
 import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
+import com.example.barcode.features.fridge.components.bottomSheetDetails.GoodToKnowScreen
 import com.example.barcode.sync.SyncScheduler
 
 
@@ -182,6 +183,15 @@ class MainActivity : ComponentActivity() {
                                 )
                             } // contient la navigation au Swipe (Home/Items/Liste/Settings)
 
+                            composable("good_to_know/{itemName}") { backStackEntry ->
+                                val encoded = backStackEntry.arguments?.getString("itemName").orEmpty()
+                                val itemName = Uri.decode(encoded)
+
+                                GoodToKnowScreen(
+                                    itemName = itemName,
+                                    onClose = { navController.popBackStack() }
+                                )
+                            }
 
                             // Parcours addItem (choix -> ScanBarCode -> ScanDate -> Confirm) ou (choix -> type -> selection/remplissage)
                             navigation(startDestination = "addItem/choose", route = "addItem") {

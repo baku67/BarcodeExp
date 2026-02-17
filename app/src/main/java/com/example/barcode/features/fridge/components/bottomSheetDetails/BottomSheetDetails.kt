@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -80,6 +81,8 @@ fun ItemDetailsBottomSheet(
     onDeleteNote: (String) -> Unit = {},
     onClose: () -> Unit,
     onOpenViewer: (List<ViewerImage>, Int) -> Unit,
+    // ✅ Wiring: callback pour ouvrir la page dédiée "Bon à savoir"
+    onOpenGoodToKnow: (String) -> Unit = {},
     onEdit: (ItemEntity) -> Unit = {},
     onRemove: (ItemEntity) -> Unit = {},
     onAddToFavorites: (ItemEntity) -> Unit = {},
@@ -239,10 +242,23 @@ fun ItemDetailsBottomSheet(
                     }
                 }
 
-                // ✅ Manual + NOT leftovers => GoodToKnow
+                // ✅ Manual + NOT leftovers => Bon à savoir (teaser -> page dédiée)
                 if (isManual && !isManualLeftovers) {
                     item(key = "good_to_know") {
-                        GoodToKnowCollapsibleSection(
+                        val nameForGoodToKnow = remember(
+                            itemEntity.manualSubtype,
+                            itemEntity.manualType
+                        ) {
+                            prettifyTaxonomyCodeForUi(
+                                itemEntity.manualSubtype?.takeIf { it.isNotBlank() }
+                                    ?: itemEntity.manualType?.takeIf { it.isNotBlank() }
+                                    ?: "Cet aliment"
+                            )
+                        }
+
+                        GoodToKnowTeaserCard(
+                            itemName = nameForGoodToKnow,
+                            onOpen = { onOpenGoodToKnow(nameForGoodToKnow) },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -257,7 +273,6 @@ fun ItemDetailsBottomSheet(
                         )
                     }
                 }
-
 
                 item(key = "notes") {
                     NotesCollapsibleSection(
@@ -496,7 +511,6 @@ private fun buildViewerImages(
     return out
 }
 
-
 private const val DAY_MS = 24L * 60L * 60L * 1000L
 
 private data class LeftoversMeta(
@@ -519,31 +533,25 @@ private fun LeftoversMetaCollapsibleSection(
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     val meta = remember(manualMetaJson) { parseLeftoversMeta(manualMetaJson) }
+    if (meta == null) return
 
+    val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(18.dp)
-    val accent = MaterialTheme.colorScheme.primary
-    val surface = MaterialTheme.colorScheme.surface
 
-    val chevronRotation by animateFloatAsState(
+    val arrow by animateFloatAsState(
         targetValue = if (expanded) 90f else 0f,
-        label = "goodToKnowChevronRotation"
+        animationSpec = tween(220),
+        label = "leftoversArrow"
     )
 
-    val borderColor by animateColorAsState(
-        targetValue = if (expanded) accent.copy(alpha = 0.55f) else accent.copy(alpha = 0.28f),
-        label = "leftoversBorder"
-    )
-
-    val bgBrush = Brush.verticalGradient(
-        0f to accent.copy(alpha = 0.12f),
-        1f to surface
-    )
+    val bg = cs.surfaceColorAtElevation(1.dp)
+    val border = cs.outlineVariant.copy(alpha = 0.75f)
 
     Column(
         modifier = modifier
             .clip(shape)
-            .background(bgBrush)
-            .border(1.dp, borderColor, shape)
+            .background(bg)
+            .border(1.dp, border, shape)
             .animateContentSize()
     ) {
         Row(
@@ -553,110 +561,79 @@ private fun LeftoversMetaCollapsibleSection(
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(accent.copy(alpha = 0.16f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-
+            Icon(
+                imageVector = Icons.Outlined.FactCheck,
+                contentDescription = null,
+                tint = cs.primary,
+                modifier = Modifier.size(18.dp)
+            )
             Spacer(Modifier.width(10.dp))
 
-            Text(
-                text = "Infos du plat",
-                fontWeight = FontWeight.SemiBold,
-                color = accent
-            )
-
-            Spacer(Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Infos du plat",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "Détails (portions, cuisson, notes…) ",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cs.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = accent.copy(alpha = 0.95f),
-                modifier = Modifier
-                    .size(22.dp)
-                    .rotate(chevronRotation)
+                tint = cs.onSurfaceVariant,
+                modifier = Modifier.rotate(arrow)
             )
         }
 
         AnimatedVisibility(
             visible = expanded,
-            enter = expandVertically(animationSpec = tween(220)) + fadeIn(animationSpec = tween(220)),
-            exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(animationSpec = tween(180))
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp)
-                    .padding(bottom = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
-                if (meta == null) {
+                val cookedAt = meta.cookedAtMs?.let { "Cuit le ${formatDate(it)}" }
+                val storage = meta.storageDays?.let { "Conservation : $it jours" }
+
+                if (cookedAt != null) Text("• $cookedAt")
+                if (storage != null) Text("• $storage")
+                if (meta.portions != null) Text("• Portions : ${meta.portions}")
+
+                val flags = buildList {
+                    if (meta.containsMeat) add("contient viande")
+                    if (meta.containsFish) add("contient poisson")
+                    if (meta.containsEggs) add("contient œufs")
+                    if (meta.containsCream) add("contient crème")
+                    if (meta.containsRice) add("contient riz")
+                }
+                if (flags.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Aucune information enregistrée.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        text = "Contenu : ${flags.joinToString(", ")}",
+                        color = cs.onSurfaceVariant
                     )
-                    return@Column
                 }
 
-                val cooked = meta.cookedAtMs
-                val expiry = if (meta.cookedAtMs != null && meta.storageDays != null) {
-                    meta.cookedAtMs + meta.storageDays.toLong() * DAY_MS
-                } else null
-
-                InfoLine("Cuisson", cooked?.let(::formatDate) ?: "—")
-                InfoLine("DLC estimée", if (meta.storageDays != null && expiry != null) "J+${meta.storageDays} → ${formatDate(expiry)}" else "—")
-
-                if (meta.portions != null) {
-                    InfoLine("Portions", meta.portions.toString())
-                }
-
-                val composition = buildList {
-                    if (meta.containsMeat) add("Viande")
-                    if (meta.containsFish) add("Poisson")
-                    if (meta.containsEggs) add("Œufs")
-                    if (meta.containsCream) add("Crème")
-                    if (meta.containsRice) add("Riz")
-                }.joinToString(", ").ifBlank { "—" }
-
-                InfoLine("Composition", composition)
-
-                if (!meta.notes.isNullOrBlank()) {
-                    InfoLine("Notes", meta.notes)
+                meta.notes?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(text = it)
                 }
             }
         }
     }
 }
 
-@Composable
-private fun InfoLine(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "$label : ",
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.70f)
-        )
-        Text(
-            text = value,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f),
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-private fun parseLeftoversMeta(json: String?): LeftoversMeta? {
-    val s = json?.trim().orEmpty()
-    if (s.isBlank()) return null
+private fun parseLeftoversMeta(s: String?): LeftoversMeta? {
+    if (s.isNullOrBlank()) return null
 
     return runCatching {
         val o = JSONObject(s)
@@ -688,3 +665,84 @@ private fun formatDate(ms: Long): String {
     return "%02d/%02d/%04d".format(d.dayOfMonth, d.monthValue, d.year)
 }
 
+private fun prettifyTaxonomyCodeForUi(raw: String): String {
+    val s = raw.trim()
+    if (s.isBlank()) return "Cet aliment"
+
+    // Ex: "GREEN_BEANS" -> "Green Beans"
+    val normalized = s
+        .replace('-', '_')
+        .replace(Regex("_+"), "_")
+        .trim('_')
+
+    if (normalized.isBlank()) return "Cet aliment"
+
+    return normalized
+        .split('_')
+        .filter { it.isNotBlank() }
+        .joinToString(" ") { part ->
+            part.lowercase().replaceFirstChar { c ->
+                if (c.isLowerCase()) c.titlecase() else c.toString()
+            }
+        }
+}
+
+@Composable
+private fun GoodToKnowTeaserCard(
+    itemName: String,
+    onOpen: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val cs = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(18.dp)
+
+    val bg = cs.surfaceColorAtElevation(2.dp)
+    val border = cs.outlineVariant.copy(alpha = 0.75f)
+    val subtitle = "Conseils + check-list pour \"$itemName\" (conservation, hygiène, idées rapides)."
+
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(bg)
+            .border(1.dp, border, shape)
+            .clickable(onClick = onOpen)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = null,
+                tint = cs.primary,
+                modifier = Modifier.size(22.dp)
+            )
+
+            Spacer(Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Bon à savoir",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cs.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = cs.onSurfaceVariant
+            )
+        }
+    }
+}

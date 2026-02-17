@@ -37,6 +37,10 @@
       "parent": "VEGETABLES",
       "title": "Carottes",
       "image": "manual_subtype_veg_carrot",
+      "gradient": {
+        "colors": ["#F0A358", "#D2762B", "#9F4D14"],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",

@@ -130,6 +130,7 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
                 )
 
                 "items" -> FridgePage(
+                    navController = navController,
                     innerPadding = PaddingValues(),
                     authVm = authVm,
                     onAddItem = {
