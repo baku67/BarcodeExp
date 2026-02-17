@@ -28,14 +28,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -98,7 +102,7 @@ fun ItemThumbnail(
     cornerBadgeIconSize: Dp = 11.dp,
     cornerBadgeOffset: Dp = 4.dp,
 ) {
-    val shape = RoundedCornerShape(3.dp)
+    var shape = RoundedCornerShape(3.dp)
 
     var boxW by remember { mutableFloatStateOf(0f) }
     var boxH by remember { mutableFloatStateOf(0f) }
@@ -146,10 +150,66 @@ fun ItemThumbnail(
         contentAlignment = Alignment.Center
     ) {
         if (!imageUrl.isNullOrBlank()) {
+
+            val imageModifier = Modifier
+                .fillMaxSize()
+                // ✅ clip + (si besoin) offscreen compositing pour que le BlendMode masque sur l'alpha
+                .graphicsLayer {
+                    shape = shape
+                    clip = true
+                    compositingStrategy =
+                        if (cornerIconTint != null) CompositingStrategy.Offscreen
+                        else CompositingStrategy.Auto
+                }
+                .then(
+                    if (cornerIconTint != null) {
+                        val fittedLocal = fitted
+                        Modifier.drawWithCache {
+                            val rect = fittedLocal
+                            val startY = rect?.top ?: 0f
+                            val endY = rect?.let { it.top + it.height } ?: size.height
+
+                            val brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0f to Color.Transparent,
+                                    0.30f to Color.Transparent,
+                                    1f to cornerIconTint.copy(alpha = overlayAlpha)
+                                ),
+                                startY = startY,
+                                endY = endY
+                            )
+
+                            onDrawWithContent {
+                                // 1) image
+                                drawContent()
+
+                                // 2) gradient masqué par l'alpha de l'image (fond transparent ignoré)
+                                if (rect != null) {
+                                    clipRect(
+                                        left = rect.left,
+                                        top = rect.top,
+                                        right = rect.left + rect.width,
+                                        bottom = rect.top + rect.height
+                                    ) {
+                                        drawRect(
+                                            brush = brush,
+                                            topLeft = Offset(rect.left, rect.top),
+                                            size = Size(rect.width, rect.height),
+                                            blendMode = BlendMode.SrcAtop
+                                        )
+                                    }
+                                } else {
+                                    drawRect(brush = brush, blendMode = BlendMode.SrcAtop)
+                                }
+                            }
+                        }
+                    } else Modifier
+                )
+
             Image(
                 painter = painter,
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().clip(shape),
+                modifier = imageModifier,
                 contentScale = ContentScale.Fit,
                 alignment = if (alignBottom) Alignment.BottomCenter else Alignment.Center,
                 colorFilter = if (dimAlpha > 0f) dimFilter else null
@@ -177,28 +237,12 @@ fun ItemThumbnail(
             }
 
             if (fitted != null) {
-                // ✅ overlay tint + border calés sur la zone FIT réelle
+                // ✅ border calé sur la zone FIT réelle
                 Canvas(Modifier.matchParentSize()) {
                     val left = fitted.left
                     val top = fitted.top
                     val w = fitted.width
                     val h = fitted.height
-
-                    if (cornerIconTint != null) {
-                        drawRect(
-                            brush = Brush.verticalGradient(
-                                colorStops = arrayOf(
-                                    0f to Color.Transparent,
-                                    0.30f to Color.Transparent,
-                                    1f to cornerIconTint.copy(alpha = overlayAlpha)
-                                ),
-                                startY = top,
-                                endY = top + h
-                            ),
-                            topLeft = Offset(left, top),
-                            size = Size(w, h)
-                        )
-                    }
 
                     if (showImageBorder) {
                         drawRoundRect(
@@ -260,8 +304,6 @@ fun ItemThumbnail(
     }
 }
 
-
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FridgeItemThumbnail(
@@ -312,7 +354,8 @@ fun FridgeItemThumbnail(
             imageUrl = effectiveImageUrl,
             modifier = Modifier.fillMaxSize(),
             alignBottom = alignBottom,
-            cornerIconTint = glowColor,
+            // ✅ on ne passe un tint que si SOON/EXPIRED (sinon pas d'overlay inutile)
+            cornerIconTint = if (cornerIcon != null) glowColor else null,
             cornerIcon = cornerIcon,
             dimAlpha = if (selected) 0f else finalDimAlpha,
             showImageBorder = selected,
@@ -325,14 +368,6 @@ fun FridgeItemThumbnail(
         )
     }
 }
-
-
-
-
-
-
-
-
 
 fun effectiveItemImageUrl(
     context: Context,
