@@ -1,5 +1,6 @@
 package com.example.barcode.features.addItems.manual
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,13 +33,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -47,13 +55,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.luminance
 
 @Composable
 fun ManualSubtypeStepScreen(
@@ -144,6 +145,7 @@ fun ManualSubtypeStepScreen(
                         .weight(1f)
                 ) {
                     val cols = if (maxWidth >= 340.dp) 3 else 2
+                    val palette = remember(typeCode) { paletteForType(typeCode ?: "") }
 
                     val gridState = rememberLazyGridState()
                     val showTopScrim by remember {
@@ -152,9 +154,7 @@ fun ManualSubtypeStepScreen(
                         }
                     }
 
-                    LaunchedEffect(q) {
-                        runCatching { gridState.scrollToItem(0) }
-                    }
+                    LaunchedEffect(q) { runCatching { gridState.scrollToItem(0) } }
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyVerticalGrid(
@@ -168,13 +168,13 @@ fun ManualSubtypeStepScreen(
                             items(filteredList, key = { it.code }) { subMeta ->
                                 val imageRes = drawableId(context, subMeta.image)
 
-                                SubtypeTileCard(
+                                ManualTaxonomyTileCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(1.05f),
                                     title = subMeta.title,
+                                    palette = palette,
                                     imageResId = imageRes,
-                                    parentTypeCode = typeCode ?: "",
                                     selected = draft.manualSubtypeCode == subMeta.code,
                                     onClick = { onPick(subMeta.code) }
                                 )
@@ -252,25 +252,32 @@ internal fun ManualSubtypeFullBleedHeader(
     }
 }
 
+
+
+
+
+/**
+ * Card “carrée” partagée entre:
+ * - ManualSubTypeStepScreen (cards de sous-types)
+ * - ManualTypeStepScreen (résultats de recherche sous-types)
+ */
 @Composable
-private fun SubtypeTileCard(
+internal fun ManualTaxonomyTileCard(
     modifier: Modifier = Modifier,
     title: String,
-    parentTypeCode: String,
-    selected: Boolean,
-    imageResId: Int,
+    palette: TypePalette,
+    @DrawableRes imageResId: Int,
+    selected: Boolean = false,
     onClick: () -> Unit
 ) {
-    val basePalette = paletteForType(parentTypeCode)
-
     val surface = MaterialTheme.colorScheme.surface
-    val bg0 = lerp(surface, basePalette.bg0, if (selected) 0.22f else 0.14f)
-    val bg1 = lerp(surface, basePalette.bg1, if (selected) 0.22f else 0.14f)
+    val bg0 = lerp(surface, palette.bg0, if (selected) 0.22f else 0.14f)
+    val bg1 = lerp(surface, palette.bg1, if (selected) 0.22f else 0.14f)
 
     val borderColor = if (selected) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
     } else {
-        basePalette.accent.copy(alpha = 0.30f)
+        palette.accent.copy(alpha = 0.30f)
     }
 
     val shape = RoundedCornerShape(22.dp)

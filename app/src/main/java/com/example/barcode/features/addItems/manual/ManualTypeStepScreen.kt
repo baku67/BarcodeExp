@@ -12,11 +12,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -52,7 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -87,15 +86,6 @@ fun ManualTypeStepScreen(
 
     var query by rememberSaveable { mutableStateOf("") }
     val q = remember(query) { normalizeForSearch(query) }
-
-    data class SubtypeHit(
-        val typeCode: String,
-        val typeTitle: String,
-        val typeImage: String?,
-        val subtypeCode: String,
-        val subtypeTitle: String,
-        val subtypeImage: String?
-    )
 
     val allSubtypeHits = remember(types, taxonomy) {
         types.flatMap { t ->
@@ -150,7 +140,6 @@ fun ManualTypeStepScreen(
             Spacer(Modifier.height(6.dp))
 
             if (q.isBlank()) {
-                // MODE NORMAL: TYPES
                 val listState = rememberLazyListState()
                 val showTopScrim by remember {
                     derivedStateOf {
@@ -195,7 +184,6 @@ fun ManualTypeStepScreen(
                     }
                 }
             } else {
-                // MODE RECHERCHE: SUBTYPES UNIQUEMENT (TYPES EXCLUS des résultats)
                 BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -227,8 +215,8 @@ fun ManualTypeStepScreen(
                                 state = gridState,
                                 columns = GridCells.Fixed(cols),
                                 modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 contentPadding = PaddingValues(bottom = 18.dp)
                             ) {
                                 val orderedTypeCodes = types
@@ -256,17 +244,19 @@ fun ManualTypeStepScreen(
 
                                     items(
                                         items = group,
-                                        key = { hit -> "sub:${hit.typeCode}:${hit.subtypeCode}" } // ✅ key unique
+                                        key = { hit -> "sub:${hit.typeCode}:${hit.subtypeCode}" }
                                     ) { hit ->
                                         val subImgRes = drawableId(context, hit.subtypeImage)
 
-                                        SubtypeSearchTile(
+                                        ManualTaxonomyTileCard(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .aspectRatio(1.05f),
                                             title = hit.subtypeTitle,
-                                            imageResId = subImgRes,
                                             palette = palette,
+                                            imageResId = subImgRes,
+                                            selected = false,
                                             onClick = {
-                                                // branché => saut direct vers produit final
-                                                // non branché => fallback ouvre la catégorie
                                                 onPickSubtype?.invoke(hit.typeCode, hit.subtypeCode)
                                                     ?: onPick(hit.typeCode)
                                             }
@@ -288,8 +278,6 @@ fun ManualTypeStepScreen(
         }
     }
 }
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -370,68 +358,6 @@ private fun TypeResultHeaderRow(
         )
     }
 }
-
-@Composable
-private fun SubtypeSearchTile(
-    title: String,
-    @DrawableRes imageResId: Int,
-    palette: TypePalette,
-    onClick: () -> Unit
-) {
-    val shape = RoundedCornerShape(20.dp)
-    val surface = MaterialTheme.colorScheme.surface
-    val bg0 = lerp(surface, palette.bg0, 0.14f)
-    val bg1 = lerp(surface, palette.bg1, 0.14f)
-    val gradient = Brush.linearGradient(listOf(bg0, bg1))
-
-    Surface(
-        onClick = onClick,
-        shape = shape,
-        color = Color.Transparent,
-        tonalElevation = 0.dp,
-        shadowElevation = 2.dp,
-        border = BorderStroke(0.75.dp, palette.accent.copy(alpha = 0.30f))
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(gradient)
-                .padding(start = 8.dp, end = 8.dp, top = 10.dp, bottom = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                if (imageResId != 0) {
-                    Image(
-                        painter = painterResource(imageResId),
-                        contentDescription = null,
-                        modifier = Modifier.size(60.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                }
-            }
-
-            Text(
-                text = title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                minLines = 2,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
 
 internal fun normalizeForSearch(raw: String): String {
     val s = raw.trim().lowercase()
@@ -526,15 +452,6 @@ private fun BigTypeCard(
 fun drawableId(context: Context, name: String?): Int {
     if (name.isNullOrBlank()) return 0
     return context.resources.getIdentifier(name, "drawable", context.packageName)
-}
-
-private fun lerpColor(a: Color, b: Color, t: Float): Color {
-    return Color(
-        red = a.red + (b.red - a.red) * t,
-        green = a.green + (b.green - a.green) * t,
-        blue = a.blue + (b.blue - a.blue) * t,
-        alpha = a.alpha + (b.alpha - a.alpha) * t
-    )
 }
 
 internal fun paletteForType(code: String): TypePalette {
