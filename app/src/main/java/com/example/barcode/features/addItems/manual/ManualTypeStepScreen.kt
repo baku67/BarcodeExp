@@ -116,12 +116,12 @@ fun ManualTypeStepScreen(
         onBack = onBack,
         onCancel = onCancel
     ) { innerPadding ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                // ✅ même padding que ManualSubType => même maxWidth => même nb de colonnes
+                .padding(horizontal = ManualTaxonomyUiSpec.screenHPad, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
@@ -189,7 +189,7 @@ fun ManualTypeStepScreen(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    val cols = if (maxWidth >= 340.dp) 3 else 2
+                    val cols = ManualTaxonomyUiSpec.colsFor(maxWidth)
                     val gridState = rememberLazyGridState()
                     val showTopScrim by remember {
                         derivedStateOf {
@@ -215,9 +215,9 @@ fun ManualTypeStepScreen(
                                 state = gridState,
                                 columns = GridCells.Fixed(cols),
                                 modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                contentPadding = PaddingValues(bottom = 18.dp)
+                                verticalArrangement = Arrangement.spacedBy(ManualTaxonomyUiSpec.gridGap),
+                                horizontalArrangement = Arrangement.spacedBy(ManualTaxonomyUiSpec.gridGap),
+                                contentPadding = PaddingValues(bottom = ManualTaxonomyUiSpec.gridBottomPad)
                             ) {
                                 val orderedTypeCodes = types
                                     .map { it.code }
@@ -248,10 +248,11 @@ fun ManualTypeStepScreen(
                                     ) { hit ->
                                         val subImgRes = drawableId(context, hit.subtypeImage)
 
+                                        // ✅ EXACTEMENT la même tuile que ManualSubType
                                         ManualTaxonomyTileCard(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .aspectRatio(1.05f),
+                                                .aspectRatio(ManualTaxonomyUiSpec.tileAspect),
                                             title = hit.subtypeTitle,
                                             palette = palette,
                                             imageResId = subImgRes,

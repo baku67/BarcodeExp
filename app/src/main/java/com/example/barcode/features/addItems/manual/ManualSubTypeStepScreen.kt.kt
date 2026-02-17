@@ -1,7 +1,5 @@
 package com.example.barcode.features.addItems.manual
 
-import androidx.annotation.DrawableRes
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -10,26 +8,18 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,7 +31,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -82,7 +71,6 @@ fun ManualSubtypeStepScreen(
         onBack = onBack,
         onCancel = onCancel
     ) { innerPadding ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -99,7 +87,10 @@ fun ManualSubtypeStepScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                    .padding(
+                        horizontal = ManualTaxonomyUiSpec.screenHPad,
+                        vertical = ManualTaxonomyUiSpec.screenHPad
+                    ),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (typeCode == null) {
@@ -144,7 +135,7 @@ fun ManualSubtypeStepScreen(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    val cols = if (maxWidth >= 340.dp) 3 else 2
+                    val cols = ManualTaxonomyUiSpec.colsFor(maxWidth)
                     val palette = remember(typeCode) { paletteForType(typeCode ?: "") }
 
                     val gridState = rememberLazyGridState()
@@ -161,9 +152,9 @@ fun ManualSubtypeStepScreen(
                             state = gridState,
                             columns = GridCells.Fixed(cols),
                             modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            contentPadding = PaddingValues(bottom = 2.dp)
+                            verticalArrangement = Arrangement.spacedBy(ManualTaxonomyUiSpec.gridGap),
+                            horizontalArrangement = Arrangement.spacedBy(ManualTaxonomyUiSpec.gridGap),
+                            contentPadding = PaddingValues(bottom = ManualTaxonomyUiSpec.gridBottomPad)
                         ) {
                             items(filteredList, key = { it.code }) { subMeta ->
                                 val imageRes = drawableId(context, subMeta.image)
@@ -171,7 +162,7 @@ fun ManualSubtypeStepScreen(
                                 ManualTaxonomyTileCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .aspectRatio(1.05f),
+                                        .aspectRatio(ManualTaxonomyUiSpec.tileAspect),
                                     title = subMeta.title,
                                     palette = palette,
                                     imageResId = imageRes,
@@ -247,110 +238,6 @@ internal fun ManualSubtypeFullBleedHeader(
                     modifier = Modifier.size(96.dp),
                     contentScale = ContentScale.Fit
                 )
-            }
-        }
-    }
-}
-
-
-
-
-
-/**
- * Card “carrée” partagée entre:
- * - ManualSubTypeStepScreen (cards de sous-types)
- * - ManualTypeStepScreen (résultats de recherche sous-types)
- */
-@Composable
-internal fun ManualTaxonomyTileCard(
-    modifier: Modifier = Modifier,
-    title: String,
-    palette: TypePalette,
-    @DrawableRes imageResId: Int,
-    selected: Boolean = false,
-    onClick: () -> Unit
-) {
-    val surface = MaterialTheme.colorScheme.surface
-    val bg0 = lerp(surface, palette.bg0, if (selected) 0.22f else 0.14f)
-    val bg1 = lerp(surface, palette.bg1, if (selected) 0.22f else 0.14f)
-
-    val borderColor = if (selected) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
-    } else {
-        palette.accent.copy(alpha = 0.30f)
-    }
-
-    val shape = RoundedCornerShape(22.dp)
-    val gradient: Brush = Brush.linearGradient(listOf(bg0, bg1))
-    val imageSize = 60.dp
-
-    Surface(
-        onClick = onClick,
-        modifier = modifier,
-        shape = shape,
-        color = Color.Transparent,
-        tonalElevation = 0.dp,
-        shadowElevation = 2.dp,
-        border = BorderStroke(0.75.dp, borderColor)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(gradient)
-                .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 3.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (imageResId != 0) {
-                        Image(
-                            painter = painterResource(imageResId),
-                            contentDescription = null,
-                            modifier = Modifier.size(imageSize),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
-                }
-
-                Text(
-                    text = title,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 6.dp, end = 6.dp, bottom = 0.dp),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center,
-                    minLines = 2,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            if (selected) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = (-6).dp, y = 6.dp)
-                        .size(22.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
             }
         }
     }
