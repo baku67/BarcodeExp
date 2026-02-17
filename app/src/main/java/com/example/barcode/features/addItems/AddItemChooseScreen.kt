@@ -125,8 +125,10 @@ fun AddItemChooseScreen(
                 LottieIconRawWithPause(
                     resId = R.raw.lottie_select,
                     modifier = Modifier.size(LottieSize),
-                    pauseMs = 1500L,
-                    slowFactor = 1.5f
+                    pauseEndMs = 1500L,
+                    pauseStartMs = 150L,
+                    slowFactor = 1.4f,
+                    pingPong = true
                 )
             },
             onClick = onPickManual
@@ -236,35 +238,46 @@ private fun LottieIconRaw(
 private fun LottieIconRawWithPause(
     @RawRes resId: Int,
     modifier: Modifier = Modifier,
-    pauseMs: Long = 1500L,
-    slowFactor: Float = 1.5f
+    pauseEndMs: Long = 1500L,   // pause sur la dernière frame (progress=1f)
+    pauseStartMs: Long = 250L,  // pause sur la première frame (progress=0f) (optionnel)
+    slowFactor: Float = 1.4f,   // > 1 = plus lent
+    pingPong: Boolean = true    // ✅ va-et-vient
 ) {
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(resId))
     val anim = remember { Animatable(0f) }
 
-    LaunchedEffect(composition) {
+    LaunchedEffect(composition, pauseEndMs, pauseStartMs, slowFactor, pingPong) {
         val c = composition ?: return@LaunchedEffect
 
-        // duration (ms) * slowFactor
         val base = c.duration.toInt().coerceAtLeast(300)
         val durationMs = (base * slowFactor).toInt().coerceAtLeast(300)
 
         while (isActive) {
+            // 0 -> 1
             anim.snapTo(0f)
             anim.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(durationMillis = durationMs, easing = LinearEasing)
             )
-            // hold last frame
-            delay(pauseMs)
+            delay(pauseEndMs) // hold dernière frame
+
+            if (pingPong) {
+                // 1 -> 0 (retour smooth au départ)
+                anim.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(durationMillis = durationMs, easing = LinearEasing)
+                )
+                delay(pauseStartMs) // hold première frame (optionnel)
+            }
         }
     }
 
     if (composition != null) {
         LottieAnimation(
             composition = composition,
-            progress = anim.value,
+            progress = { anim.value },
             modifier = modifier
         )
     }
 }
+
