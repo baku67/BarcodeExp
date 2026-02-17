@@ -41,12 +41,37 @@
         "colors": ["#F0A358", "#D2762B", "#9F4D14"],
         "angleDeg": 0
       },
-      "storageDaysMin": 5,
-      "storageDaysMax": 7,
-      "fridgeAdvise": "",
-      "health_good": "",
-      "health_warning": "",
-      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+      "storageDaysMin": 10,
+      "storageDaysMax": 21,
+      "fridgeAdvise": {
+        "type": "bullets",
+        "items": [
+          "À mettre au bac à légumes pour ralentit le ramollissement et la perte d’eau.",
+          "Astuce anti-mou: Retire les fanes si elles sont présentes, elles pompent l’humidité.",
+          "Pour garder le croquant: plonger les carottes (épluchées ou non) dans une boîte d’eau froide au frigo, et en changeant l’eau régulièrement."
+      ]},
+      "health_good": {
+        "type": "bullets",
+        "items": [
+          "**Bêta-carotène** (provitamine A): Soutient la vision (notamment vision nocturne), la peau et les muqueuses, le système immunitaire.",
+          "**Fibres**: Améliorent le transit, la satiété, et aident à réguler glycémie et cholestérol.",
+          "**Potassium**: Utile pour la pression artérielle et la fonction musculaire.",
+          "**Vitamine K1**: Participe à la coagulation et au maintien des os.",
+          "**Antioxydants**: Protection cellulaire, bénéfice potentiel pour la santé cardiovasculaire."
+      ]},
+      "health_warning": {
+        "type": "bullets",
+        "items": [
+          "Compléments de bêta-carotène en plus: mauvaise idée surtout chez les fumeurs/ex-fumeurs."
+      ]},
+      "goodToKnow": {
+        "type": "bullets",
+        "items": [
+          "Une carotte qui devient **molle** n’est pas forcément “mauvaise” : souvent juste déshydratée → un bain d’eau froide peut la raffermir.",
+          "Les **fanes** sont comestibles : pesto, soupe, poêlée (à condition qu’elles soient bien fraîches).",
+          "**Congélation** : mieux vaut blanchir 2–3 min puis congeler (texture bien meilleure qu’en congelant cru).",
+          "La couleur donne des indices : Orange (caroténoïdes), violette (anthocyanes), jaune (xanthophylles) → profils antioxydants un peu différents.",
+        ]}
     },
     {
       "code": "VEG_GREEN_BEANS",

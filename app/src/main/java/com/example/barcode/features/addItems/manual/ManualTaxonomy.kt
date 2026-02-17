@@ -53,6 +53,11 @@ data class ManualGradientMeta(
     val angleDeg: Float? = null,
 )
 
+sealed interface ManualContent {
+    data class Markdown(val text: String) : ManualContent
+    data class Bullets(val items: List<String>) : ManualContent
+}
+
 data class ManualSubtypeMeta(
     val code: String,
     val parentCode: String,
@@ -60,11 +65,17 @@ data class ManualSubtypeMeta(
     val image: String? = null,
     val storageDaysMin: Int? = null,
     val storageDaysMax: Int? = null,
-    val goodToKnow: String? = null,
 
-    // ✅ NEW: venant de subtypes.gradient.colors[] (+ angleDeg optionnel)
+    // ✅ tri-color pour le titre/placeholder
     val gradient: ManualGradientMeta? = null,
+
+    // ✅ sections dynamiques
+    val fridgeAdvise: ManualContent? = null,
+    val healthGood: ManualContent? = null,
+    val healthWarning: ManualContent? = null,
+    val goodToKnow: ManualContent? = null,
 )
+
 
 data class ManualTaxonomy(
     val types: List<ManualTypeMeta>,

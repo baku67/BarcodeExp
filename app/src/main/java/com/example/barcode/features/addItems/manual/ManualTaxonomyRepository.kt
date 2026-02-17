@@ -54,11 +54,7 @@ object ManualTaxonomyRepository {
 
     private fun JSONArray.toSubtypeMetas(): List<ManualSubtypeMeta> = buildList {
         for (i in 0 until length()) {
-            val o = optJSONObject(i)
-            if (o == null) {
-                android.util.Log.e("ManualTaxonomy", "Subtype null at index=$i")
-                continue
-            }
+            val o = optJSONObject(i) ?: continue
 
             val code = o.optString("code").takeIf { it.isNotBlank() } ?: continue
             val parent = o.optString("parent").takeIf { it.isNotBlank() } ?: continue
@@ -84,16 +80,18 @@ object ManualTaxonomyRepository {
                     parentCode = parent,
                     title = title,
                     image = o.optString("image").takeIf { it.isNotBlank() },
-                    goodToKnow = o.optString("goodToKnow").takeIf { it.isNotBlank() },
-
                     storageDaysMin = o.optIntOrNull("storageDaysMin"),
                     storageDaysMax = o.optIntOrNull("storageDaysMax"),
 
-                    // ✅ NEW
-                    gradient = gradient
+                    gradient = gradient,
+
+                    // ✅ sections dynamiques (acceptent String OU {type,...})
+                    fridgeAdvise = o.optManualContent("fridgeAdvise"),
+                    healthGood = o.optManualContent("health_good"),
+                    healthWarning = o.optManualContent("health_warning"),
+                    goodToKnow = o.optManualContent("goodToKnow"),
                 )
             )
-
         }
     }
 }
@@ -102,6 +100,41 @@ object ManualTaxonomyRepository {
 private fun JSONObject.optIntOrNull(key: String): Int? {
     if (!has(key) || isNull(key)) return null
     return optInt(key)
+}
+
+private fun JSONObject.optManualContent(key: String): ManualContent? {
+    if (!has(key) || isNull(key)) return null
+
+    return when (val v = opt(key)) {
+        is JSONObject -> v.toManualContent()
+        is String -> v.trim().takeIf { it.isNotBlank() }?.let { ManualContent.Markdown(it) }
+        else -> null
+    }
+}
+
+/**
+ * Supporte:
+ * - { "type":"bullets", "items":[ "a", "b" ] }
+ * - { "type":"markdown", "text":"..." }  (ou "md")
+ * - { "type":"text", "text":"..." }
+ */
+private fun JSONObject.toManualContent(): ManualContent? {
+    val type = optString("type").trim().lowercase()
+    return when (type) {
+        "bullets", "bullet", "list" -> {
+            val items = optJSONArray("items")?.toStringList().orEmpty()
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+            if (items.isEmpty()) null else ManualContent.Bullets(items)
+        }
+        "markdown", "md", "text", "" -> {
+            val text = optString("text").takeIf { it.isNotBlank() }
+                ?: optString("md").takeIf { it.isNotBlank() }
+                ?: ""
+            text.trim().takeIf { it.isNotBlank() }?.let { ManualContent.Markdown(it) }
+        }
+        else -> null
+    }
 }
 
 private fun JSONArray.toStringList(): List<String> = buildList {
