@@ -48,6 +48,11 @@ data class ManualTypeMeta(
     val image: String? = null,
 )
 
+data class ManualGradientMeta(
+    val colors: List<String>,
+    val angleDeg: Float? = null,
+)
+
 data class ManualSubtypeMeta(
     val code: String,
     val parentCode: String,
@@ -56,6 +61,9 @@ data class ManualSubtypeMeta(
     val storageDaysMin: Int? = null,
     val storageDaysMax: Int? = null,
     val goodToKnow: String? = null,
+
+    // ✅ NEW: venant de subtypes.gradient.colors[] (+ angleDeg optionnel)
+    val gradient: ManualGradientMeta? = null,
 )
 
 data class ManualTaxonomy(

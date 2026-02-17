@@ -64,6 +64,20 @@ object ManualTaxonomyRepository {
             val parent = o.optString("parent").takeIf { it.isNotBlank() } ?: continue
             val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
 
+            val gradient = o.optJSONObject("gradient")?.let { g ->
+                val colors = g.optJSONArray("colors")
+                    ?.toStringList()
+                    .orEmpty()
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+
+                if (colors.isEmpty()) null
+                else ManualGradientMeta(
+                    colors = colors,
+                    angleDeg = g.optFloatOrNull("angleDeg")
+                )
+            }
+
             add(
                 ManualSubtypeMeta(
                     code = code,
@@ -72,11 +86,14 @@ object ManualTaxonomyRepository {
                     image = o.optString("image").takeIf { it.isNotBlank() },
                     goodToKnow = o.optString("goodToKnow").takeIf { it.isNotBlank() },
 
-                    // ✅ nouveaux champs
                     storageDaysMin = o.optIntOrNull("storageDaysMin"),
                     storageDaysMax = o.optIntOrNull("storageDaysMax"),
+
+                    // ✅ NEW
+                    gradient = gradient
                 )
             )
+
         }
     }
 }
@@ -85,4 +102,16 @@ object ManualTaxonomyRepository {
 private fun JSONObject.optIntOrNull(key: String): Int? {
     if (!has(key) || isNull(key)) return null
     return optInt(key)
+}
+
+private fun JSONArray.toStringList(): List<String> = buildList {
+    for (i in 0 until length()) {
+        val s = optString(i).takeIf { it.isNotBlank() } ?: continue
+        add(s)
+    }
+}
+
+private fun JSONObject.optFloatOrNull(key: String): Float? {
+    if (!has(key) || isNull(key)) return null
+    return optDouble(key).toFloat()
 }
