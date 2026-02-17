@@ -236,9 +236,7 @@ fun ManualTypeStepScreen(
                                         span = { GridItemSpan(cols) }
                                     ) {
                                         TypeResultHeaderRow(
-                                            title = any.typeTitle,
-                                            imageResId = typeImgRes,
-                                            palette = palette
+                                            title = any.typeTitle
                                         )
                                     }
 
@@ -322,43 +320,34 @@ internal fun ManualSubtypeSearchField(
 
 @Composable
 private fun TypeResultHeaderRow(
-    title: String,
-    @DrawableRes imageResId: Int,
-    palette: TypePalette
+    title: String
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp, bottom = 2.dp),
+            .padding(top = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = title,
-            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Black,
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        if (imageResId != 0) {
-            Image(
-                painter = painterResource(imageResId),
-                contentDescription = null,
-                modifier = Modifier.size(26.dp),
-                contentScale = ContentScale.Fit
-            )
-        }
-
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(10.dp))
 
         Box(
             modifier = Modifier
-                .height(1.dp)
+                .height(0.6.dp) // plus fin
                 .weight(1f)
-                .background(palette.accent.copy(alpha = 0.35f))
+                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f)) // plus discret
         )
     }
 }
+
 
 internal fun normalizeForSearch(raw: String): String {
     val s = raw.trim().lowercase()
