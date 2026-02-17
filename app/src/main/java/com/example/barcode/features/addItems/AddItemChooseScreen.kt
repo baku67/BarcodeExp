@@ -108,7 +108,7 @@ fun AddItemChooseScreen(
             backgroundBrush = sharedGradient,
             leading = {
                 LottieIconRaw(
-                    resId = R.raw.lottie_barcode_scanner,
+                    resId = R.raw.lottie_barcode_scanner_light,
                     modifier = Modifier.size(LottieSize)
                 )
             },
@@ -123,11 +123,11 @@ fun AddItemChooseScreen(
             backgroundBrush = sharedGradient,
             leading = {
                 LottieIconRawWithPause(
-                    resId = R.raw.lottie_select,
+                    resId = R.raw.lottie_select_light,
                     modifier = Modifier.size(LottieSize),
-                    pauseEndMs = 1500L,
+                    pauseEndMs = 1200L,
                     pauseStartMs = 150L,
-                    slowFactor = 1.4f,
+                    slowFactor = 1.3f,
                     pingPong = true
                 )
             },

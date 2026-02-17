@@ -576,7 +576,7 @@ private fun CameraScanOverlay(
         }
 
         // ✅ Lottie centrée dans la fenêtre (discrète)
-        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.lottie_barcode_scanner))
+        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.lottie_barcode_scanner_light))
         val progress by animateLottieCompositionAsState(
             composition = composition,
             iterations = LottieConstants.IterateForever
