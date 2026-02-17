@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,10 +47,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.luminance
 
 @Composable
@@ -66,6 +69,13 @@ fun ManualSubtypeStepScreen(
     val list = typeCode?.let { taxonomy.subtypesOf(it) }.orEmpty()
     val typeMeta = typeCode?.let { taxonomy.typeMeta(it) }
 
+    var query by rememberSaveable(typeCode) { mutableStateOf("") }
+    val q = remember(query) { normalizeForSearch(query) }
+    val filteredList = remember(q, list) {
+        if (q.isBlank()) list
+        else list.filter { normalizeForSearch(it.title).contains(q) }
+    }
+
     AddItemStepScaffold(
         step = 2,
         onBack = onBack,
@@ -75,7 +85,7 @@ fun ManualSubtypeStepScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding) // ✅ collé sous la barre "Ajouter un produit (2/3)"
+                .padding(innerPadding)
         ) {
             if (typeCode != null) {
                 ManualSubtypeFullBleedHeader(
@@ -85,7 +95,6 @@ fun ManualSubtypeStepScreen(
                 )
             }
 
-            // ✅ tout le reste garde ton padding “page”
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -102,10 +111,29 @@ fun ManualSubtypeStepScreen(
                     return@AddItemStepScaffold
                 }
 
+                ManualSubtypeSearchField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 if (list.isEmpty()) {
                     Text(
                         "Aucun sous-type disponible pour ${typeMeta?.title ?: typeCode}.",
                         style = MaterialTheme.typography.bodyMedium
+                    )
+                    return@AddItemStepScaffold
+                }
+
+                if (q.isNotBlank() && filteredList.isEmpty()) {
+                    Text(
+                        text = "Aucun résultat",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
                     )
                     return@AddItemStepScaffold
                 }
@@ -124,6 +152,10 @@ fun ManualSubtypeStepScreen(
                         }
                     }
 
+                    LaunchedEffect(q) {
+                        runCatching { gridState.scrollToItem(0) }
+                    }
+
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyVerticalGrid(
                             state = gridState,
@@ -133,7 +165,7 @@ fun ManualSubtypeStepScreen(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             contentPadding = PaddingValues(bottom = 2.dp)
                         ) {
-                            items(list, key = { it.code }) { subMeta ->
+                            items(filteredList, key = { it.code }) { subMeta ->
                                 val imageRes = drawableId(context, subMeta.image)
 
                                 SubtypeTileCard(
@@ -162,17 +194,12 @@ fun ManualSubtypeStepScreen(
     }
 }
 
-
-
-
-
 @Composable
 internal fun ManualSubtypeFullBleedHeader(
     typeTitle: String,
     typeImageResId: Int,
     palette: TypePalette
 ) {
-    // ✅ un peu moins “agressif”
     val topColor = lerp(palette.bg0, palette.accent, 0.28f)
 
     val gradient = Brush.verticalGradient(
@@ -189,7 +216,7 @@ internal fun ManualSubtypeFullBleedHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(118.dp) // ✅ plus fin
+            .height(118.dp)
     ) {
         Box(
             modifier = Modifier
@@ -200,7 +227,7 @@ internal fun ManualSubtypeFullBleedHeader(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 8.dp), // ✅ moins de padding vertical
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -217,18 +244,13 @@ internal fun ManualSubtypeFullBleedHeader(
                 Image(
                     painter = painterResource(typeImageResId),
                     contentDescription = null,
-                    modifier = Modifier.size(96.dp), // ✅ image un poil plus grande
+                    modifier = Modifier.size(96.dp),
                     contentScale = ContentScale.Fit
                 )
             }
         }
     }
 }
-
-
-
-
-
 
 @Composable
 private fun SubtypeTileCard(

@@ -318,13 +318,14 @@ class MainActivity : ComponentActivity() {
 
                                     ManualTypeStepScreen(
                                         onPick = { typeCode: String ->
-                                            addVm.setManualType(typeCode) // => doit setter manualTypeCode + reset manualSubtypeCode
+                                            // doit setter manualTypeCode + reset manualSubtypeCode
+                                            addVm.setManualType(typeCode)
 
                                             val hasSubtypes = taxonomy.subtypesOf(typeCode).isNotEmpty()
 
                                             when {
                                                 typeCode == "LEFTOVERS" ->
-                                                    navController.navigate("addItem/manual/leftovers/details") // TODO
+                                                    navController.navigate("addItem/manual/leftovers/details")
 
                                                 hasSubtypes ->
                                                     navController.navigate("addItem/manual/subtype")
@@ -333,10 +334,25 @@ class MainActivity : ComponentActivity() {
                                                     navController.navigate("addItem/manual/details")
                                             }
                                         },
+
+                                        // ✅ signature corrigée: (typeCode, subtypeCode)
+                                        onPickSubtype = { typeCode: String, subtypeCode: String ->
+                                            // important: set le type d'abord (et reset subtype), puis set le subtype
+                                            addVm.setManualType(typeCode)
+                                            addVm.setManualSubtype(subtypeCode)
+
+                                            if (typeCode == "LEFTOVERS") {
+                                                navController.navigate("addItem/manual/leftovers/details")
+                                            } else {
+                                                navController.navigate("addItem/manual/details")
+                                            }
+                                        },
+
                                         onCancel = { close() },
                                         onBack = { navController.popBackStack() }
                                     )
                                 }
+
 
                                 // ✅ Manuel - Étape 2 : subtype (vegetables, viande, laitiers)
                                 composable("addItem/manual/subtype") { backStackEntry ->
