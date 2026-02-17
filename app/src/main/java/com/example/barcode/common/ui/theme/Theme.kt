@@ -27,7 +27,7 @@ private val DarkColorScheme = darkColorScheme(
     tertiary = AppRed,
     onPrimary = Color(0xFF0B1220), // Text dans bouton primary
     background = Color(0xFF0B1220), // inutile car AppBackground au dessus ?
-    surface = Color(0x9C121418), // Bleu anthracite surface/cards UN PEU TRANSPARENT
+    surface = Color(0xFF121418), // Bleu anthracite surface/cards UN PEU TRANSPARENT
     // JAUNE/expiré: Color(0xFFF9A825)
     onBackground = Color.White
 )
