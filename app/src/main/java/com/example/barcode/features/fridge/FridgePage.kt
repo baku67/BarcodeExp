@@ -104,6 +104,7 @@ fun FridgePage(
     }
 
     var showVegDrawerAll by remember { mutableStateOf(false) }
+    val vegDrawerAllSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // ✅ Pull-to-refresh state (pour avoir l'icône qui descend pendant le geste)
     val pullState = rememberPullToRefreshState()
@@ -410,7 +411,7 @@ fun FridgePage(
     if (showVegDrawerAll) {
         ModalBottomSheet(
             onDismissRequest = { showVegDrawerAll = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            sheetState = vegDrawerAllSheetState,
         ) {
             Text(
                 text = "Bac à légumes (${vegDrawerItems.size})",
@@ -435,12 +436,22 @@ fun FridgePage(
                         selected = selectedIds.contains(item.id),
                         dimAlpha = dimAlpha,
                         onClick = {
-                            showVegDrawerAll = false
-                            if (selectionMode) toggleSelect(item.id) else sheetItemEntity = item
+                            if (selectionMode) {
+                                // ✅ multi-select : on toggle et on garde le modal ouvert
+                                toggleSelect(item.id)
+                            } else {
+                                // ✅ mode normal : on ferme et on ouvre les détails
+                                showVegDrawerAll = false
+                                sheetItemEntity = item
+                            }
                         },
                         onLongPress = {
-                            showVegDrawerAll = false
-                            if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id)
+                            if (!selectionMode) {
+                                // ✅ on entre en multi-select ET on garde le modal ouvert
+                                enterSelectionWith(item.id)
+                            } else {
+                                toggleSelect(item.id)
+                            }
                         }
                     )
                 }
@@ -449,6 +460,7 @@ fun FridgePage(
             Spacer(Modifier.height(24.dp))
         }
     }
+
 
 
     // --- Auto-load 1 seule fois quand l’onglet est réellement actif
@@ -723,43 +735,44 @@ fun FridgePage(
                                 }
 
                                 // ✅ IMPORTANT : ne retire pas l’item du LazyColumn quand on active le multi-select
-                                if (canScroll) {
-                                    item(key = "vegDrawer") {
-                                        if (!selectionMode) {
-                                            VegetableDrawerCube3D(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 6.dp),
-                                                height = vegDrawerHeight,
-                                                depth = 16.dp,
-                                                dimAlpha = dimAlpha,
-                                                isGhost = vegDrawerEmpty
-                                            ) {
-                                                if (vegDrawerEmpty) {
-                                                    Text(
-                                                        text = "Bac à légumes vide",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-                                                    )
-                                                } else {
-                                                    VegDrawerPreviewRow(
-                                                        items = vegDrawerItems,
-                                                        selectionMode = selectionMode,
-                                                        selectedIds = selectedIds,
-                                                        dimAlpha = dimAlpha,
-                                                        onClickItem = { item ->
-                                                            if (selectionMode) toggleSelect(item.id) else sheetItemEntity = item
-                                                        },
-                                                        onLongPressItem = { item ->
-                                                            if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id)
-                                                        },
-                                                        onOpenAll = { showVegDrawerAll = true }
-                                                    )
-                                                }
+                                // ✅ IMPORTANT : ne retire pas l’item du LazyColumn quand on active le multi-select
+                                item(key = "vegDrawer") {
+                                    // ✅ Si on le “pin” dans le dock (liste courte + pas selection), on ne le duplique pas dans la liste
+                                    if (!showPinnedVegDrawer) {
+                                        VegetableDrawerCube3D(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 6.dp),
+                                            height = vegDrawerHeight,
+                                            depth = 16.dp,
+                                            dimAlpha = dimAlpha,
+                                            isGhost = vegDrawerEmpty
+                                        ) {
+                                            if (vegDrawerEmpty) {
+                                                Text(
+                                                    text = "Bac à légumes vide",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                                )
+                                            } else {
+                                                VegDrawerPreviewRow(
+                                                    items = vegDrawerItems,
+                                                    selectionMode = selectionMode,
+                                                    selectedIds = selectedIds,
+                                                    dimAlpha = dimAlpha,
+                                                    onClickItem = { item ->
+                                                        if (selectionMode) toggleSelect(item.id) else sheetItemEntity = item
+                                                    },
+                                                    onLongPressItem = { item ->
+                                                        if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id)
+                                                    },
+                                                    onOpenAll = { showVegDrawerAll = true }
+                                                )
                                             }
-                                        } else {
-                                            Spacer(Modifier.height(vegDrawerHeight))
                                         }
+                                    } else {
+                                        // ✅ garde le key stable sans réserver de place (sinon doublon visuel)
+                                        Spacer(Modifier.height(0.dp))
                                     }
                                 }
                             }
