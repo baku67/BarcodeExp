@@ -1,25 +1,38 @@
 package com.example.barcode.features.fridge.components.bottomSheetDetails
 
 import android.graphics.Color as AndroidColor
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -30,9 +43,11 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.example.barcode.R
 import com.example.barcode.features.addItems.manual.ManualContent
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
+import kotlin.math.abs
 
 private const val ITEM_TOKEN = "{ITEM}"
 
@@ -68,6 +83,12 @@ fun GoodToKnowScreen(
             runCatching { Color(AndroidColor.parseColor(hex)) }.getOrNull()
         }
         if (parsed.size >= 3) parsed else listOf(cs.primary, cs.tertiary, cs.secondary)
+    }
+
+    val markdownBoldColor = remember(gradientColors, cs.surface) {
+        // ✅ plus optimisé que "prendre la 1ère" : choisit la couleur du gradient la plus lisible
+        gradientColors.maxByOrNull { abs(it.luminance() - cs.surface.luminance()) }
+            ?: cs.primary
     }
 
     val tokenSpan = remember(gradientColors) {
@@ -123,7 +144,8 @@ fun GoodToKnowScreen(
                     insert = insert,
                     baseTitleSpan = textSpan,
                     baseBodySpan = bodySpan,
-                    tokenSpan = tokenSpan
+                    tokenSpan = tokenSpan,
+                    boldColor = markdownBoldColor,
                 )
             }
 
@@ -132,11 +154,18 @@ fun GoodToKnowScreen(
                 item {
                     DynamicSectionCard(
                         title = "Conseils frigo",
-                        icon = { Icon(Icons.Outlined.Lightbulb, null) },
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
+                                contentDescription = "Frigo",
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
                         content = it,
                         insert = insert,
                         baseSpan = bodySpan,
-                        tokenSpan = tokenSpan
+                        tokenSpan = tokenSpan,
+                        boldColor = markdownBoldColor,
                     )
                 }
             }
@@ -146,11 +175,12 @@ fun GoodToKnowScreen(
                 item {
                     DynamicSectionCard(
                         title = "Bon pour la santé",
-                        icon = { Icon(Icons.Outlined.Info, null) },
+                        icon = { Icon(Icons.Outlined.HealthAndSafety, null) },
                         content = it,
                         insert = insert,
                         baseSpan = bodySpan,
-                        tokenSpan = tokenSpan
+                        tokenSpan = tokenSpan,
+                        boldColor = markdownBoldColor,
                     )
                 }
             }
@@ -164,7 +194,8 @@ fun GoodToKnowScreen(
                         content = it,
                         insert = insert,
                         baseSpan = bodySpan,
-                        tokenSpan = tokenSpan
+                        tokenSpan = tokenSpan,
+                        boldColor = markdownBoldColor,
                     )
                 }
             }
@@ -178,7 +209,8 @@ fun GoodToKnowScreen(
                         content = it,
                         insert = insert,
                         baseSpan = bodySpan,
-                        tokenSpan = tokenSpan
+                        tokenSpan = tokenSpan,
+                        boldColor = markdownBoldColor,
                     )
                 }
             }
@@ -194,6 +226,7 @@ private fun GoodToKnowHeader(
     baseTitleSpan: SpanStyle,
     baseBodySpan: SpanStyle,
     tokenSpan: SpanStyle,
+    boldColor: Color,
 ) {
     val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(22.dp)
@@ -233,21 +266,12 @@ private fun GoodToKnowHeader(
 
                 Column(Modifier.weight(1f)) {
                     MarkdownInlineText(
-                        template = "Conseils et repères pour “$ITEM_TOKEN”",
+                        template = "Conseils et infos pour les $ITEM_TOKEN",
                         insert = insert,
                         baseSpan = baseTitleSpan,
                         tokenSpan = tokenSpan,
-                        style = MaterialTheme.typography.titleLarge
-                    )
-
-                    Spacer(Modifier.height(6.dp))
-
-                    MarkdownInlineText(
-                        template = "Infos, listes et conseils pratiques pour “$ITEM_TOKEN”.",
-                        insert = insert,
-                        baseSpan = baseBodySpan,
-                        tokenSpan = tokenSpan,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.titleLarge,
+                        boldColor = boldColor,
                     )
                 }
             }
@@ -263,61 +287,101 @@ private fun DynamicSectionCard(
     insert: String,
     baseSpan: SpanStyle,
     tokenSpan: SpanStyle,
+    boldColor: Color? = null,
+    defaultExpanded: Boolean = false,
 ) {
+    var expanded by rememberSaveable(title) { mutableStateOf(defaultExpanded) }
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        label = "sectionArrowRotation"
+    )
+
     ElevatedCard(shape = MaterialTheme.shapes.large) {
-        Column(Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 if (icon != null) {
                     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
                         icon()
                     }
                     Spacer(Modifier.width(10.dp))
                 }
-                Text(title, style = MaterialTheme.typography.titleMedium)
+
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Icon(
+                    imageVector = Icons.Outlined.ExpandMore,
+                    contentDescription = if (expanded) "Réduire" else "Développer",
+                    modifier = Modifier.rotate(rotation),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            Spacer(Modifier.height(10.dp))
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                ) {
+                    Spacer(Modifier.height(2.dp))
 
-            when (content) {
-                is ManualContent.Markdown -> {
-                    val paragraphs = remember(content.text) {
-                        content.text
-                            .split("\n\n")
-                            .map { it.trim() }
-                            .filter { it.isNotBlank() }
-                    }
+                    when (content) {
+                        is ManualContent.Markdown -> {
+                            val paragraphs = remember(content.text) {
+                                content.text
+                                    .split("\n\n")
+                                    .map { it.trim() }
+                                    .filter { it.isNotBlank() }
+                            }
 
-                    paragraphs.forEachIndexed { idx, p ->
-                        MarkdownInlineText(
-                            template = p,
-                            insert = insert,
-                            baseSpan = baseSpan,
-                            tokenSpan = tokenSpan,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        if (idx != paragraphs.lastIndex) Spacer(Modifier.height(10.dp))
-                    }
-                }
-
-                is ManualContent.Bullets -> {
-                    content.items.forEach { b ->
-                        Row(Modifier.fillMaxWidth()) {
-                            Text(
-                                "•  ",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            MarkdownInlineText(
-                                template = b,
-                                insert = insert,
-                                baseSpan = baseSpan,
-                                tokenSpan = tokenSpan,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f)
-                            )
+                            paragraphs.forEachIndexed { idx, p ->
+                                MarkdownInlineText(
+                                    template = p,
+                                    insert = insert,
+                                    baseSpan = baseSpan,
+                                    tokenSpan = tokenSpan,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    boldColor = boldColor,
+                                )
+                                if (idx != paragraphs.lastIndex) Spacer(Modifier.height(10.dp))
+                            }
                         }
-                        Spacer(Modifier.height(6.dp))
+
+                        is ManualContent.Bullets -> {
+                            content.items.forEach { b ->
+                                Row(Modifier.fillMaxWidth()) {
+                                    Text(
+                                        "•  ",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    MarkdownInlineText(
+                                        template = b,
+                                        insert = insert,
+                                        baseSpan = baseSpan,
+                                        tokenSpan = tokenSpan,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f),
+                                        boldColor = boldColor,
+                                    )
+                                }
+                                Spacer(Modifier.height(6.dp))
+                            }
+                        }
                     }
                 }
             }
@@ -332,22 +396,26 @@ private fun MarkdownInlineText(
     baseSpan: SpanStyle,
     tokenSpan: SpanStyle,
     style: androidx.compose.ui.text.TextStyle,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    boldColor: Color? = null, // ✅
 ) {
-    val annotated = remember(template, insert, baseSpan, tokenSpan) {
+    val effectiveBoldColor = boldColor ?: MaterialTheme.colorScheme.primary
+
+    val boldSpan = remember(baseSpan, effectiveBoldColor) {
+        baseSpan.copy(color = effectiveBoldColor)
+    }
+
+    val annotated = remember(template, insert, baseSpan, tokenSpan, effectiveBoldColor) {
         buildInlineMarkdownAnnotatedString(
             template = template,
             insert = insert,
             baseSpan = baseSpan,
-            tokenSpan = tokenSpan
+            tokenSpan = tokenSpan,
+            boldSpan = boldSpan // ✅
         )
     }
 
-    Text(
-        text = annotated,
-        style = style,
-        modifier = modifier
-    )
+    Text(text = annotated, style = style, modifier = modifier)
 }
 
 /**
@@ -360,7 +428,8 @@ private fun buildInlineMarkdownAnnotatedString(
     template: String,
     insert: String,
     baseSpan: SpanStyle,
-    tokenSpan: SpanStyle
+    tokenSpan: SpanStyle,
+    boldSpan: SpanStyle? = null, // ✅
 ): AnnotatedString {
     var i = 0
     var bold = false
@@ -370,7 +439,11 @@ private fun buildInlineMarkdownAnnotatedString(
     val buf = StringBuilder()
 
     fun currentSpan(isToken: Boolean): SpanStyle {
-        val base = if (isToken) tokenSpan else baseSpan
+        val base = when {
+            isToken -> tokenSpan
+            bold && boldSpan != null -> boldSpan      // ✅ gras coloré
+            else -> baseSpan
+        }
 
         val weight = when {
             isToken && bold -> FontWeight.Bold
@@ -379,7 +452,6 @@ private fun buildInlineMarkdownAnnotatedString(
         }
 
         val fStyle = if (italic) FontStyle.Italic else base.fontStyle
-
         return base.copy(fontWeight = weight, fontStyle = fStyle)
     }
 
@@ -390,27 +462,13 @@ private fun buildInlineMarkdownAnnotatedString(
     }
 
     while (i < template.length) {
-        // ** bold toggle
-        if (template.startsWith("**", i)) {
-            flush()
-            bold = !bold
-            i += 2
-            continue
-        }
+        if (template.startsWith("**", i)) { flush(); bold = !bold; i += 2; continue }
+        if (template[i] == '*') { flush(); italic = !italic; i += 1; continue }
 
-        // * italic toggle
-        if (template[i] == '*') {
-            flush()
-            italic = !italic
-            i += 1
-            continue
-        }
-
-        // {ITEM} injection
         if (template.startsWith(ITEM_TOKEN, i)) {
             flush()
             buf.append(insert)
-            flush(isToken = true)
+            flush(isToken = true) // ✅ garde le gradient sur {ITEM}
             i += ITEM_TOKEN.length
             continue
         }
@@ -422,6 +480,7 @@ private fun buildInlineMarkdownAnnotatedString(
     flush()
     return out.toAnnotatedString()
 }
+
 
 /** Fallback si jamais le code n'existe pas dans la taxonomie */
 private fun prettifyTaxonomyCodeForUi(raw: String): String {
