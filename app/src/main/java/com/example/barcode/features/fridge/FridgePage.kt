@@ -433,7 +433,7 @@ fun FridgePage(
                         size = 72.dp,
                         compact = true,
                         selectionMode = selectionMode,
-                        selected = selectedIds.contains(item.id),
+                        selected = item.id in selectedIds,
                         dimAlpha = dimAlpha,
                         onClick = {
                             if (selectionMode) {
@@ -949,7 +949,7 @@ private fun VegDrawerManualItemsGrid(
                         FridgeItemThumbnail(
                             item = item,
                             size = 50.dp,
-                            selected = selectedIds.contains(item.id),
+                            selected = item.id in selectedIds,
                             selectionMode = selectionMode,
                             dimAlpha = dimAlpha,
                             onClick = { onClickItem(item) },
@@ -975,48 +975,66 @@ private fun VegDrawerPreviewRow(
     onClickItem: (ItemEntity) -> Unit,
     onLongPressItem: (ItemEntity) -> Unit,
     onOpenAll: () -> Unit,
-    visibleSlots: Int = 5,
     gap: Dp = 6.dp,
 ) {
     if (items.isEmpty()) return
 
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        // ✅ taille calculée pour que ~5 thumbs tiennent sans clamp
-        val size = ((maxWidth - gap * (visibleSlots - 1)) / visibleSlots)
-            .coerceIn(26.dp, 40.dp)
 
-        val visible = remember(items) { items.take(visibleSlots) }
+        // ✅ bouton "voir tout" uniquement si on dépasse 5
+        val showMore = items.size > 5
+
+        // ✅ 5 items, OU 4 items si on affiche le bouton
+        val visibleItemCount = when {
+            showMore -> 4
+            else -> minOf(5, items.size)
+        }
+
+        // ✅ slots réels pour calculer la taille (items + bouton éventuel)
+        val slotsForSizing = (visibleItemCount + if (showMore) 1 else 0).coerceAtLeast(1)
+
+        // ✅ ton calcul, mais basé sur les slots réels
+        val size = ((maxWidth - gap * (slotsForSizing - 1)) / slotsForSizing)
+            .coerceIn(30.dp, 48.dp)
+
+        val visible = remember(items, visibleItemCount) { items.take(visibleItemCount) }
         val remaining = (items.size - visible.size).coerceAtLeast(0)
 
-        Row(
+        // ✅ centrage du groupe
+        Box(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(gap),
-            verticalAlignment = Alignment.Bottom
+            contentAlignment = Alignment.Center
         ) {
-            visible.forEach { item ->
-                FridgeItemThumbnail(
-                    item = item,
-                    size = size,
-                    compact = true,
-                    selectionMode = selectionMode,
-                    selected = selectedIds.contains(item.id),
-                    dimAlpha = dimAlpha,
-                    onClick = { onClickItem(item) },
-                    onLongPress = { onLongPressItem(item) }
-                )
-            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(gap),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                visible.forEach { item ->
+                    FridgeItemThumbnail(
+                        item = item,
+                        size = size,
+                        compact = true,
+                        selectionMode = selectionMode,
+                        selected = item.id in selectedIds,
+                        dimAlpha = dimAlpha,
+                        onClick = { onClickItem(item) },
+                        onLongPress = { onLongPressItem(item) }
+                    )
+                }
 
-            if (remaining > 0) {
-                VegDrawerMoreTile(
-                    size = size,
-                    remaining = remaining,
-                    dimAlpha = dimAlpha,
-                    onClick = onOpenAll
-                )
+                if (showMore && remaining > 0) {
+                    VegDrawerMoreTile(
+                        size = size,
+                        remaining = remaining,
+                        dimAlpha = dimAlpha,
+                        onClick = onOpenAll
+                    )
+                }
             }
         }
     }
 }
+
 
 @Composable
 private fun VegDrawerMoreTile(
