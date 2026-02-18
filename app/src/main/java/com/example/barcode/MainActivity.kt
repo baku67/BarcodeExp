@@ -89,6 +89,14 @@ class MainActivity : ComponentActivity() {
                         tonalElevation = 0.dp
                     ) {
 
+                        // ✅ charge la taxonomie dès le démarrage pour que le frigo ait les images SUBTYPES
+                        val taxonomyBoot = rememberManualTaxonomy()
+
+                        // ✅ optionnel (mais OK) : assure le chargement même si taxonomyBoot n’est pas “utilisé”
+                        LaunchedEffect(Unit) {
+                            ManualTaxonomyRepository.preload(appContext)
+                        }
+
                         // Si ouverture app suite a click lien email verification (page dédiée ou ici juste snack):
                         LaunchedEffect(Unit) {
                             DeepLinkBus.links.collect { uri ->
@@ -220,10 +228,6 @@ class MainActivity : ComponentActivity() {
                                         navController.getBackStackEntry("addItem")
                                     }
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
-
-                                    LaunchedEffect(Unit) {
-                                        ManualTaxonomyRepository.preload(appContext)
-                                    }
 
                                     AddItemChooseScreen(
                                         onPickScan = {
