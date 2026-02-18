@@ -1,5 +1,7 @@
 package com.example.barcode.features.fridge.components.bottomSheetDetails
 
+import android.graphics.Color as AndroidColor
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
@@ -262,8 +264,33 @@ fun ItemDetailsBottomSheet(
                                 ?: prettifyTaxonomyCodeForUi(goodToKnowCode)
                         }
 
+                        // ✅ Rappel couleur (depuis le gradient du subtype, si dispo)
+                        val teaserGradientColors: List<Color> = remember(goodToKnowCode, taxonomy, cs) {
+                            val hexes = taxonomy?.subtypeMeta(goodToKnowCode)?.gradient?.colors?.take(3).orEmpty()
+                            val parsed = hexes.mapNotNull { hex ->
+                                runCatching { Color(AndroidColor.parseColor(hex)) }.getOrNull()
+                            }
+
+                            if (parsed.size >= 2) {
+                                when (parsed.size) {
+                                    2 -> listOf(parsed[0], parsed[1], parsed[1])
+                                    else -> parsed.take(3)
+                                }
+                            } else {
+                                listOf(cs.primary, cs.tertiary, cs.secondary)
+                            }
+                        }
+
+                        val teaserAccent = remember(teaserGradientColors, cs.primary) {
+                            teaserGradientColors.getOrNull(1)
+                                ?: teaserGradientColors.firstOrNull()
+                                ?: cs.primary
+                        }
+
                         GoodToKnowTeaserCard(
-                            itemName = displayTitle,              // ✅ joli dans le teaser
+                            itemName = displayTitle, // utile pour a11y
+                            accentColor = teaserAccent,
+                            gradientColors = teaserGradientColors,
                             onOpen = { onOpenGoodToKnow(goodToKnowCode) }, // ✅ on navigate toujours avec le code
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -696,20 +723,41 @@ private fun prettifyTaxonomyCodeForUi(raw: String): String {
 @Composable
 private fun GoodToKnowTeaserCard(
     itemName: String,
+    accentColor: Color,
+    gradientColors: List<Color>,
     onOpen: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(18.dp)
 
-    val bg = cs.surfaceColorAtElevation(2.dp)
-    val border = cs.outlineVariant.copy(alpha = 0.75f)
-    val subtitle = "Conseils + check-list pour \"$itemName\" (conservation, hygiène, idées rapides)."
+    val baseBg = cs.surfaceColorAtElevation(2.dp)
+
+    val c0 = gradientColors.getOrNull(0) ?: accentColor
+    val c1 = gradientColors.getOrNull(1) ?: accentColor
+    val c2 = gradientColors.getOrNull(2) ?: c1
+
+    // ✅ Test : gradient très léger (discret)
+    val bg0 = lerp(baseBg, c0, 0.12f)
+    val bg1 = lerp(baseBg, c1, 0.07f)
+    val bg2 = lerp(baseBg, c2, 0.03f)
+
+    val bgBrush = remember(baseBg, bg0, bg1, bg2) {
+        Brush.linearGradient(listOf(bg0, bg1, bg2))
+    }
+
+    val border = remember(accentColor, cs.outlineVariant) {
+        lerp(cs.outlineVariant, accentColor, 0.70f).copy(alpha = 0.55f)
+    }
+
+    val iconTint = remember(accentColor) { accentColor.copy(alpha = 0.95f) }
+    val chevronTint = remember(accentColor) { accentColor.copy(alpha = 0.70f) }
+    val iconHalo = remember(accentColor) { accentColor.copy(alpha = 0.14f) }
 
     Box(
         modifier = modifier
             .clip(shape)
-            .background(bg)
+            .background(bgBrush)
             .border(1.dp, border, shape)
             .clickable(onClick = onOpen)
             .padding(horizontal = 14.dp, vertical = 12.dp)
@@ -718,36 +766,34 @@ private fun GoodToKnowTeaserCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = null,
-                tint = cs.primary,
-                modifier = Modifier.size(22.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(iconHalo, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
 
             Spacer(Modifier.width(10.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Bon à savoir",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = cs.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Text(
+                text = "Bon à savoir",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
 
             Spacer(Modifier.width(8.dp))
 
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = cs.onSurfaceVariant
+                contentDescription = "Ouvrir Bon à savoir pour $itemName",
+                tint = chevronTint
             )
         }
     }
