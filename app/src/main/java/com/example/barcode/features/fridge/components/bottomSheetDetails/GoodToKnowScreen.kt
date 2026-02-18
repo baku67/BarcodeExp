@@ -125,6 +125,8 @@ fun GoodToKnowScreen(
     val goodToKnow = subtype?.goodToKnow
 
     Scaffold(
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         contentWindowInsets = WindowInsets(0)
     ) {
         Column(Modifier.fillMaxSize()) {
@@ -335,7 +337,7 @@ private fun DynamicSectionCard(
     val cs = MaterialTheme.colorScheme
 
     // ✅ Border fine + discrète (teintée item)
-    val borderColor = remember(accentColor) { accentColor.copy(alpha = 0.18f) }
+    val borderColor = remember(accentColor) { accentColor.copy(alpha = 0.28f) }
 
     // ✅ Chevron teinté, reste neutre
     val chevronTint = remember(accentColor) { accentColor.copy(alpha = 0.60f) }
