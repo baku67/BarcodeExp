@@ -1,4 +1,21 @@
 {
+  "snippets": {
+    "nutrient.fibers": "**Fibres**: améliorent le transit, la satiété, et aident à réguler glycémie et cholestérol.",
+    "nutrient.potassium": "**Potassium**: utile pour la pression artérielle et la fonction musculaire.",
+    "nutrient.vitamin_k1": "**Vitamine K1**: participe à la coagulation et au maintien des os.",
+    "nutrient.vitamin_c": "**Vitamine C**: soutien immunitaire, antioxydant, participe au collagène (peau, gencives, cicatrisation).",
+    "nutrient.antioxidants": "**Antioxydants**: protection cellulaire (stress oxydatif), bénéfices possibles cardio sur le long terme.",
+    "nutrient.carotenoids": "**Caroténoïdes**: antioxydants ; certains (β-carotène…) contribuent à la vitamine A → vision, peau, immunité.",
+    "nutrient.folate": "**Folate (B9)**: utile au renouvellement cellulaire et à la formation des cellules sanguines (important grossesse/croissance).",
+    "nutrient.low_calories": "**Peu calorique**: pratique pour “faire du volume” et augmenter la satiété sans trop charger l’apport énergétique.",
+    "storage.cut_hermetic_paper_towel": "Si tu l’as coupée: boîte hermétique + papier absorbant + coupe fraîche (retire les bords bruns) → meilleure tenue.",
+    "storage.freeze_blanch_2_3min": "**Congélation**: blanchir 2–3 min, refroidir (eau glacée), égoutter puis congeler (texture bien meilleure qu’en cru).",
+    "storage.veg_drawer": "À mettre au **bac à légumes** (ralentit le ramollissement et la perte d’eau).",
+    "storage.avoid_ethylene": "**Évite l’éthylène**: ne colle pas aux pommes/bananes/avocats/tomates (ça accélère le vieillissement).",
+    "storage.dont_wash": "**Ne lave pas** avant stockage (sauf si tu sèches vraiment à fond): l’eau résiduelle accélère le pourrissement."
+  },
+
+
   "types": [
     {
       "code": "VEGETABLES",
@@ -51,27 +68,24 @@
       },
       "fridgeAdvise": {
         "type": "bullets",
+        "refs": ["storage.veg_drawer"],
         "items": [
-          "À mettre au **bac à légumes** pour ralentit le ramollissement et la perte d’eau.",
           "Astuce **anti-mou**: Retire les fanes si elles sont présentes, elles pompent l’humidité.",
           "Pour garder le **croquant**: plonger les carottes (épluchées ou non) dans une boîte d’eau froide au frigo, et en changeant l’eau régulièrement."
       ]},
       "health_good": {
         "type": "bullets",
-        "items": [
-          "**Caroténoïdes**: Soutient la vision (notamment vision nocturne), la peau et les muqueuses, le système immunitaire.",
-          "**Fibres**: Améliorent le transit, la satiété, et aident à réguler glycémie et cholestérol.",
-          "**Potassium**: Utile pour la pression artérielle et la fonction musculaire.",
-          "**Vitamine K1**: Participe à la coagulation et au maintien des os.",
-          "**Antioxydants**: Protection cellulaire, bénéfice potentiel pour la santé cardiovasculaire."
-      ]},
+        "refs": ["nutrient.fibers", "nutrient.carotenoids", "nutrient.potassium", "nutrient.antioxidants", "nutrient.vitamin_k1"],
+        "items": []},
       "health_warning": {
         "type": "bullets",
+        "refs": [],
         "items": [
           "Compléments de bêta-carotène en plus: mauvaise idée surtout chez les fumeurs/ex-fumeurs."
       ]},
       "goodToKnow": {
         "type": "bullets",
+        "refs": [],
         "items": [
           "Une carotte qui devient **molle** n’est pas forcément mauvaise: souvent juste déshydratée → un bain d’eau froide peut la raffermir.",
           "Les **fanes** sont comestibles: pesto, soupe, poêlée (à condition qu’elles soient bien fraîches).",
@@ -98,20 +112,16 @@
       },
       "fridgeAdvise": {
         "type": "bullets",
+        "refs": ["storage.veg_drawer", "storage.dont_wash"],
         "items": [
-          "À mettre au **bac à légumes**.",
-          "Ne les lave pas avant de les stocker.",
           "Évite : sac fermé “tout mouillé” / haricots déjà “pré-lavés” très humides → ça tourne vite."
         ]},
       "health_good": {
         "type": "bullets",
+        "refs": ["nutrient.fibers", "nutrient.vitamin_c", "nutrient.vitamin_k1", "nutrient.carotenoids"],
         "items": [
-          "**Fibres** → transit, satiété, aide à la régulation du cholestérol.",
-          "**Vitamine C** → soutien immunitaire + rôle antioxydant.",
           "**Vitamine B9** → utile pour la formation des cellules sanguines, important en période de croissance, et souvent mise en avant pour la santé cardio.",
-          "**Vitamine K1**: Participe à la coagulation et au maintien des os.",
           "**Minéraux** (potassium, magnésium, calcium, fer) → pression artérielle, fonction musculaire, os, transport de l’oxygène.",
-          "**Caroténoïdes** → antioxydants, soutien la peau et la vision.",
           "Bonus : **peu caloriques** → top en accompagnement “volume” sans exploser l’apport énergétique."
         ]},
       "health_warning": {
@@ -145,20 +155,13 @@
       },
       "fridgeAdvise": {
         "type": "bullets",
-        "items": [
-          "À mettre au **bac à légumes**.",
-          "**Ne lave pas** avant stockage (sauf si tu sèches vraiment à fond): L’eau résiduelle = feuilles qui pourrissent plus vite.",
-          "**Évite l’éthylène** (fait vieillir plus vite): Ne colle pas l’iceberg à des pommes, avocats, tomates, bananes, poires.",
-          "Si tu l’as coupée: Boîte hermétique + papier absorbant + coupe fraîche (retire les bords bruns) → meilleure tenue."
-        ]},
+        "refs": ["storage.veg_drawer", "storage.dont_wash", "storage.avoid_ethylene", "storage.cut_hermetic_paper_towel"],
+        "items": []},
       "health_good": {
         "type": "bullets",
+        "refs": ["nutrient.fibers", "nutrient.vitamin_k1", "nutrient.folate", "nutrient.potassium"],
         "items": [
-          "**Eau** (très riche): aide à l’hydratation et à la sensation de fraîcheur/satiété.",
-          "**Fibres** (modérées): soutien du transit et du microbiote (mieux si tu manges la portion généreuse).",
-          "**Vitamine K**: contribue à la coagulation et au métabolisme osseux.",
-          "**Folate**: utile pour le renouvellement cellulaire (particulièrement important en période de croissance/grossesse).",
-          "**Potassium**: participe à l’équilibre nerveux/musculaire et à la pression artérielle."
+          "**Eau** (très riche): aide à l’hydratation et à la sensation de fraîcheur/satiété."
         ]},
       "health_warning": {
         "type": "bullets",

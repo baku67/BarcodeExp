@@ -1,15 +1,20 @@
 package com.example.barcode.features.addItems.manual
 
 import android.content.Context
+import android.util.Log
 import com.example.barcode.R
 import kotlinx.coroutines.Dispatchers
-import org.json.JSONArray
-import org.json.JSONObject
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+
+private const val MANUAL_TAXONOMY_TAG = "ManualTaxonomy"
 
 object ManualTaxonomyRepository {
+
+    private const val TAG = MANUAL_TAXONOMY_TAG
 
     @Volatile private var cached: ManualTaxonomy? = null
     private val mutex = Mutex()
@@ -37,19 +42,21 @@ object ManualTaxonomyRepository {
     private fun load(context: Context): ManualTaxonomy {
         return try {
             val json = context.resources
-                // ✅ si ton fichier s'appelle manual_taxonomy.json
                 .openRawResource(R.raw.manual_taxonomy)
-                // ✅ si ton fichier s'appelle manual_taxonomie.json, remplace par :
-                // .openRawResource(R.raw.manual_taxonomie)
                 .bufferedReader()
                 .use { it.readText() }
 
             val root = JSONObject(json)
+
+            // ✅ snippets optionnels: { "snippets": { "key": "...", ... } }
+            val snippets = root.optJSONObject("snippets")?.toStringMap().orEmpty()
+
             val types = root.getJSONArray("types").toTypeMetas()
-            val subtypes = root.getJSONArray("subtypes").toSubtypeMetas()
-            return ManualTaxonomy(types = types, subtypes = subtypes)
+            val subtypes = root.getJSONArray("subtypes").toSubtypeMetas(snippets)
+
+            ManualTaxonomy(types = types, subtypes = subtypes)
         } catch (e: Exception) {
-            android.util.Log.e("ManualTaxonomy", "Failed to load taxonomy", e)
+            Log.e(TAG, "Failed to load taxonomy", e)
             ManualTaxonomy(types = emptyList(), subtypes = emptyList())
         }
     }
@@ -70,7 +77,7 @@ object ManualTaxonomyRepository {
         }
     }
 
-    private fun JSONArray.toSubtypeMetas(): List<ManualSubtypeMeta> = buildList {
+    private fun JSONArray.toSubtypeMetas(snippets: Map<String, String>): List<ManualSubtypeMeta> = buildList {
         for (i in 0 until length()) {
             val o = optJSONObject(i) ?: continue
 
@@ -103,28 +110,27 @@ object ManualTaxonomyRepository {
 
                     gradient = gradient,
 
-                    // ✅ sections dynamiques (acceptent String OU {type,...})
-                    fridgeAdvise = o.optManualContent("fridgeAdvise"),
-                    healthGood = o.optManualContent("health_good"),
-                    healthWarning = o.optManualContent("health_warning"),
-                    goodToKnow = o.optManualContent("goodToKnow"),
+                    // ✅ sections dynamiques (supportent refs)
+                    fridgeAdvise = o.optManualContent("fridgeAdvise", snippets),
+                    healthGood = o.optManualContent("health_good", snippets),
+                    healthWarning = o.optManualContent("health_warning", snippets),
+                    goodToKnow = o.optManualContent("goodToKnow", snippets),
                 )
             )
         }
     }
 }
 
-
 private fun JSONObject.optIntOrNull(key: String): Int? {
     if (!has(key) || isNull(key)) return null
     return optInt(key)
 }
 
-private fun JSONObject.optManualContent(key: String): ManualContent? {
+private fun JSONObject.optManualContent(key: String, snippets: Map<String, String>): ManualContent? {
     if (!has(key) || isNull(key)) return null
 
     return when (val v = opt(key)) {
-        is JSONObject -> v.toManualContent()
+        is JSONObject -> v.toManualContent(snippets)
         is String -> v.trim().takeIf { it.isNotBlank() }?.let { ManualContent.Markdown(it) }
         else -> null
     }
@@ -132,25 +138,59 @@ private fun JSONObject.optManualContent(key: String): ManualContent? {
 
 /**
  * Supporte:
- * - { "type":"bullets", "items":[ "a", "b" ] }
- * - { "type":"markdown", "text":"..." }  (ou "md")
+ * - { "type":"bullets", "items":[ "a", "b" ], "refs":["k1","k2"] }
+ * - { "type":"markdown", "text":"...", "refs":["k1"] }  (ou "md")
  * - { "type":"text", "text":"..." }
  */
-private fun JSONObject.toManualContent(): ManualContent? {
+private fun JSONObject.toManualContent(snippets: Map<String, String>): ManualContent? {
     val type = optString("type").trim().lowercase()
+
+    val refs = optJSONArray("refs")
+        ?.toStringList()
+        .orEmpty()
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+
+    fun resolveRefs(): List<String> {
+        if (refs.isEmpty()) return emptyList()
+        return refs.mapNotNull { key ->
+            snippets[key]?.trim()?.takeIf { it.isNotBlank() }.also { resolved ->
+                if (resolved == null) Log.w(MANUAL_TAXONOMY_TAG, "Snippet manquant: $key")
+            }
+        }
+    }
+
     return when (type) {
         "bullets", "bullet", "list" -> {
-            val items = optJSONArray("items")?.toStringList().orEmpty()
+            val items = optJSONArray("items")
+                ?.toStringList()
+                .orEmpty()
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
-            if (items.isEmpty()) null else ManualContent.Bullets(items)
+
+            val resolved = resolveRefs()
+            val merged = dedupeKeepOrder(resolved + items)
+
+            if (merged.isEmpty()) null else ManualContent.Bullets(merged)
         }
+
         "markdown", "md", "text", "" -> {
-            val text = optString("text").takeIf { it.isNotBlank() }
+            val base = optString("text").takeIf { it.isNotBlank() }
                 ?: optString("md").takeIf { it.isNotBlank() }
                 ?: ""
-            text.trim().takeIf { it.isNotBlank() }?.let { ManualContent.Markdown(it) }
+
+            val resolved = resolveRefs()
+            val merged = buildString {
+                if (resolved.isNotEmpty()) append(resolved.joinToString("\n\n"))
+                if (base.isNotBlank()) {
+                    if (isNotEmpty()) append("\n\n")
+                    append(base.trim())
+                }
+            }
+
+            merged.trim().takeIf { it.isNotBlank() }?.let { ManualContent.Markdown(it) }
         }
+
         else -> null
     }
 }
@@ -165,4 +205,26 @@ private fun JSONArray.toStringList(): List<String> = buildList {
 private fun JSONObject.optFloatOrNull(key: String): Float? {
     if (!has(key) || isNull(key)) return null
     return optDouble(key).toFloat()
+}
+
+private fun JSONObject.toStringMap(): Map<String, String> {
+    val out = LinkedHashMap<String, String>()
+    val keys = keys()
+    while (keys.hasNext()) {
+        val k = keys.next()
+        val v = optString(k).trim()
+        if (k.isNotBlank() && v.isNotBlank()) out[k.trim()] = v
+    }
+    return out
+}
+
+private fun dedupeKeepOrder(list: List<String>): List<String> {
+    if (list.isEmpty()) return emptyList()
+    val seen = LinkedHashSet<String>(list.size)
+    val out = ArrayList<String>(list.size)
+    for (s in list) {
+        val t = s.trim()
+        if (t.isNotBlank() && seen.add(t)) out += t
+    }
+    return out
 }

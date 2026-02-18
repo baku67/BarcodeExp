@@ -167,7 +167,7 @@ fun GoodToKnowScreen(
                 fridgeAdvise?.let {
                     item {
                         DynamicSectionCard(
-                            title = "Conseils frigo",
+                            title = "Stockage",
                             icon = {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
@@ -188,7 +188,7 @@ fun GoodToKnowScreen(
                 healthGood?.let {
                     item {
                         DynamicSectionCard(
-                            title = "Bon pour la santé",
+                            title = "Bienfaits",
                             icon = { Icon(Icons.Outlined.HealthAndSafety, null) },
                             content = it,
                             insert = insert,
@@ -280,10 +280,16 @@ private fun GoodToKnowHeader(
                     Spacer(Modifier.width(14.dp))
                 }
 
+                val insertCap = remember(insert) {
+                    insert.replaceFirstChar { ch ->
+                        if (ch.isLowerCase()) ch.titlecase() else ch.toString()
+                    }
+                }
+
                 Column(Modifier.weight(1f)) {
                     MarkdownInlineText(
-                        template = "Conseils et infos pour les $ITEM_TOKEN",
-                        insert = insert,
+                        template = "Conseils et infos\n$ITEM_TOKEN",
+                        insert = insertCap,
                         baseSpan = baseTitleSpan,
                         tokenSpan = tokenSpan,
                         style = MaterialTheme.typography.titleLarge,
