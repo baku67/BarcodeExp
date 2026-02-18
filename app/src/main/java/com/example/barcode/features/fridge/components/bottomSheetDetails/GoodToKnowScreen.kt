@@ -44,6 +44,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.example.barcode.R
@@ -56,8 +57,8 @@ import kotlin.math.abs
 private const val ITEM_TOKEN = "{ITEM}"
 
 private val MONTH_LABELS_FR = listOf(
-    "Jan", "Fév", "Mar", "Avr", "Mai", "Jun",
-    "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"
+    "J", "F", "M", "A", "M", "J",
+    "J", "A", "S", "O", "N", "D"
 )
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -166,9 +167,9 @@ fun GoodToKnowScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
-                    .offset(y = (-14).dp),
+                    .offset(y = (-18).dp),
                 contentPadding = PaddingValues(
-                    top = 10.dp,
+                    top = 6.dp,
                     bottom = 24.dp + navBottom
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -189,6 +190,7 @@ fun GoodToKnowScreen(
                                 months = temperateMonths,
                                 accentColor = accentColor,
                             )
+                            Spacer(Modifier.height(15.dp))
                         }
                     }
 
@@ -298,7 +300,7 @@ private fun GoodToKnowHeroHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(240.dp)
+            .height(220.dp)
             .background(heroBrush)
             .statusBarsPadding()
     ) {
@@ -362,12 +364,15 @@ private fun SeasonalityGaugeCard(
         Calendar.getInstance().get(Calendar.MONTH) + 1 // 1..12
     }
 
-    val isInSeasonNow = remember(months, currentMonth) { months.contains(currentMonth) }
+    val monthsSet = remember(months) { months.filter { it in 1..12 }.toSet() }
+    val ranges = remember(monthsSet) { buildMonthRanges(monthsSet) }
+
+    val isInSeasonNow = remember(monthsSet, currentMonth) { currentMonth in monthsSet }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp)
+            .padding(top = 0.dp)
     ) {
         Text(
             text = if (isInSeasonNow) "C'est la saison !" else "Hors saison",
@@ -379,6 +384,9 @@ private fun SeasonalityGaugeCard(
         Spacer(Modifier.height(10.dp))
 
         val gaugeShape = RoundedCornerShape(999.dp)
+        val innerPad = 8.dp
+        val highlightVPad = 6.dp
+
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -389,44 +397,59 @@ private fun SeasonalityGaugeCard(
             tonalElevation = 0.dp,
             shadowElevation = 0.dp
         ) {
-            Row(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = innerPad)
             ) {
-                MONTH_LABELS_FR.forEachIndexed { index, label ->
-                    val month = index + 1
-                    val isInSeason = months.contains(month)
-                    val isCurrent = month == currentMonth
+                val cellW = maxWidth / 12f
+                val highlightColor = cs.primary.copy(alpha = 0.32f)
 
-                    val cellShape = RoundedCornerShape(8.dp)
-                    val cellBg = when {
-                        isCurrent && isInSeason -> cs.primary.copy(alpha = 0.36f)
-                        isInSeason -> cs.primary.copy(alpha = 0.22f)
-                        isCurrent -> accentColor.copy(alpha = 0.14f)
-                        else -> Color.Transparent
-                    }
+                // ✅ Surbrillance en blocs (ranges contigus)
+                ranges.forEach { r ->
+                    val startIndex = (r.first - 1).coerceIn(0, 11)
+                    val endIndex = (r.last - 1).coerceIn(0, 11)
+                    val x = cellW * startIndex
+                    val w = cellW * (endIndex - startIndex + 1)
 
                     Box(
                         modifier = Modifier
-                            .weight(1f)
+                            .offset(x = x)
+                            .width(w)
                             .fillMaxHeight()
-                            .padding(vertical = 6.dp, horizontal = 1.dp)
-                            .background(cellBg, cellShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = label,
-                            color = when {
-                                isCurrent && isInSeason -> cs.onPrimary
-                                isInSeason -> cs.onSurface
-                                else -> cs.onSurfaceVariant
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium,
-                            maxLines = 1
-                        )
+                            .padding(vertical = highlightVPad)
+                            .background(highlightColor, RoundedCornerShape(999.dp))
+                    )
+                }
+
+                // ✅ Labels au-dessus
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    MONTH_LABELS_FR.forEachIndexed { index, label ->
+                        val month = index + 1
+                        val isInSeason = month in monthsSet
+                        val isCurrent = month == currentMonth
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                color = when {
+                                    isInSeason -> cs.onSurface
+                                    isCurrent -> accentColor.copy(alpha = 0.85f)
+                                    else -> cs.onSurfaceVariant
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }
@@ -435,12 +458,34 @@ private fun SeasonalityGaugeCard(
         Spacer(Modifier.height(6.dp))
 
         Text(
-            text = "Saison estimée — Europe tempérée",
-            color = cs.onSurfaceVariant.copy(alpha = 0.75f),
+            text = "Europe tempérée",
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.End,
+            color = cs.onSurfaceVariant.copy(alpha = 0.65f),
             style = MaterialTheme.typography.labelSmall
         )
     }
 }
+
+private fun buildMonthRanges(months: Set<Int>): List<IntRange> {
+    if (months.isEmpty()) return emptyList()
+
+    val ranges = mutableListOf<IntRange>()
+    var start: Int? = null
+
+    for (m in 1..12) {
+        if (m in months) {
+            if (start == null) start = m
+        } else if (start != null) {
+            ranges += start!!..(m - 1)
+            start = null
+        }
+    }
+    if (start != null) ranges += start!!..12
+
+    return ranges
+}
+
 
 
 
