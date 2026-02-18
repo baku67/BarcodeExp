@@ -339,7 +339,9 @@ private fun GoodToKnowHeroHeader(
                     template = "**$ITEM_TOKEN**",
                     insert = insertCap,
                     baseSpan = baseTitleSpan,
-                    tokenSpan = tokenSpan,
+                    tokenSpan = tokenSpan.copy(
+                        fontSize = MaterialTheme.typography.headlineMedium.fontSize // ou headlineMedium
+                    ),
                     style = MaterialTheme.typography.titleLarge,
                     boldColor = boldColor,
                 )
