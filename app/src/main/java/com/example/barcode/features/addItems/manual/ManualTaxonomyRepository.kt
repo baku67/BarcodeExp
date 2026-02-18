@@ -4,6 +4,9 @@ import android.content.Context
 import android.util.Log
 import com.example.barcode.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -16,6 +19,9 @@ private const val MANUAL_TAXONOMY_TAG = "ManualTaxonomy"
 object ManualTaxonomyRepository {
 
     private const val TAG = MANUAL_TAXONOMY_TAG
+
+    private val _taxonomyState = MutableStateFlow<ManualTaxonomy?>(null)
+    val taxonomyState: StateFlow<ManualTaxonomy?> = _taxonomyState.asStateFlow()
 
     @Volatile
     private var cached: ManualTaxonomy? = null
@@ -51,6 +57,7 @@ object ManualTaxonomyRepository {
         }
 
         cached = taxonomy
+        _taxonomyState.value = taxonomy
         taxonomy
     }
 

@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +60,7 @@ import com.example.barcode.common.ui.expiry.expirySelectionBorderColor
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
+import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
 
 private data class FittedRectPx(
     val left: Float,
@@ -409,8 +411,9 @@ fun rememberEffectiveItemImageUrl(item: ItemEntity): String? {
     val context = LocalContext.current
     val pkg = context.packageName
 
-    // ✅ mêmes keys que tes 3 implémentations → mêmes triggers de recalcul
-    return remember(item.addMode, item.manualType, item.manualSubtype, item.imageUrl, pkg) {
+    val taxonomy by ManualTaxonomyRepository.taxonomyState.collectAsState()
+
+    return remember(taxonomy, item.addMode, item.manualType, item.manualSubtype, item.imageUrl, pkg) {
         effectiveItemImageUrl(context, item)
     }
 }

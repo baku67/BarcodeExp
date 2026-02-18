@@ -94,52 +94,60 @@ data class ManualTaxonomy(
 
 object ManualTaxonomyImageResolver {
 
-    // Cache par NOM de drawable (pas par code) => évite les “mauvaises” résolutions figées.
-    private val resByName = ConcurrentHashMap<String, Int>()
+    private val byName = ConcurrentHashMap<String, Int>()
+    private val typeByCode = ConcurrentHashMap<String, Int>()
+    private val subtypeByCode = ConcurrentHashMap<String, Int>()
 
-    private fun resolveByName(context: Context, drawableName: String?): Int {
+    private fun idOf(context: Context, drawableName: String?): Int {
         val name = drawableName?.trim().orEmpty()
         if (name.isBlank()) return 0
-        return resByName.getOrPut(name) {
-            context.resources.getIdentifier(name, "drawable", context.packageName)
-        }
+
+        byName[name]?.let { return it }
+
+        val id = context.resources.getIdentifier(name, "drawable", context.packageName)
+        if (id != 0) byName[name] = id // ✅ on ne cache pas 0
+        return id
     }
 
-    /** ✅ Utilise directement le champ JSON `image` si dispo */
     fun resolveTypeDrawableResId(context: Context, typeCode: String): Int {
+        typeByCode[typeCode]?.let { return it }
+
         val tax = ManualTaxonomyRepository.peek()
-        val meta = tax?.typeMeta(typeCode)
+        val fromJson = tax?.typeMeta(typeCode)?.image
+        val fallback = "manual_type_${typeCode.lowercase()}"
 
-        // 1) priorité au JSON `image`
-        resolveByName(context, meta?.image).takeIf { it != 0 }?.let { return it }
+        val id = idOf(context, fromJson).takeIf { it != 0 } ?: idOf(context, fallback)
 
-        // 2) fallback : ancienne convention
-        return resolveByName(context, "manual_type_${typeCode.lowercase()}")
+        if (id != 0) typeByCode[typeCode] = id // ✅ pas de cache si 0
+        return id
     }
 
-    /** ✅ Utilise directement le champ JSON `image` si dispo */
     fun resolveSubtypeDrawableResId(context: Context, subtypeCode: String): Int {
+        subtypeByCode[subtypeCode]?.let { return it }
+
         val tax = ManualTaxonomyRepository.peek()
-        val meta = tax?.subtypeMeta(subtypeCode)
 
-        // 1) priorité au JSON `image` (=> FRUITS OK car "manual_subtype_fruits_*")
-        resolveByName(context, meta?.image).takeIf { it != 0 }?.let { return it }
+        // ✅ 1) JSON → source de vérité
+        val fromJson = tax?.subtypeMeta(subtypeCode)?.image
+        var id = idOf(context, fromJson)
 
-        // 2) fallback : ancienne convention (utile si taxonomy pas encore chargée)
-        val safe = subtypeCode.lowercase()
+        // ✅ 2) fallback conventions (au cas où)
+        if (id == 0) {
+            val safe = subtypeCode.lowercase()
+            val directName = if (safe.startsWith("manual_subtype_")) safe else "manual_subtype_$safe"
+            id = idOf(context, directName)
 
-        resolveByName(context, "manual_subtype_$safe").takeIf { it != 0 }?.let { return it }
-
-        // 3) fallback compat FRUITS si jamais appelé avant preload/peek (optionnel mais pratique)
-        if (safe.startsWith("fruit_")) {
-            resolveByName(context, "manual_subtype_fruits_" + safe.removePrefix("fruit_"))
-                .takeIf { it != 0 }
-                ?.let { return it }
+            // (garde le petit fallback FRUIT_ → fruits_ si tu as du legacy)
+            if (id == 0 && safe.startsWith("fruit_")) {
+                id = idOf(context, "manual_subtype_fruits_${safe.removePrefix("fruit_")}")
+            }
         }
 
-        return 0
+        if (id != 0) subtypeByCode[subtypeCode] = id // ✅ pas de cache si 0
+        return id
     }
 }
+
 
 
 
@@ -243,7 +251,7 @@ internal fun ManualTaxonomyTileCard(
 }
 
 
-internal object ManualTaxonomyUiSpec {
+object ManualTaxonomyUiSpec {
     // IMPORTANT: c’est ça qui faisait basculer ManualType en 2 colonnes (padding trop grand)
     val screenHPad: Dp = 10.dp
 
