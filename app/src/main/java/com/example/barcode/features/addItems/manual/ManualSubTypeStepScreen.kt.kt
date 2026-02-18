@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -38,10 +40,12 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
@@ -95,7 +99,10 @@ fun ManualSubtypeStepScreen(
                 ManualSubtypeFullBleedHeader(
                     typeTitle = typeMeta?.title ?: typeCode,
                     typeImageResId = drawableId(context, typeMeta?.image),
-                    palette = paletteForType(typeCode)
+                    palette = paletteForType(typeCode),
+                    // ✅ Revenir à un header plus petit UNIQUEMENT ici
+                    // (laisse ManualDetails sur le default 188.dp)
+                    height = 118.dp
                 )
             }
 
@@ -205,34 +212,75 @@ internal fun ManualSubtypeFullBleedHeader(
     typeTitle: String,
     typeImageResId: Int,
     palette: TypePalette,
-    gradientColors: List<Color>? = null, // ✅ AJOUT : permet au ManualDetailsStepScreen de passer le tri-color SUBTYPE
+    gradientColors: List<Color>? = null, // ✅ tri-color SUBTYPE pour ManualDetailsStepScreen
+    isLarge: Boolean = false,            // ✅ default inchangé
+    height: Dp = if (isLarge) 220.dp else 188.dp, // ✅ default inchangé
 ) {
     // Fallback historique (TYPE)
     val fallbackTopColor = lerp(palette.bg0, palette.accent, 0.28f)
 
-    // ✅ Si on a un tri-color (SUBTYPE), on s'en sert pour le fond + le titre
+    // Tri-color (SUBTYPE) si fourni
     val c0 = gradientColors?.getOrNull(0)
     val c1 = gradientColors?.getOrNull(1) ?: c0
     val c2 = gradientColors?.getOrNull(2) ?: c1 ?: c0
 
-    val heroBrush = remember(c0, c1, c2, fallbackTopColor) {
-        if (c0 != null) {
-            Brush.verticalGradient(
-                colors = listOf(
-                    c0.copy(alpha = 0.55f),
-                    (c1 ?: c0).copy(alpha = 0.30f),
-                    (c2 ?: c0).copy(alpha = 0.14f),
-                    Color.Transparent
+    // Layout : uniquement ajusté en mode "large"
+    val hPad = if (isLarge) 18.dp else 16.dp
+    val vPad = if (isLarge) 14.dp else 8.dp
+    val imageSize = if (isLarge) 104.dp else 96.dp
+    val gap = if (isLarge) 10.dp else 0.dp
+
+    val bg = MaterialTheme.colorScheme.background
+    val endY = with(LocalDensity.current) { height.toPx() * 1.35f }
+
+    val heroBrush = remember(c0, c1, c2, fallbackTopColor, isLarge, bg, endY) {
+        if (!isLarge) {
+            // ====== MODE DEFAULT : ton rendu original ======
+            if (c0 != null) {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        c0.copy(alpha = 0.55f),
+                        (c1 ?: c0).copy(alpha = 0.30f),
+                        (c2 ?: c0).copy(alpha = 0.14f),
+                        Color.Transparent
+                    )
                 )
-            )
+            } else {
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0.00f to fallbackTopColor.copy(alpha = 0.92f),
+                        0.42f to fallbackTopColor.copy(alpha = 0.62f),
+                        1.00f to fallbackTopColor.copy(alpha = 0.00f)
+                    )
+                )
+            }
         } else {
-            Brush.verticalGradient(
-                colorStops = arrayOf(
-                    0.00f to fallbackTopColor.copy(alpha = 0.92f),
-                    0.42f to fallbackTopColor.copy(alpha = 0.62f),
-                    1.00f to fallbackTopColor.copy(alpha = 0.00f)
+            // ====== MODE LARGE : plus smooth ======
+            if (c0 != null) {
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0.00f to c0.copy(alpha = 0.62f),
+                        0.28f to (c1 ?: c0).copy(alpha = 0.38f),
+                        0.56f to (c2 ?: c0).copy(alpha = 0.20f),
+                        0.82f to (c2 ?: c0).copy(alpha = 0.08f),
+                        1.00f to bg
+                    ),
+                    startY = 0f,
+                    endY = endY
                 )
-            )
+            } else {
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0.00f to fallbackTopColor.copy(alpha = 0.92f),
+                        0.30f to fallbackTopColor.copy(alpha = 0.72f),
+                        0.60f to fallbackTopColor.copy(alpha = 0.38f),
+                        0.84f to fallbackTopColor.copy(alpha = 0.14f),
+                        1.00f to bg
+                    ),
+                    startY = 0f,
+                    endY = endY
+                )
+            }
         }
     }
 
@@ -253,7 +301,7 @@ internal fun ManualSubtypeFullBleedHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(118.dp)
+            .height(height)
     ) {
         Box(
             modifier = Modifier
@@ -264,7 +312,7 @@ internal fun ManualSubtypeFullBleedHeader(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = hPad, vertical = vPad),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -278,10 +326,11 @@ internal fun ManualSubtypeFullBleedHeader(
             )
 
             if (typeImageResId != 0) {
+                if (gap > 0.dp) Spacer(Modifier.width(gap))
                 Image(
                     painter = painterResource(typeImageResId),
                     contentDescription = null,
-                    modifier = Modifier.size(96.dp),
+                    modifier = Modifier.size(imageSize),
                     contentScale = ContentScale.Fit
                 )
             }
