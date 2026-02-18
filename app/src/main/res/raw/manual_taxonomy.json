@@ -14,8 +14,6 @@
     "storage.avoid_ethylene": "**Évite l’éthylène**: ne colle pas aux pommes/bananes/avocats/tomates (ça accélère le vieillissement).",
     "storage.dont_wash": "**Ne lave pas** avant stockage (sauf si tu sèches vraiment à fond): l’eau résiduelle accélère le pourrissement."
   },
-
-
   "types": [
     {
       "code": "VEGETABLES",
@@ -55,43 +53,91 @@
       "title": "Carottes",
       "image": "manual_subtype_veg_carrot",
       "gradient": {
-        "colors": ["#F0A358", "#D2762B", "#9F4D14"],
+        "colors": [
+          "#F0A358",
+          "#D2762B",
+          "#9F4D14"
+        ],
         "angleDeg": 0
       },
       "commentary": "non épluchées:",
       "storageDaysMin": 10,
       "storageDaysMax": 21,
       "seasons": {
-        "EU_SOUTH": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-        "EU_TEMPERATE": [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12],
-        "EU_NORTH": [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12]
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          4,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
       },
       "fridgeAdvise": {
         "type": "bullets",
-        "refs": ["storage.veg_drawer"],
         "items": [
+          "@ref:storage.veg_drawer",
           "Astuce **anti-mou**: Retire les fanes si elles sont présentes, elles pompent l’humidité.",
           "Pour garder le **croquant**: plonger les carottes (épluchées ou non) dans une boîte d’eau froide au frigo, et en changeant l’eau régulièrement."
-      ]},
+        ]
+      },
       "health_good": {
         "type": "bullets",
-        "refs": ["nutrient.fibers", "nutrient.carotenoids", "nutrient.potassium", "nutrient.antioxidants", "nutrient.vitamin_k1"],
-        "items": []},
+        "items": [
+          "@ref:nutrient.fibers",
+          "@ref:nutrient.carotenoids",
+          "@ref:nutrient.potassium",
+          "@ref:nutrient.antioxidants",
+          "@ref:nutrient.vitamin_k1"
+        ]
+      },
       "health_warning": {
         "type": "bullets",
-        "refs": [],
         "items": [
           "Compléments de bêta-carotène en plus: mauvaise idée surtout chez les fumeurs/ex-fumeurs."
-      ]},
+        ]
+      },
       "goodToKnow": {
         "type": "bullets",
-        "refs": [],
         "items": [
           "Une carotte qui devient **molle** n’est pas forcément mauvaise: souvent juste déshydratée → un bain d’eau froide peut la raffermir.",
           "Les **fanes** sont comestibles: pesto, soupe, poêlée (à condition qu’elles soient bien fraîches).",
           "**Congélation**: mieux vaut blanchir 2–3 min puis congeler (texture bien meilleure qu’en congelant cru).",
           "La couleur donne des indices: Orange (caroténoïdes), violette (anthocyanes), jaune (xanthophylles) → profils antioxydants un peu différents."
-        ]}
+        ]
+      }
     },
     {
       "code": "VEG_GREEN_BEANS",
@@ -99,42 +145,73 @@
       "title": "Haricots verts",
       "image": "manual_subtype_veg_green_beans",
       "gradient": {
-        "colors": ["#AACA6A", "#70962C", "#314F0A"],
+        "colors": [
+          "#AACA6A",
+          "#70962C",
+          "#314F0A"
+        ],
         "angleDeg": 0
       },
       "commentary": "crus, 3-4j pour cuits:",
       "storageDaysMin": 3,
       "storageDaysMax": 6,
       "seasons": {
-        "EU_SOUTH": [4,5,6,7,8,9,10],
-        "EU_TEMPERATE": [5,6,7,8,9,10],
-        "EU_NORTH": [7,8,9]
+        "EU_SOUTH": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_TEMPERATE": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          7,
+          8,
+          9
+        ]
       },
       "fridgeAdvise": {
         "type": "bullets",
-        "refs": ["storage.veg_drawer", "storage.dont_wash"],
         "items": [
+          "@ref:storage.veg_drawer",
+          "@ref:storage.dont_wash",
           "Évite : sac fermé “tout mouillé” / haricots déjà “pré-lavés” très humides → ça tourne vite."
-        ]},
+        ]
+      },
       "health_good": {
         "type": "bullets",
-        "refs": ["nutrient.fibers", "nutrient.vitamin_c", "nutrient.vitamin_k1", "nutrient.carotenoids"],
         "items": [
+          "@ref:nutrient.fibers",
+          "@ref:nutrient.vitamin_c",
+          "@ref:nutrient.vitamin_k1",
+          "@ref:nutrient.carotenoids",
           "**Vitamine B9** → utile pour la formation des cellules sanguines, important en période de croissance, et souvent mise en avant pour la santé cardio.",
           "**Minéraux** (potassium, magnésium, calcium, fer) → pression artérielle, fonction musculaire, os, transport de l’oxygène.",
           "Bonus : **peu caloriques** → top en accompagnement “volume” sans exploser l’apport énergétique."
-        ]},
+        ]
+      },
       "health_warning": {
         "type": "bullets",
         "items": [
           "Haricots verts en conserve: souvent plus salés → pense à rincer pour réduire le sodium."
-        ]},
+        ]
+      },
       "goodToKnow": {
         "type": "bullets",
         "items": [
           "Saison: en France, la pleine saison est surtout juillet–août (le reste de l’année, beaucoup viennent de l’import).",
           "**Congélation**: blanchir ~3 min, refroidir eau glacée, égoutter puis congeler (idéalement en couche pour éviter le “bloc”)."
-        ]}
+        ]
+      }
     },
     {
       "code": "VEG_SALAD",
@@ -142,39 +219,77 @@
       "title": "Salade",
       "image": "manual_subtype_veg_salad",
       "gradient": {
-        "colors": ["#E6E8A4", "#A7B759", "#4F6422"],
+        "colors": [
+          "#E6E8A4",
+          "#A7B759",
+          "#4F6422"
+        ],
         "angleDeg": 0
       },
       "commentary": "dépend de déjà lavée, non coupée",
       "storageDaysMin": 4,
       "storageDaysMax": 6,
       "seasons": {
-        "EU_SOUTH": [1, 2, 3, 4, 5, 10, 11, 12],
-        "EU_TEMPERATE": [4, 5, 6, 7, 8, 9, 10],
-        "EU_NORTH": [6, 7, 8, 9, 10]
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
       },
       "fridgeAdvise": {
         "type": "bullets",
-        "refs": ["storage.veg_drawer", "storage.dont_wash", "storage.avoid_ethylene", "storage.cut_hermetic_paper_towel"],
-        "items": []},
+        "items": [
+          "@ref:storage.veg_drawer",
+          "@ref:storage.dont_wash",
+          "@ref:storage.avoid_ethylene",
+          "@ref:storage.cut_hermetic_paper_towel"
+        ]
+      },
       "health_good": {
         "type": "bullets",
-        "refs": ["nutrient.fibers", "nutrient.vitamin_k1", "nutrient.folate", "nutrient.potassium"],
         "items": [
+          "@ref:nutrient.fibers",
+          "@ref:nutrient.vitamin_k1",
+          "@ref:nutrient.folate",
+          "@ref:nutrient.potassium",
           "**Eau** (très riche): aide à l’hydratation et à la sensation de fraîcheur/satiété."
-        ]},
+        ]
+      },
       "health_warning": {
         "type": "bullets",
         "items": [
           "Risque microbien (salades crues) : une salade peut être contaminée (terre/eau de culture, manipulation).\nRince soigneusement, enlève les feuilles externes abîmées.\nPour personnes immunodéprimées, femmes enceintes, personnes âgées: vigilance accrue."
-        ]},
+        ]
+      },
       "goodToKnow": {
         "type": "bullets",
         "items": [
           "**Raviver une iceberg molle**: 10–15 min dans de l’eau glacée → elle redevient souvent croquante.",
           "**Congélation déconseillée**: la texture devient spongieuse à la décongélation (trop d’eau).",
           "**Usage anti-gaspillage**: Feuilles un peu fatiguées → wraps, tacos, ou salade sautée 2 min à la poêle (surprenant mais efficace)."
-        ]}
+        ]
+      }
     },
     {
       "code": "VEG_TOMATO",
@@ -182,16 +297,38 @@
       "title": "Tomates",
       "image": "manual_subtype_veg_tomato",
       "gradient": {
-        "colors": ["#EE654A", "#D54128", "#881F16"],
+        "colors": [
+          "#EE654A",
+          "#D54128",
+          "#881F16"
+        ],
         "angleDeg": 0
       },
       "commentary": "se garde plus longtemps mais texture et gout dégradé",
       "storageDaysMin": 2,
       "storageDaysMax": 5,
       "seasons": {
-        "EU_SOUTH": [5, 6, 7, 8, 9, 10, 11],
-        "EU_TEMPERATE": [6, 7, 8, 9, 10],
-        "EU_NORTH": [6, 7, 8]
+        "EU_SOUTH": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "EU_TEMPERATE": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          6,
+          7,
+          8
+        ]
       },
       "fridgeAdvise": {
         "type": "bullets",
@@ -200,7 +337,8 @@
           "Astuce : **sors-les 30–60 min** avant de les manger → arômes plus présents.",
           "Idéal si consommée bientôt (qualité gustative): température ambiante, tige vers le bas, loin du soleil et de la chaleur.",
           "Si tu l’as coupée: Boîte hermétique + papier absorbant + coupe fraîche (retire les bords bruns) → meilleure tenue."
-        ]},
+        ]
+      },
       "health_good": {
         "type": "bullets",
         "items": [
@@ -210,19 +348,22 @@
           "**Folate**: utile pour le renouvellement cellulaire (particulièrement important en période de croissance/grossesse).",
           "Fibres: Aide transit, satiété, et contribue à un meilleur contrôle glycémique.",
           "Polyphénols: Effets antioxydants/anti-inflammatoires “modérés” mais intéressants sur le long terme (ça dépend beaucoup de la variété et de la maturité)."
-        ]},
+        ]
+      },
       "health_warning": {
         "type": "bullets",
         "items": [
           "Reflux / brûlures d’estomac : tomate acide → peut aggraver les symptômes chez certains."
-        ]},
+        ]
+      },
       "goodToKnow": {
         "type": "bullets",
         "items": [
           "Le frigo rend souvent la tomate “farineuse”: le froid perturbe la structure et les arômes.",
           "Tomate cuite ≠ tomate crue (nutrition):\nCrue : mieux pour vitamine C (fragile à la chaleur).\nCuite : mieux pour lycopène assimilable.",
           "Congélation: possible, mais la texture devient molle → parfait pour sauces/soupes, moins pour salade."
-        ]}
+        ]
+      }
     },
     {
       "code": "VEG_CUCUMBER",
@@ -230,16 +371,43 @@
       "title": "Concombre",
       "image": "manual_subtype_veg_cucumber",
       "gradient": {
-        "colors": ["#DCE7A5", "#88A852", "#2E4E1F"],
+        "colors": [
+          "#DCE7A5",
+          "#88A852",
+          "#2E4E1F"
+        ],
         "angleDeg": 0
       },
       "commentary": "entier et non lavé",
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "seasons": {
-        "EU_SOUTH": [3, 4, 5, 6, 7, 8, 9, 10, 11],
-        "EU_TEMPERATE": [4, 5, 6, 7, 8, 9, 10],
-        "EU_NORTH": [6, 7, 8, 9]
+        "EU_SOUTH": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "EU_TEMPERATE": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          6,
+          7,
+          8,
+          9
+        ]
       },
       "fridgeAdvise": {
         "type": "bullets",
@@ -248,7 +416,8 @@
           "**Éviter l’éthylène**: ne le colle pas aux pommes/bananes/tomates/avocats (ça accélère le ramollissement).",
           "**Lavage**: lave juste avant de consommer (et sèche bien).",
           "**Attention au froid trop bas**: le concombre est sensible au froid ; évite les zones très froides du frigo (et la congélation si tu veux garder du croquant)."
-        ]},
+        ]
+      },
       "health_good": {
         "type": "bullets",
         "items": [
@@ -257,19 +426,22 @@
           "**Minéraux**: potassium (~170 mg/100 g) → participe à l’équilibre hydrique et à la fonction musculaire et nerveuse.",
           "**Vitamine K** (~24 µg/100 g): impliquée dans la coagulation et la santé osseuse.",
           "**Antioxydants**: présence de composés antioxydants (effet “bouclier” contre le stress oxydatif, modestement)."
-        ]},
+        ]
+      },
       "health_warning": {
         "type": "bullets",
         "items": [
           "Goût très amer = méfiance : une amertume marquée peut signaler des cucurbitacines (irritantes/toxiques chez certaines cucurbitacées). Si c’est franchement amer, n’insiste pas.",
           "Résidus / cire : privilégie un bon rinçage + frottage (brosse si besoin), surtout si peau cirée."
-        ]},
+        ]
+      },
       "goodToKnow": {
         "type": "bullets",
         "items": [
           "Astuce **anti-ramollissement**: garde le concombre sec et protégé de la condensation (essuie-tout).",
           "Botaniquement, c’est un fruit (comme la tomate), même si on le cuisine en légume."
-        ]}
+        ]
+      }
     },
     {
       "code": "VEG_ZUCCHINI",

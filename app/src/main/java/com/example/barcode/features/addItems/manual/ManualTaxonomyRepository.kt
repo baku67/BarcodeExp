@@ -162,13 +162,19 @@ private fun JSONObject.toManualContent(snippets: Map<String, String>): ManualCon
 
     return when (type) {
         "bullets", "bullet", "list" -> {
-            val items = optJSONArray("items")
+            val rawItems = optJSONArray("items")
                 ?.toStringList()
                 .orEmpty()
+
+            // ✅ Supporte les refs inline dans items tout en conservant l’ordre :
+            // "@ref:nutrient.carotenoids"
+            val items = expandInlineRefsOrdered(rawItems, snippets)
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
 
-            val resolved = resolveRefs()
+            val hasInlineRefs = rawItems.any { it.trim().startsWith("@ref:", ignoreCase = true) }
+            // ✅ Compat: si tu utilises @ref: dans items, on ignore le champ "refs" pour éviter doublons et garder l’ordre choisi.
+            val resolved = if (hasInlineRefs) emptyList() else resolveRefs()
             val merged = dedupeKeepOrder(resolved + items)
 
             if (merged.isEmpty()) null else ManualContent.Bullets(merged)
@@ -215,6 +221,33 @@ private fun JSONObject.toStringMap(): Map<String, String> {
         val v = optString(k).trim()
         if (k.isNotBlank() && v.isNotBlank()) out[k.trim()] = v
     }
+    return out
+}
+
+
+private fun expandInlineRefsOrdered(
+    rawItems: List<String>,
+    snippets: Map<String, String>
+): List<String> {
+    if (rawItems.isEmpty()) return emptyList()
+
+    val out = ArrayList<String>(rawItems.size)
+
+    for (raw in rawItems) {
+        val t = raw.trim()
+        if (t.startsWith("@ref:", ignoreCase = true)) {
+            val key = t.removePrefix("@ref:").trim()
+            val resolved = snippets[key]?.trim()
+            if (!resolved.isNullOrBlank()) {
+                out += resolved
+            } else {
+                Log.w(MANUAL_TAXONOMY_TAG, "Snippet manquant (inline): $key")
+            }
+        } else {
+            if (t.isNotBlank()) out += t
+        }
+    }
+
     return out
 }
 
