@@ -11,6 +11,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -403,7 +405,12 @@ private fun SeasonalityGaugeCard(
                     .padding(horizontal = innerPad)
             ) {
                 val cellW = maxWidth / 12f
-                val highlightColor = cs.primary.copy(alpha = 0.32f)
+
+                // Fond de la surbrillance = teinte de l'item (mélangée à la surface pour rester douce)
+                val highlightBg = lerp(cs.surface, accentColor, 0.32f)
+
+                // Texte sur la surbrillance = noir/blanc auto selon luminance
+                val onHighlight = if (highlightBg.luminance() < 0.45f) Color.White else Color.Black
 
                 // ✅ Surbrillance en blocs (ranges contigus)
                 ranges.forEach { r ->
@@ -418,7 +425,7 @@ private fun SeasonalityGaugeCard(
                             .width(w)
                             .fillMaxHeight()
                             .padding(vertical = highlightVPad)
-                            .background(highlightColor, RoundedCornerShape(999.dp))
+                            .background(highlightBg, RoundedCornerShape(999.dp))
                     )
                 }
 
@@ -429,8 +436,31 @@ private fun SeasonalityGaugeCard(
                 ) {
                     MONTH_LABELS_FR.forEachIndexed { index, label ->
                         val month = index + 1
+
+                        val inSeasonLabelColor = onHighlight.copy(alpha = 0.92f)
+
                         val isInSeason = month in monthsSet
                         val isCurrent = month == currentMonth
+
+                        // Pastille mois courant
+                        val currentPillBg = when {
+                            isCurrent && isInSeason -> cs.primary
+                            isCurrent -> cs.surfaceVariant.copy(alpha = 0.95f)
+                            else -> Color.Transparent
+                        }
+
+                        val currentPillBorder = when {
+                            isCurrent && isInSeason -> cs.onPrimary.copy(alpha = 0.18f)
+                            isCurrent -> cs.outlineVariant.copy(alpha = 0.60f)
+                            else -> Color.Transparent
+                        }
+
+                        val labelColor = when {
+                            isCurrent && isInSeason -> cs.onPrimary
+                            isCurrent -> cs.onSurface
+                            isInSeason -> inSeasonLabelColor // (déjà calculée avec onHighlight)
+                            else -> cs.onSurfaceVariant
+                        }
 
                         Box(
                             modifier = Modifier
@@ -438,18 +468,28 @@ private fun SeasonalityGaugeCard(
                                 .fillMaxHeight(),
                             contentAlignment = Alignment.Center
                         ) {
+                            if (isCurrent) {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .padding(vertical = highlightVPad) // ✅ même hauteur que l'inner-gauge
+                                        .background(currentPillBg, RoundedCornerShape(999.dp))
+                                        .border(1.dp, currentPillBorder, RoundedCornerShape(999.dp))
+                                )
+                            }
+
                             Text(
                                 text = label,
-                                color = when {
-                                    isInSeason -> cs.onSurface
-                                    isCurrent -> accentColor.copy(alpha = 0.85f)
-                                    else -> cs.onSurfaceVariant
-                                },
+                                color = labelColor,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium,
+                                fontWeight = when {
+                                    isCurrent -> FontWeight.ExtraBold
+                                    else -> FontWeight.Medium
+                                },
                                 maxLines = 1
                             )
                         }
+
                     }
                 }
             }
