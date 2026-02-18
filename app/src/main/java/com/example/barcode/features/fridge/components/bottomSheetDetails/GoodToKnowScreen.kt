@@ -549,6 +549,10 @@ private fun DynamicSectionCard(
 
     val cs = MaterialTheme.colorScheme
 
+    // ✅ Fond très léger pour détacher du background (un poil plus présent quand ouvert)
+    val sectionBgAlpha = if (expanded) 0.24f else 0.18f
+    val sectionBg = cs.surfaceVariant.copy(alpha = sectionBgAlpha)
+
     // ✅ Border fine + discrète (teintée item)
     val borderColor = remember(accentColor) { accentColor.copy(alpha = 0.28f) }
 
@@ -575,7 +579,7 @@ private fun DynamicSectionCard(
         shape = MaterialTheme.shapes.large,
         border = BorderStroke(1.dp, borderColor),
         colors = CardDefaults.outlinedCardColors(
-            containerColor = Color.Transparent
+            containerColor = sectionBg
         ),
         elevation = CardDefaults.outlinedCardElevation(
             defaultElevation = 0.dp
