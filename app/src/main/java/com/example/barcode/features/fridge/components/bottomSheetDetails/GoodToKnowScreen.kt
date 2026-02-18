@@ -1,5 +1,6 @@
 package com.example.barcode.features.fridge.components.bottomSheetDetails
 
+import android.annotation.SuppressLint
 import android.graphics.Color as AndroidColor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -12,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
@@ -46,12 +48,12 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.R
 import com.example.barcode.features.addItems.manual.ManualContent
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
-import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
 import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
 import kotlin.math.abs
 
 private const val ITEM_TOKEN = "{ITEM}"
 
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoodToKnowScreen(
@@ -59,8 +61,6 @@ fun GoodToKnowScreen(
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
-
-    // ✅ async + cache (repo gère Dispatchers.IO)
     val taxonomy = rememberManualTaxonomy()
 
     val code = remember(itemName) { itemName.trim() }
@@ -79,8 +79,9 @@ fun GoodToKnowScreen(
     // "Carottes" -> "carottes"
     val insert = remember(resolvedTitle) { resolvedTitle.lowercaseFirstEachLine() }
 
-    // ✅ tri-color du JSON (fallback si absent)
     val cs = MaterialTheme.colorScheme
+
+    // ✅ tri-color du JSON (fallback si absent)
     val gradientColors: List<Color> = remember(subtype, cs) {
         val hexes = subtype?.gradient?.colors?.take(3).orEmpty()
         val parsed = hexes.mapNotNull { hex ->
@@ -113,119 +114,109 @@ fun GoodToKnowScreen(
         else ManualTaxonomyImageResolver.resolveTypeDrawableResId(context, code)
     }.takeIf { it != 0 }
 
-    // ✅ sections depuis JSON
     val fridgeAdvise = subtype?.fridgeAdvise
     val healthGood = subtype?.healthGood
     val healthWarning = subtype?.healthWarning
     val goodToKnow = subtype?.goodToKnow
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Bon à savoir") },
-                actions = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Outlined.Close, contentDescription = "Fermer")
-                    }
-                }
+        contentWindowInsets = WindowInsets(0)
+    ) {
+        Column(Modifier.fillMaxSize()) {
+
+            GoodToKnowHeroHeader(
+                imageResId = headerImageResId,
+                gradientColors = gradientColors,
+                insert = insert,
+                baseTitleSpan = textSpan,
+                tokenSpan = tokenSpan,
+                boldColor = markdownBoldColor,
+                onClose = onClose,
             )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // ✅ Loader tant que la taxonomy n'est pas prête (évite écran vide)
-            if (taxonomy == null) {
-                item {
-                    Spacer(Modifier.height(24.dp))
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-            } else {
-                item {
-                    GoodToKnowHeader(
-                        imageResId = headerImageResId,
-                        gradientColors = gradientColors,
-                        insert = insert,
-                        baseTitleSpan = textSpan,
-                        baseBodySpan = bodySpan,
-                        tokenSpan = tokenSpan,
-                        boldColor = markdownBoldColor,
-                    )
-                }
 
-                // ✅ FRIDGE ADVISE
-                fridgeAdvise?.let {
-                    item {
-                        DynamicSectionCard(
-                            title = "Stockage",
-                            icon = {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
-                                    contentDescription = "Frigo",
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            },
-                            content = it,
-                            insert = insert,
-                            baseSpan = bodySpan,
-                            tokenSpan = tokenSpan,
-                            boldColor = markdownBoldColor,
-                        )
-                    }
-                }
+            val navBottom = WindowInsets.navigationBars
+                .asPaddingValues()
+                .calculateBottomPadding()
 
-                // ✅ HEALTH GOOD
-                healthGood?.let {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+                    .offset(y = (-14).dp),
+                contentPadding = PaddingValues(
+                    top = 10.dp,
+                    bottom = 24.dp + navBottom
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (taxonomy == null) {
                     item {
-                        DynamicSectionCard(
-                            title = "Bienfaits",
-                            icon = { Icon(Icons.Outlined.HealthAndSafety, null) },
-                            content = it,
-                            insert = insert,
-                            baseSpan = bodySpan,
-                            tokenSpan = tokenSpan,
-                            boldColor = markdownBoldColor,
-                        )
+                        Spacer(Modifier.height(18.dp))
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
                     }
-                }
-
-                // ✅ HEALTH WARNING
-                healthWarning?.let {
-                    item {
-                        DynamicSectionCard(
-                            title = "À surveiller",
-                            icon = { Icon(Icons.Outlined.WarningAmber, null) },
-                            content = it,
-                            insert = insert,
-                            baseSpan = bodySpan,
-                            tokenSpan = tokenSpan,
-                            boldColor = markdownBoldColor,
-                        )
+                } else {
+                    fridgeAdvise?.let {
+                        item {
+                            DynamicSectionCard(
+                                title = "Conseils frigo",
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
+                                        contentDescription = "Frigo",
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                },
+                                content = it,
+                                insert = insert,
+                                baseSpan = bodySpan,
+                                tokenSpan = tokenSpan,
+                                boldColor = markdownBoldColor,
+                            )
+                        }
                     }
-                }
 
-                // ✅ GOOD TO KNOW
-                goodToKnow?.let {
-                    item {
-                        DynamicSectionCard(
-                            title = "Bon à savoir",
-                            icon = { Icon(Icons.Outlined.Info, null) },
-                            content = it,
-                            insert = insert,
-                            baseSpan = bodySpan,
-                            tokenSpan = tokenSpan,
-                            boldColor = markdownBoldColor,
-                        )
+                    healthGood?.let {
+                        item {
+                            DynamicSectionCard(
+                                title = "Bon pour la santé",
+                                icon = { Icon(Icons.Outlined.HealthAndSafety, null) },
+                                content = it,
+                                insert = insert,
+                                baseSpan = bodySpan,
+                                tokenSpan = tokenSpan,
+                                boldColor = markdownBoldColor,
+                            )
+                        }
+                    }
+
+                    healthWarning?.let {
+                        item {
+                            DynamicSectionCard(
+                                title = "À surveiller",
+                                icon = { Icon(Icons.Outlined.WarningAmber, null) },
+                                content = it,
+                                insert = insert,
+                                baseSpan = bodySpan,
+                                tokenSpan = tokenSpan,
+                                boldColor = markdownBoldColor,
+                            )
+                        }
+                    }
+
+                    goodToKnow?.let {
+                        item {
+                            DynamicSectionCard(
+                                title = "Bon à savoir",
+                                icon = { Icon(Icons.Outlined.Info, null) },
+                                content = it,
+                                insert = insert,
+                                baseSpan = bodySpan,
+                                tokenSpan = tokenSpan,
+                                boldColor = markdownBoldColor,
+                            )
+                        }
                     }
                 }
             }
@@ -233,73 +224,88 @@ fun GoodToKnowScreen(
     }
 }
 
-
 @Composable
-private fun GoodToKnowHeader(
+private fun GoodToKnowHeroHeader(
     imageResId: Int?,
     gradientColors: List<Color>,
     insert: String,
     baseTitleSpan: SpanStyle,
-    baseBodySpan: SpanStyle,
     tokenSpan: SpanStyle,
     boldColor: Color,
+    onClose: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(22.dp)
 
-    val bgBrush = remember(gradientColors) {
-        Brush.linearGradient(gradientColors.map { it.copy(alpha = 0.18f) })
+    val insertCap = remember(insert) {
+        insert.replaceFirstChar { ch ->
+            if (ch.isLowerCase()) ch.titlecase() else ch.toString()
+        }
     }
 
-    ElevatedCard(shape = shape) {
-        Box(
+    val heroBrush = remember(gradientColors) {
+        Brush.verticalGradient(
+            colors = listOf(
+                gradientColors[0].copy(alpha = 0.55f),
+                gradientColors.getOrNull(1)?.copy(alpha = 0.30f) ?: gradientColors[0].copy(alpha = 0.30f),
+                gradientColors.getOrNull(2)?.copy(alpha = 0.14f) ?: gradientColors[0].copy(alpha = 0.14f),
+                Color.Transparent
+            )
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(240.dp)
+            .background(heroBrush)
+            .statusBarsPadding()
+    ) {
+        Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(bgBrush)
-                .padding(16.dp)
+                .align(Alignment.TopEnd)
+                .padding(10.dp),
+            shape = CircleShape,
+            color = cs.surface.copy(alpha = 0.55f),
+            tonalElevation = 0.dp
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (imageResId != null) {
-                    Surface(
-                        shape = RoundedCornerShape(18.dp),
-                        color = cs.surface.copy(alpha = 0.70f),
-                        tonalElevation = 2.dp
-                    ) {
-                        Image(
-                            painter = painterResource(imageResId),
-                            contentDescription = null,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .size(76.dp)
-                                .padding(10.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(14.dp))
-                }
+            IconButton(onClick = onClose) {
+                Icon(Icons.Outlined.Close, contentDescription = "Fermer")
+            }
+        }
 
-                val insertCap = remember(insert) {
-                    insert.replaceFirstChar { ch ->
-                        if (ch.isLowerCase()) ch.titlecase() else ch.toString()
-                    }
-                }
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterStart)   // ✅ au centre vertical du header
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp)
+                .offset(y = (-8).dp),           // ✅ optionnel : remonte un peu
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (imageResId != null) {
+                Image(
+                    painter = painterResource(imageResId),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(118.dp)
+                )
+                Spacer(Modifier.width(14.dp))
+            }
 
-                Column(Modifier.weight(1f)) {
-                    MarkdownInlineText(
-                        template = "Conseils et infos\n$ITEM_TOKEN",
-                        insert = insertCap,
-                        baseSpan = baseTitleSpan,
-                        tokenSpan = tokenSpan,
-                        style = MaterialTheme.typography.titleLarge,
-                        boldColor = boldColor,
-                    )
-                }
+            Column(Modifier.weight(1f)) {
+                MarkdownInlineText(
+                    template = "Conseils et infos\n$ITEM_TOKEN",
+                    insert = insertCap,
+                    baseSpan = baseTitleSpan,
+                    tokenSpan = tokenSpan,
+                    style = MaterialTheme.typography.titleLarge,
+                    boldColor = boldColor,
+                )
             }
         }
     }
 }
+
+
 
 @Composable
 private fun DynamicSectionCard(
@@ -419,7 +425,7 @@ private fun MarkdownInlineText(
     tokenSpan: SpanStyle,
     style: androidx.compose.ui.text.TextStyle,
     modifier: Modifier = Modifier,
-    boldColor: Color? = null, // ✅
+    boldColor: Color? = null,
 ) {
     val effectiveBoldColor = boldColor ?: MaterialTheme.colorScheme.primary
 
@@ -433,7 +439,7 @@ private fun MarkdownInlineText(
             insert = insert,
             baseSpan = baseSpan,
             tokenSpan = tokenSpan,
-            boldSpan = boldSpan // ✅
+            boldSpan = boldSpan
         )
     }
 
@@ -451,7 +457,7 @@ private fun buildInlineMarkdownAnnotatedString(
     insert: String,
     baseSpan: SpanStyle,
     tokenSpan: SpanStyle,
-    boldSpan: SpanStyle? = null, // ✅
+    boldSpan: SpanStyle? = null,
 ): AnnotatedString {
     var i = 0
     var bold = false
@@ -463,7 +469,7 @@ private fun buildInlineMarkdownAnnotatedString(
     fun currentSpan(isToken: Boolean): SpanStyle {
         val base = when {
             isToken -> tokenSpan
-            bold && boldSpan != null -> boldSpan      // ✅ gras coloré
+            bold && boldSpan != null -> boldSpan
             else -> baseSpan
         }
 
@@ -490,7 +496,7 @@ private fun buildInlineMarkdownAnnotatedString(
         if (template.startsWith(ITEM_TOKEN, i)) {
             flush()
             buf.append(insert)
-            flush(isToken = true) // ✅ garde le gradient sur {ITEM}
+            flush(isToken = true)
             i += ITEM_TOKEN.length
             continue
         }
@@ -502,7 +508,6 @@ private fun buildInlineMarkdownAnnotatedString(
     flush()
     return out.toAnnotatedString()
 }
-
 
 /** Fallback si jamais le code n'existe pas dans la taxonomie */
 private fun prettifyTaxonomyCodeForUi(raw: String): String {
