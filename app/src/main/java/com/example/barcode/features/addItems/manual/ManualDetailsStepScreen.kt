@@ -1,14 +1,16 @@
 package com.example.barcode.features.addItems.manual
 
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,7 +58,19 @@ fun ManualDetailsStepScreen(
     // Header = SubType (fallback = Type si pas de subtype)
     val headerTitle = subtypeMeta?.title ?: typeMeta?.title ?: ""
     val headerImageResId = drawableId(context, subtypeMeta?.image ?: typeMeta?.image)
+
+    // Palette fallback (si pas de gradient sur le subtype)
     val headerPaletteCode = typeCode ?: subtypeMeta?.parentCode ?: ""
+
+    // ✅ Couleurs item (SUBTYPE) pour gradient background + gradient titre (comme GoodToKnowScreen)
+    // (si absent => le header continue à utiliser le paletteForType() comme avant)
+    val headerGradientColors: List<Color>? = remember(subtypeMeta) {
+        val hexes = subtypeMeta?.gradient?.colors?.take(3) ?: return@remember null
+        val parsed = hexes.mapNotNull { hex ->
+            runCatching { Color(AndroidColor.parseColor(hex)) }.getOrNull()
+        }
+        parsed.takeIf { it.size >= 3 }
+    }
 
     var name by rememberSaveable(draft.name, typeCode, subtypeCode) {
         mutableStateOf(draft.name.orEmpty())
@@ -95,7 +109,9 @@ fun ManualDetailsStepScreen(
                 ManualSubtypeFullBleedHeader(
                     typeTitle = headerTitle,
                     typeImageResId = headerImageResId,
-                    palette = paletteForType(headerPaletteCode)
+                    palette = paletteForType(headerPaletteCode),
+                    // ✅ override pour reprendre le tri-color du SUBTYPE
+                    gradientColors = headerGradientColors,
                 )
             }
 
@@ -106,9 +122,7 @@ fun ManualDetailsStepScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 val scrollState = rememberScrollState()
-                val showTopScrim by remember {
-                    derivedStateOf { scrollState.value > 0 }
-                }
+                val showTopScrim by remember { derivedStateOf { scrollState.value > 0 } }
 
                 Box(modifier = Modifier.weight(1f)) {
                     Column(

@@ -27,7 +27,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -205,20 +204,51 @@ fun ManualSubtypeStepScreen(
 internal fun ManualSubtypeFullBleedHeader(
     typeTitle: String,
     typeImageResId: Int,
-    palette: TypePalette
+    palette: TypePalette,
+    gradientColors: List<Color>? = null, // ✅ AJOUT : permet au ManualDetailsStepScreen de passer le tri-color SUBTYPE
 ) {
-    val topColor = lerp(palette.bg0, palette.accent, 0.28f)
+    // Fallback historique (TYPE)
+    val fallbackTopColor = lerp(palette.bg0, palette.accent, 0.28f)
 
-    val gradient = Brush.verticalGradient(
-        colorStops = arrayOf(
-            0.00f to topColor.copy(alpha = 0.92f),
-            0.42f to topColor.copy(alpha = 0.62f),
-            1.00f to topColor.copy(alpha = 0.00f)
-        )
-    )
+    // ✅ Si on a un tri-color (SUBTYPE), on s'en sert pour le fond + le titre
+    val c0 = gradientColors?.getOrNull(0)
+    val c1 = gradientColors?.getOrNull(1) ?: c0
+    val c2 = gradientColors?.getOrNull(2) ?: c1 ?: c0
 
-    val isLight = topColor.luminance() > 0.65f
-    val titleColor = if (isLight) Color(0xFF0F172A) else Color.White
+    val heroBrush = remember(c0, c1, c2, fallbackTopColor) {
+        if (c0 != null) {
+            Brush.verticalGradient(
+                colors = listOf(
+                    c0.copy(alpha = 0.55f),
+                    (c1 ?: c0).copy(alpha = 0.30f),
+                    (c2 ?: c0).copy(alpha = 0.14f),
+                    Color.Transparent
+                )
+            )
+        } else {
+            Brush.verticalGradient(
+                colorStops = arrayOf(
+                    0.00f to fallbackTopColor.copy(alpha = 0.92f),
+                    0.42f to fallbackTopColor.copy(alpha = 0.62f),
+                    1.00f to fallbackTopColor.copy(alpha = 0.00f)
+                )
+            )
+        }
+    }
+
+    val titleBrush = remember(gradientColors) {
+        gradientColors?.takeIf { it.size >= 2 }?.let { Brush.linearGradient(it) }
+    }
+
+    val luminanceBase = (c0 ?: fallbackTopColor).luminance()
+    val isLight = luminanceBase > 0.65f
+    val fallbackTitleColor = if (isLight) Color(0xFF0F172A) else Color.White
+
+    val titleStyle = if (titleBrush != null) {
+        MaterialTheme.typography.headlineSmall.copy(brush = titleBrush)
+    } else {
+        MaterialTheme.typography.headlineSmall
+    }
 
     Box(
         modifier = Modifier
@@ -228,7 +258,7 @@ internal fun ManualSubtypeFullBleedHeader(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(gradient)
+                .background(heroBrush)
         )
 
         Row(
@@ -240,9 +270,9 @@ internal fun ManualSubtypeFullBleedHeader(
             Text(
                 text = typeTitle,
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.headlineSmall,
+                style = titleStyle,
                 fontWeight = FontWeight.Black,
-                color = titleColor,
+                color = if (titleBrush != null) Color.Unspecified else fallbackTitleColor,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
