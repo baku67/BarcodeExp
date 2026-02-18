@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -49,9 +50,15 @@ import com.example.barcode.R
 import com.example.barcode.features.addItems.manual.ManualContent
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
+import java.util.Calendar
 import kotlin.math.abs
 
 private const val ITEM_TOKEN = "{ITEM}"
+
+private val MONTH_LABELS_FR = listOf(
+    "Jan", "Fév", "Mar", "Avr", "Mai", "Jun",
+    "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"
+)
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -124,6 +131,16 @@ fun GoodToKnowScreen(
     val healthWarning = subtype?.healthWarning
     val goodToKnow = subtype?.goodToKnow
 
+    // ✅ Saison EU_TEMPERATE (mois 1..12)
+    val temperateMonths = remember(subtype) {
+        subtype?.seasons
+            ?.get("EU_TEMPERATE")
+            .orEmpty()
+            .filter { it in 1..12 }
+            .distinct()
+            .sorted()
+    }
+
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onBackground,
@@ -164,6 +181,17 @@ fun GoodToKnowScreen(
                         }
                     }
                 } else {
+
+                    // ✅ Nouveau composant Saison (sous header, au-dessus des volets)
+                    if (temperateMonths.isNotEmpty()) {
+                        item {
+                            SeasonalityGaugeCard(
+                                months = temperateMonths,
+                                accentColor = accentColor,
+                            )
+                        }
+                    }
+
                     fridgeAdvise?.let {
                         item {
                             DynamicSectionCard(
@@ -235,6 +263,9 @@ fun GoodToKnowScreen(
     }
 }
 
+
+
+
 @Composable
 private fun GoodToKnowHeroHeader(
     imageResId: Int?,
@@ -297,14 +328,15 @@ private fun GoodToKnowHeroHeader(
                     painter = painterResource(imageResId),
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(118.dp)
+                    modifier = Modifier.size(92.dp)
                 )
+
                 Spacer(Modifier.width(14.dp))
             }
 
             Column(Modifier.weight(1f)) {
                 MarkdownInlineText(
-                    template = "Conseils et infos\n$ITEM_TOKEN",
+                    template = "**$ITEM_TOKEN**",
                     insert = insertCap,
                     baseSpan = baseTitleSpan,
                     tokenSpan = tokenSpan,
@@ -315,6 +347,100 @@ private fun GoodToKnowHeroHeader(
         }
     }
 }
+
+
+@Composable
+private fun SeasonalityGaugeCard(
+    months: List<Int>,
+    accentColor: Color,
+) {
+    val cs = MaterialTheme.colorScheme
+
+    val currentMonth = remember {
+        Calendar.getInstance().get(Calendar.MONTH) + 1 // 1..12
+    }
+
+    val isInSeasonNow = remember(months, currentMonth) { months.contains(currentMonth) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp)
+    ) {
+        Text(
+            text = if (isInSeasonNow) "C'est la saison !" else "Hors saison",
+            color = if (isInSeasonNow) cs.primary else cs.onSurfaceVariant.copy(alpha = 0.85f),
+            style = if (isInSeasonNow) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleMedium,
+            fontWeight = if (isInSeasonNow) FontWeight.ExtraBold else FontWeight.Medium,
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        val gaugeShape = RoundedCornerShape(999.dp)
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(38.dp),
+            shape = gaugeShape,
+            color = cs.surface.copy(alpha = 0.65f),
+            border = BorderStroke(1.dp, cs.outlineVariant.copy(alpha = 0.55f)),
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MONTH_LABELS_FR.forEachIndexed { index, label ->
+                    val month = index + 1
+                    val isInSeason = months.contains(month)
+                    val isCurrent = month == currentMonth
+
+                    val cellShape = RoundedCornerShape(8.dp)
+                    val cellBg = when {
+                        isCurrent && isInSeason -> cs.primary.copy(alpha = 0.36f)
+                        isInSeason -> cs.primary.copy(alpha = 0.22f)
+                        isCurrent -> accentColor.copy(alpha = 0.14f)
+                        else -> Color.Transparent
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(vertical = 6.dp, horizontal = 1.dp)
+                            .background(cellBg, cellShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            color = when {
+                                isCurrent && isInSeason -> cs.onPrimary
+                                isInSeason -> cs.onSurface
+                                else -> cs.onSurfaceVariant
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        Text(
+            text = "Saison estimée — Europe tempérée",
+            color = cs.onSurfaceVariant.copy(alpha = 0.75f),
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
+
 
 @Composable
 private fun DynamicSectionCard(

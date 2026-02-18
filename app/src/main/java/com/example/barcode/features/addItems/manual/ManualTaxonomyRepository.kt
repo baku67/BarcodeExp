@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.example.barcode.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -16,39 +17,52 @@ object ManualTaxonomyRepository {
 
     private const val TAG = MANUAL_TAXONOMY_TAG
 
-    @Volatile private var cached: ManualTaxonomy? = null
+    @Volatile
+    private var cached: ManualTaxonomy? = null
+
     private val mutex = Mutex()
 
-    suspend fun get(context: Context): ManualTaxonomy {
-        cached?.let { return it }
 
-        return mutex.withLock {
-            cached?.let { return it }
+    // ✅ scope interne (évite GlobalScope)
+    private val scope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
+    )
 
-            val loaded = withContext(Dispatchers.IO) {
-                load(context.applicationContext)
-            }
-            cached = loaded
-            loaded
+    /** ✅ Accès immédiat si déjà chargé */
+    fun peek(): ManualTaxonomy? = cached
+
+    /**
+     * ✅ Précharge en background (idempotent)
+     * Utilisable depuis MainActivity (LaunchedEffect ou pas).
+     */
+    fun preload(context: android.content.Context) {
+        if (cached != null) return
+        val appCtx = context.applicationContext
+        scope.launch {
+            runCatching { load(appCtx) }
         }
     }
 
-    fun peek(): ManualTaxonomy? = cached
+    suspend fun load(context: Context): ManualTaxonomy = mutex.withLock {
+        cached?.let { return it }
 
-    suspend fun preload(context: Context) {
-        get(context.applicationContext)
+        val taxonomy = withContext(Dispatchers.IO) {
+            loadFromRaw(context)
+        }
+
+        cached = taxonomy
+        taxonomy
     }
 
-    private fun load(context: Context): ManualTaxonomy {
+    private fun loadFromRaw(context: Context): ManualTaxonomy {
         return try {
-            val json = context.resources
-                .openRawResource(R.raw.manual_taxonomy)
+            val raw = context.resources.openRawResource(R.raw.manual_taxonomy)
                 .bufferedReader()
                 .use { it.readText() }
 
-            val root = JSONObject(json)
+            val root = JSONObject(raw)
 
-            // ✅ snippets optionnels: { "snippets": { "key": "...", ... } }
+            // ✅ snippets = { "k":"...", ... } (optionnel)
             val snippets = root.optJSONObject("snippets")?.toStringMap().orEmpty()
 
             val types = root.getJSONArray("types").toTypeMetas()
@@ -85,6 +99,8 @@ object ManualTaxonomyRepository {
             val parent = o.optString("parent").takeIf { it.isNotBlank() } ?: continue
             val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
 
+            val seasons = o.optJSONObject("seasons")?.toMonthsByRegion()
+
             val gradient = o.optJSONObject("gradient")?.let { g ->
                 val colors = g.optJSONArray("colors")
                     ?.toStringList()
@@ -108,9 +124,10 @@ object ManualTaxonomyRepository {
                     storageDaysMin = o.optIntOrNull("storageDaysMin"),
                     storageDaysMax = o.optIntOrNull("storageDaysMax"),
 
+                    seasons = seasons,
+
                     gradient = gradient,
 
-                    // ✅ sections dynamiques (supportent refs)
                     fridgeAdvise = o.optManualContent("fridgeAdvise", snippets),
                     healthGood = o.optManualContent("health_good", snippets),
                     healthWarning = o.optManualContent("health_warning", snippets),
@@ -166,14 +183,11 @@ private fun JSONObject.toManualContent(snippets: Map<String, String>): ManualCon
                 ?.toStringList()
                 .orEmpty()
 
-            // ✅ Supporte les refs inline dans items tout en conservant l’ordre :
-            // "@ref:nutrient.carotenoids"
             val items = expandInlineRefsOrdered(rawItems, snippets)
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
 
             val hasInlineRefs = rawItems.any { it.trim().startsWith("@ref:", ignoreCase = true) }
-            // ✅ Compat: si tu utilises @ref: dans items, on ignore le champ "refs" pour éviter doublons et garder l’ordre choisi.
             val resolved = if (hasInlineRefs) emptyList() else resolveRefs()
             val merged = dedupeKeepOrder(resolved + items)
 
@@ -208,6 +222,31 @@ private fun JSONArray.toStringList(): List<String> = buildList {
     }
 }
 
+private fun JSONArray.toIntList(): List<Int> = buildList {
+    for (i in 0 until length()) {
+        val v = when (val raw = opt(i)) {
+            is Number -> raw.toInt()
+            is String -> raw.trim().toIntOrNull()
+            else -> null
+        } ?: continue
+
+        if (v in 1..12) add(v)
+    }
+}
+
+/** { "EU_TEMPERATE":[1,2,3], "EU_SOUTH":[...]} */
+private fun JSONObject.toMonthsByRegion(): Map<String, List<Int>> {
+    val out = LinkedHashMap<String, List<Int>>()
+    val ks = keys()
+    while (ks.hasNext()) {
+        val k = ks.next()
+        val arr = optJSONArray(k) ?: continue
+        val months = arr.toIntList().distinct().sorted()
+        if (k.isNotBlank() && months.isNotEmpty()) out[k.trim()] = months
+    }
+    return out
+}
+
 private fun JSONObject.optFloatOrNull(key: String): Float? {
     if (!has(key) || isNull(key)) return null
     return optDouble(key).toFloat()
@@ -223,7 +262,6 @@ private fun JSONObject.toStringMap(): Map<String, String> {
     }
     return out
 }
-
 
 private fun expandInlineRefsOrdered(
     rawItems: List<String>,

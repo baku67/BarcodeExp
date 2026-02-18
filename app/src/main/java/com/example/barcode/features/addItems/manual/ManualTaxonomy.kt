@@ -66,6 +66,9 @@ data class ManualSubtypeMeta(
     val storageDaysMin: Int? = null,
     val storageDaysMax: Int? = null,
 
+    // ✅ mois de saison (1-12) par région (ex: EU_TEMPERATE)
+    val seasons: Map<String, List<Int>>? = null,
+
     // ✅ tri-color pour le titre/placeholder
     val gradient: ManualGradientMeta? = null,
 
@@ -76,7 +79,6 @@ data class ManualSubtypeMeta(
     val goodToKnow: ManualContent? = null,
 )
 
-
 data class ManualTaxonomy(
     val types: List<ManualTypeMeta>,
     val subtypes: List<ManualSubtypeMeta>
@@ -85,33 +87,43 @@ data class ManualTaxonomy(
     private val subtypesByCode = subtypes.associateBy { it.code }
     private val subtypesByParent = subtypes.groupBy { it.parentCode }
 
-    // ✅ version “String codes” (celle que tu utilises déjà)
     fun typeMeta(typeCode: String): ManualTypeMeta? = typesByCode[typeCode]
     fun subtypeMeta(subtypeCode: String): ManualSubtypeMeta? = subtypesByCode[subtypeCode]
     fun subtypesOf(typeCode: String): List<ManualSubtypeMeta> = subtypesByParent[typeCode].orEmpty()
 }
 
 object ManualTaxonomyImageResolver {
-
-    private val imageNameToResId = ConcurrentHashMap<String, Int>()
-
-    fun resolveSubtypeDrawableResId(context: Context, subtypeCode: String): Int {
-        val taxonomy = ManualTaxonomyRepository.peek() ?: return 0
-        val imageName = taxonomy.subtypeMeta(subtypeCode)?.image ?: return 0
-        return resolveImageNameToResId(context, imageName)
-    }
+    private val typeResCache = ConcurrentHashMap<String, Int>()
+    private val subtypeResCache = ConcurrentHashMap<String, Int>()
 
     fun resolveTypeDrawableResId(context: Context, typeCode: String): Int {
-        val taxonomy = ManualTaxonomyRepository.peek() ?: return 0
-        val imageName = taxonomy.typeMeta(typeCode)?.image ?: return 0
-        return resolveImageNameToResId(context, imageName)
+        return typeResCache.getOrPut(typeCode) {
+            val safe = typeCode.lowercase()
+            val name = "manual_type_${safe}"
+            context.resources.getIdentifier(name, "drawable", context.packageName)
+        }
     }
 
-    private fun resolveImageNameToResId(context: Context, imageName: String): Int {
-        val key = imageName.trim()
-        if (key.isBlank()) return 0
-        return imageNameToResId.getOrPut(key) {
-            context.resources.getIdentifier(key, "drawable", context.packageName)
+    fun resolveSubtypeDrawableResId(context: Context, subtypeCode: String): Int {
+        return subtypeResCache.getOrPut(subtypeCode) {
+            val safe = subtypeCode.lowercase()
+
+            fun idOf(name: String): Int =
+                context.resources.getIdentifier(name, "drawable", context.packageName)
+
+            // 1) convention “normale”
+            val directName = if (safe.startsWith("manual_subtype_")) safe else "manual_subtype_$safe"
+            val directId = idOf(directName)
+            if (directId != 0) return@getOrPut directId
+
+            // 2) FIX FRUITS : FRUIT_* -> manual_subtype_fruits_*
+            if (safe.startsWith("fruit_")) {
+                val pluralName = "manual_subtype_fruits_" + safe.removePrefix("fruit_")
+                val pluralId = idOf(pluralName)
+                if (pluralId != 0) return@getOrPut pluralId
+            }
+
+            0
         }
     }
 }
