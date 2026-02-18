@@ -226,12 +226,47 @@
       "parent": "VEGETABLES",
       "title": "Concombre",
       "image": "manual_subtype_veg_cucumber",
+      "gradient": {
+        "colors": ["#DCE7A5", "#88A852", "#2E4E1F"],
+        "angleDeg": 0
+      },
+      "commentary": "entier et non lavé",
       "storageDaysMin": 5,
       "storageDaysMax": 7,
-      "fridgeAdvise": "",
-      "health_good": "",
-      "health_warning": "",
-      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+      "seasons": {
+        "EU_SOUTH": [3, 4, 5, 6, 7, 8, 9, 10, 11],
+        "EU_TEMPERATE": [4, 5, 6, 7, 8, 9, 10],
+        "EU_NORTH": [6, 7, 8, 9]
+      },
+      "fridgeAdvise": {
+        "type": "bullets",
+        "items": [
+          "À mettre au frigo (**bac à légumes**).",
+          "**Éviter l’éthylène**: ne le colle pas aux pommes/bananes/tomates/avocats (ça accélère le ramollissement).",
+          "**Lavage**: lave juste avant de consommer (et sèche bien).",
+          "**Attention au froid trop bas**: le concombre est sensible au froid ; évite les zones très froides du frigo (et la congélation si tu veux garder du croquant)."
+        ]},
+      "health_good": {
+        "type": "bullets",
+        "items": [
+          "**Hydratation**: ~95% d’eau → aide à couvrir les besoins hydriques.",
+          "**Peu calorique**: ~14–16 kcal / 100 g → utile en “volume” alimentaire sans charger.",
+          "**Minéraux**: potassium (~170 mg/100 g) → participe à l’équilibre hydrique et à la fonction musculaire et nerveuse.",
+          "**Vitamine K** (~24 µg/100 g): impliquée dans la coagulation et la santé osseuse.",
+          "**Antioxydants**: présence de composés antioxydants (effet “bouclier” contre le stress oxydatif, modestement)."
+        ]},
+      "health_warning": {
+        "type": "bullets",
+        "items": [
+          "Goût très amer = méfiance : une amertume marquée peut signaler des cucurbitacines (irritantes/toxiques chez certaines cucurbitacées). Si c’est franchement amer, n’insiste pas.",
+          "Résidus / cire : privilégie un bon rinçage + frottage (brosse si besoin), surtout si peau cirée."
+        ]},
+      "goodToKnow": {
+        "type": "bullets",
+        "items": [
+          "Astuce **anti-ramollissement**: garde le concombre sec et protégé de la condensation (essuie-tout).",
+          "Botaniquement, c’est un fruit (comme la tomate), même si on le cuisine en légume."
+        ]}
     },
     {
       "code": "VEG_ZUCCHINI",

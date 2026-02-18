@@ -99,6 +99,8 @@ fun EditItemScreen(
 ) {
     val context = LocalContext.current
 
+    val isManual = remember(itemEntity.addMode) { itemEntity.addMode == "manual" }
+
     var name by rememberSaveable { mutableStateOf(itemEntity.name.orEmpty()) }
     var brand by rememberSaveable { mutableStateOf(itemEntity.brand.orEmpty()) }
     var expiry by rememberSaveable { mutableStateOf(itemEntity.expiryDate) }
@@ -195,10 +197,13 @@ fun EditItemScreen(
                             onSave(
                                 EditItemResult(
                                     name = name.trim().ifBlank { null },
-                                    brand = brand.trim().ifBlank { null },
+                                    // ⚠️ Ajout manuel : pas d’édition de marque / Nutri-Score
+                                    brand = if (isManual) itemEntity.brand?.trim()?.ifBlank { null }
+                                    else brand.trim().ifBlank { null },
                                     expiryDate = expiry,
                                     imageUrl = imageUrl.trim().ifBlank { null },
-                                    nutriScore = nutriScore?.trim()?.ifBlank { null },
+                                    nutriScore = if (isManual) itemEntity.nutriScore?.trim()?.ifBlank { null }
+                                    else nutriScore?.trim()?.ifBlank { null },
                                     imageIngredientsUrl = ingredientsUrl.trim().ifBlank { null },
                                     imageNutritionUrl = nutritionUrl.trim().ifBlank { null },
                                 )
@@ -351,56 +356,58 @@ fun EditItemScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = brand,
-                        onValueChange = { brand = it },
-                        label = { Text("Marque") },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Spacer(Modifier.width(20.dp))
-
-                    // --- NutriScore ---
-                    Box(
-                        modifier = Modifier
-                            .width(84.dp)
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
-                            .clickable { showNutriPicker = true },
-                        contentAlignment = Alignment.Center
+                if (!isManual) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val nutriRes = nutriScoreRes(nutriScore)
+                        OutlinedTextField(
+                            value = brand,
+                            onValueChange = { brand = it },
+                            label = { Text("Marque") },
+                            modifier = Modifier.weight(1f)
+                        )
 
-                        if (nutriRes != null) {
-                            Image(
-                                painter = painterResource(nutriRes),
-                                contentDescription = "Nutri-Score $nutriScore",
-                                modifier = Modifier.height(24.dp)
-                            )
-                        } else {
-                            Image(
-                                painter = painterResource(R.drawable.nutri_score_neutre),
-                                contentDescription = "Nutri-Score neutre",
-                                modifier = Modifier.height(24.dp).alpha(0.35f)
-                            )
+                        Spacer(Modifier.width(20.dp))
+
+                        // --- NutriScore ---
+                        Box(
+                            modifier = Modifier
+                                .width(84.dp)
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                                .clickable { showNutriPicker = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val nutriRes = nutriScoreRes(nutriScore)
+
+                            if (nutriRes != null) {
+                                Image(
+                                    painter = painterResource(nutriRes),
+                                    contentDescription = "Nutri-Score $nutriScore",
+                                    modifier = Modifier.height(24.dp)
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(R.drawable.nutri_score_neutre),
+                                    contentDescription = "Nutri-Score neutre",
+                                    modifier = Modifier.height(24.dp).alpha(0.35f)
+                                )
+                            }
                         }
                     }
-                }
 
-                if (showNutriPicker) {
-                    NutriScorePickerDialog(
-                        current = nutriScore,
-                        onSelect = {
-                            nutriScore = it
-                            showNutriPicker = false
-                        },
-                        onDismiss = { showNutriPicker = false }
-                    )
+                    if (showNutriPicker) {
+                        NutriScorePickerDialog(
+                            current = nutriScore,
+                            onSelect = {
+                                nutriScore = it
+                                showNutriPicker = false
+                            },
+                            onDismiss = { showNutriPicker = false }
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -470,10 +477,13 @@ fun EditItemScreen(
                     onSave(
                         EditItemResult(
                             name = name.trim().ifBlank { null },
-                            brand = brand.trim().ifBlank { null },
+                            // ⚠️ Ajout manuel : pas d’édition de marque / Nutri-Score
+                            brand = if (isManual) itemEntity.brand?.trim()?.ifBlank { null }
+                            else brand.trim().ifBlank { null },
                             expiryDate = expiry,
                             imageUrl = imageUrl.trim().ifBlank { null },
-                            nutriScore = nutriScore?.trim()?.ifBlank { null },
+                            nutriScore = if (isManual) itemEntity.nutriScore?.trim()?.ifBlank { null }
+                            else nutriScore?.trim()?.ifBlank { null },
                             imageIngredientsUrl = ingredientsUrl.trim().ifBlank { null },
                             imageNutritionUrl = nutritionUrl.trim().ifBlank { null },
                         )
