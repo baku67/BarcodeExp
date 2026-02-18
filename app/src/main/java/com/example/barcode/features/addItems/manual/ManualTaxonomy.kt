@@ -93,40 +93,54 @@ data class ManualTaxonomy(
 }
 
 object ManualTaxonomyImageResolver {
-    private val typeResCache = ConcurrentHashMap<String, Int>()
-    private val subtypeResCache = ConcurrentHashMap<String, Int>()
 
-    fun resolveTypeDrawableResId(context: Context, typeCode: String): Int {
-        return typeResCache.getOrPut(typeCode) {
-            val safe = typeCode.lowercase()
-            val name = "manual_type_${safe}"
+    // Cache par NOM de drawable (pas par code) => évite les “mauvaises” résolutions figées.
+    private val resByName = ConcurrentHashMap<String, Int>()
+
+    private fun resolveByName(context: Context, drawableName: String?): Int {
+        val name = drawableName?.trim().orEmpty()
+        if (name.isBlank()) return 0
+        return resByName.getOrPut(name) {
             context.resources.getIdentifier(name, "drawable", context.packageName)
         }
     }
 
+    /** ✅ Utilise directement le champ JSON `image` si dispo */
+    fun resolveTypeDrawableResId(context: Context, typeCode: String): Int {
+        val tax = ManualTaxonomyRepository.peek()
+        val meta = tax?.typeMeta(typeCode)
+
+        // 1) priorité au JSON `image`
+        resolveByName(context, meta?.image).takeIf { it != 0 }?.let { return it }
+
+        // 2) fallback : ancienne convention
+        return resolveByName(context, "manual_type_${typeCode.lowercase()}")
+    }
+
+    /** ✅ Utilise directement le champ JSON `image` si dispo */
     fun resolveSubtypeDrawableResId(context: Context, subtypeCode: String): Int {
-        return subtypeResCache.getOrPut(subtypeCode) {
-            val safe = subtypeCode.lowercase()
+        val tax = ManualTaxonomyRepository.peek()
+        val meta = tax?.subtypeMeta(subtypeCode)
 
-            fun idOf(name: String): Int =
-                context.resources.getIdentifier(name, "drawable", context.packageName)
+        // 1) priorité au JSON `image` (=> FRUITS OK car "manual_subtype_fruits_*")
+        resolveByName(context, meta?.image).takeIf { it != 0 }?.let { return it }
 
-            // 1) convention “normale”
-            val directName = if (safe.startsWith("manual_subtype_")) safe else "manual_subtype_$safe"
-            val directId = idOf(directName)
-            if (directId != 0) return@getOrPut directId
+        // 2) fallback : ancienne convention (utile si taxonomy pas encore chargée)
+        val safe = subtypeCode.lowercase()
 
-            // 2) FIX FRUITS : FRUIT_* -> manual_subtype_fruits_*
-            if (safe.startsWith("fruit_")) {
-                val pluralName = "manual_subtype_fruits_" + safe.removePrefix("fruit_")
-                val pluralId = idOf(pluralName)
-                if (pluralId != 0) return@getOrPut pluralId
-            }
+        resolveByName(context, "manual_subtype_$safe").takeIf { it != 0 }?.let { return it }
 
-            0
+        // 3) fallback compat FRUITS si jamais appelé avant preload/peek (optionnel mais pratique)
+        if (safe.startsWith("fruit_")) {
+            resolveByName(context, "manual_subtype_fruits_" + safe.removePrefix("fruit_"))
+                .takeIf { it != 0 }
+                ?.let { return it }
         }
+
+        return 0
     }
 }
+
 
 
 
