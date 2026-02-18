@@ -126,12 +126,6 @@ fun ManualTypeStepScreen(
                 .padding(horizontal = ManualTaxonomyUiSpec.screenHPad, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "Choisis une catégorie",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold
-            )
-
             ManualSubtypeSearchField(
                 value = query,
                 onValueChange = { query = it },
