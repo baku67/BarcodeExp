@@ -8,13 +8,13 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -37,10 +37,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
@@ -81,7 +81,7 @@ fun GoodToKnowScreen(
 
     val cs = MaterialTheme.colorScheme
 
-    // ✅ tri-color du JSON (fallback si absent)
+    // tri-color du JSON (fallback si absent)
     val gradientColors: List<Color> = remember(subtype, cs) {
         val hexes = subtype?.gradient?.colors?.take(3).orEmpty()
         val parsed = hexes.mapNotNull { hex ->
@@ -95,6 +95,11 @@ fun GoodToKnowScreen(
             ?: cs.primary
     }
 
+    // ✅ Accent discret basé sur la couleur item (pour halo / chevron / puces)
+    val accentColor = remember(gradientColors, markdownBoldColor) {
+        gradientColors.getOrNull(1) ?: markdownBoldColor
+    }
+
     val tokenSpan = remember(gradientColors) {
         SpanStyle(
             brush = Brush.linearGradient(gradientColors),
@@ -105,7 +110,7 @@ fun GoodToKnowScreen(
     val bodySpan = remember(cs) { SpanStyle(color = cs.onSurfaceVariant) }
     val textSpan = remember(cs) { SpanStyle(color = cs.onSurface) }
 
-    // ✅ image header : recalcul quand taxonomy arrive (sinon reste sur fallback)
+    // image header : recalcul quand taxonomy arrive
     val headerImageResId = remember(context, code, taxonomy) {
         if (taxonomy == null || code.isBlank()) return@remember 0
 
@@ -173,6 +178,7 @@ fun GoodToKnowScreen(
                                 baseSpan = bodySpan,
                                 tokenSpan = tokenSpan,
                                 boldColor = markdownBoldColor,
+                                accentColor = accentColor,
                             )
                         }
                     }
@@ -187,6 +193,7 @@ fun GoodToKnowScreen(
                                 baseSpan = bodySpan,
                                 tokenSpan = tokenSpan,
                                 boldColor = markdownBoldColor,
+                                accentColor = accentColor,
                             )
                         }
                     }
@@ -201,6 +208,7 @@ fun GoodToKnowScreen(
                                 baseSpan = bodySpan,
                                 tokenSpan = tokenSpan,
                                 boldColor = markdownBoldColor,
+                                accentColor = accentColor,
                             )
                         }
                     }
@@ -215,6 +223,7 @@ fun GoodToKnowScreen(
                                 baseSpan = bodySpan,
                                 tokenSpan = tokenSpan,
                                 boldColor = markdownBoldColor,
+                                accentColor = accentColor,
                             )
                         }
                     }
@@ -275,10 +284,10 @@ private fun GoodToKnowHeroHeader(
 
         Row(
             modifier = Modifier
-                .align(Alignment.CenterStart)   // ✅ au centre vertical du header
+                .align(Alignment.CenterStart)
                 .fillMaxWidth()
                 .padding(start = 16.dp, end = 16.dp)
-                .offset(y = (-8).dp),           // ✅ optionnel : remonte un peu
+                .offset(y = (-8).dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (imageResId != null) {
@@ -305,8 +314,6 @@ private fun GoodToKnowHeroHeader(
     }
 }
 
-
-
 @Composable
 private fun DynamicSectionCard(
     title: String,
@@ -317,6 +324,7 @@ private fun DynamicSectionCard(
     tokenSpan: SpanStyle,
     boldColor: Color? = null,
     defaultExpanded: Boolean = false,
+    accentColor: Color,
 ) {
     var expanded by rememberSaveable(title) { mutableStateOf(defaultExpanded) }
     val rotation by animateFloatAsState(
@@ -324,7 +332,40 @@ private fun DynamicSectionCard(
         label = "sectionArrowRotation"
     )
 
-    ElevatedCard(shape = MaterialTheme.shapes.large) {
+    val cs = MaterialTheme.colorScheme
+
+    // ✅ Border fine + discrète (teintée item)
+    val borderColor = remember(accentColor) { accentColor.copy(alpha = 0.18f) }
+
+    // ✅ Chevron teinté, reste neutre
+    val chevronTint = remember(accentColor) { accentColor.copy(alpha = 0.60f) }
+
+    // ✅ Puces teintées
+    val bulletTint = remember(accentColor) { accentColor.copy(alpha = 0.75f) }
+
+    // ✅ Halo smooth (radial) derrière l’icône
+    val density = LocalDensity.current
+    val haloBrush = remember(accentColor, density) {
+        val r = with(density) { 18.dp.toPx() }
+        Brush.radialGradient(
+            colors = listOf(
+                accentColor.copy(alpha = 0.18f),
+                Color.Transparent
+            ),
+            radius = r
+        )
+    }
+
+    OutlinedCard(
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, borderColor),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = Color.Transparent
+        ),
+        elevation = CardDefaults.outlinedCardElevation(
+            defaultElevation = 0.dp
+        )
+    ) {
         Column {
             Row(
                 modifier = Modifier
@@ -334,8 +375,15 @@ private fun DynamicSectionCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (icon != null) {
-                    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
-                        icon()
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(haloBrush, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CompositionLocalProvider(LocalContentColor provides cs.onSurface) {
+                            icon()
+                        }
                     }
                     Spacer(Modifier.width(10.dp))
                 }
@@ -343,6 +391,7 @@ private fun DynamicSectionCard(
                 Text(
                     title,
                     style = MaterialTheme.typography.titleMedium,
+                    color = cs.onSurface,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -350,7 +399,7 @@ private fun DynamicSectionCard(
                     imageVector = Icons.Outlined.ExpandMore,
                     contentDescription = if (expanded) "Réduire" else "Développer",
                     modifier = Modifier.rotate(rotation),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = chevronTint
                 )
             }
 
@@ -394,7 +443,7 @@ private fun DynamicSectionCard(
                                     Text(
                                         "•  ",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = bulletTint
                                     )
 
                                     MarkdownInlineText(
@@ -416,6 +465,7 @@ private fun DynamicSectionCard(
         }
     }
 }
+
 
 @Composable
 private fun MarkdownInlineText(
