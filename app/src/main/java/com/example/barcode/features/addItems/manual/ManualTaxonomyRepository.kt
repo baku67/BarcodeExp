@@ -2,18 +2,36 @@ package com.example.barcode.features.addItems.manual
 
 import android.content.Context
 import com.example.barcode.R
+import kotlinx.coroutines.Dispatchers
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 object ManualTaxonomyRepository {
 
     @Volatile private var cached: ManualTaxonomy? = null
+    private val mutex = Mutex()
 
-    fun get(context: Context): ManualTaxonomy {
+    suspend fun get(context: Context): ManualTaxonomy {
         cached?.let { return it }
-        return synchronized(this) {
-            cached ?: load(context).also { cached = it }
+
+        return mutex.withLock {
+            cached?.let { return it }
+
+            val loaded = withContext(Dispatchers.IO) {
+                load(context.applicationContext)
+            }
+            cached = loaded
+            loaded
         }
+    }
+
+    fun peek(): ManualTaxonomy? = cached
+
+    suspend fun preload(context: Context) {
+        get(context.applicationContext)
     }
 
     private fun load(context: Context): ManualTaxonomy {

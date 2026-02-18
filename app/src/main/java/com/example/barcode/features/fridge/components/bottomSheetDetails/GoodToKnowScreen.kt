@@ -47,6 +47,7 @@ import com.example.barcode.R
 import com.example.barcode.features.addItems.manual.ManualContent
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
+import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
 import kotlin.math.abs
 
 private const val ITEM_TOKEN = "{ITEM}"
@@ -58,16 +59,19 @@ fun GoodToKnowScreen(
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
-    val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
+
+    // ✅ async + cache (repo gère Dispatchers.IO)
+    val taxonomy = rememberManualTaxonomy()
 
     val code = remember(itemName) { itemName.trim() }
-    val subtype = remember(code, taxonomy) { taxonomy.subtypeMeta(code) }
+    val subtype = remember(code, taxonomy) { taxonomy?.subtypeMeta(code) }
+    val typeMeta = remember(code, taxonomy) { taxonomy?.typeMeta(code) }
 
-    val resolvedTitle = remember(code, subtype, taxonomy) {
+    val resolvedTitle = remember(code, subtype, typeMeta) {
         when {
             code.isBlank() -> "Cet aliment"
             else -> subtype?.title
-                ?: taxonomy.typeMeta(code)?.title
+                ?: typeMeta?.title
                 ?: prettifyTaxonomyCodeForUi(code)
         }
     }
@@ -86,7 +90,6 @@ fun GoodToKnowScreen(
     }
 
     val markdownBoldColor = remember(gradientColors, cs.surface) {
-        // ✅ plus optimisé que "prendre la 1ère" : choisit la couleur du gradient la plus lisible
         gradientColors.maxByOrNull { abs(it.luminance() - cs.surface.luminance()) }
             ?: cs.primary
     }
@@ -101,12 +104,11 @@ fun GoodToKnowScreen(
     val bodySpan = remember(cs) { SpanStyle(color = cs.onSurfaceVariant) }
     val textSpan = remember(cs) { SpanStyle(color = cs.onSurface) }
 
-    // ✅ image header du subtype (fallback type si besoin)
-    val headerImageResId = remember(context, code) {
-        val subRes = if (code.isNotBlank())
-            ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(context, code)
-        else 0
+    // ✅ image header : recalcul quand taxonomy arrive (sinon reste sur fallback)
+    val headerImageResId = remember(context, code, taxonomy) {
+        if (taxonomy == null || code.isBlank()) return@remember 0
 
+        val subRes = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(context, code)
         if (subRes != 0) subRes
         else ManualTaxonomyImageResolver.resolveTypeDrawableResId(context, code)
     }.takeIf { it != 0 }
@@ -137,86 +139,100 @@ fun GoodToKnowScreen(
             contentPadding = PaddingValues(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                GoodToKnowHeader(
-                    imageResId = headerImageResId,
-                    gradientColors = gradientColors,
-                    insert = insert,
-                    baseTitleSpan = textSpan,
-                    baseBodySpan = bodySpan,
-                    tokenSpan = tokenSpan,
-                    boldColor = markdownBoldColor,
-                )
-            }
-
-            // ✅ FRIDGE ADVISE
-            fridgeAdvise?.let {
+            // ✅ Loader tant que la taxonomy n'est pas prête (évite écran vide)
+            if (taxonomy == null) {
                 item {
-                    DynamicSectionCard(
-                        title = "Conseils frigo",
-                        icon = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
-                                contentDescription = "Frigo",
-                                modifier = Modifier.size(22.dp)
-                            )
-                        },
-                        content = it,
+                    Spacer(Modifier.height(24.dp))
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            } else {
+                item {
+                    GoodToKnowHeader(
+                        imageResId = headerImageResId,
+                        gradientColors = gradientColors,
                         insert = insert,
-                        baseSpan = bodySpan,
+                        baseTitleSpan = textSpan,
+                        baseBodySpan = bodySpan,
                         tokenSpan = tokenSpan,
                         boldColor = markdownBoldColor,
                     )
                 }
-            }
 
-            // ✅ HEALTH GOOD
-            healthGood?.let {
-                item {
-                    DynamicSectionCard(
-                        title = "Bon pour la santé",
-                        icon = { Icon(Icons.Outlined.HealthAndSafety, null) },
-                        content = it,
-                        insert = insert,
-                        baseSpan = bodySpan,
-                        tokenSpan = tokenSpan,
-                        boldColor = markdownBoldColor,
-                    )
+                // ✅ FRIDGE ADVISE
+                fridgeAdvise?.let {
+                    item {
+                        DynamicSectionCard(
+                            title = "Conseils frigo",
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
+                                    contentDescription = "Frigo",
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            },
+                            content = it,
+                            insert = insert,
+                            baseSpan = bodySpan,
+                            tokenSpan = tokenSpan,
+                            boldColor = markdownBoldColor,
+                        )
+                    }
                 }
-            }
 
-            // ✅ HEALTH WARNING
-            healthWarning?.let {
-                item {
-                    DynamicSectionCard(
-                        title = "À surveiller",
-                        icon = { Icon(Icons.Outlined.WarningAmber, null) },
-                        content = it,
-                        insert = insert,
-                        baseSpan = bodySpan,
-                        tokenSpan = tokenSpan,
-                        boldColor = markdownBoldColor,
-                    )
+                // ✅ HEALTH GOOD
+                healthGood?.let {
+                    item {
+                        DynamicSectionCard(
+                            title = "Bon pour la santé",
+                            icon = { Icon(Icons.Outlined.HealthAndSafety, null) },
+                            content = it,
+                            insert = insert,
+                            baseSpan = bodySpan,
+                            tokenSpan = tokenSpan,
+                            boldColor = markdownBoldColor,
+                        )
+                    }
                 }
-            }
 
-            // ✅ GOOD TO KNOW
-            goodToKnow?.let {
-                item {
-                    DynamicSectionCard(
-                        title = "Bon à savoir",
-                        icon = { Icon(Icons.Outlined.Info, null) },
-                        content = it,
-                        insert = insert,
-                        baseSpan = bodySpan,
-                        tokenSpan = tokenSpan,
-                        boldColor = markdownBoldColor,
-                    )
+                // ✅ HEALTH WARNING
+                healthWarning?.let {
+                    item {
+                        DynamicSectionCard(
+                            title = "À surveiller",
+                            icon = { Icon(Icons.Outlined.WarningAmber, null) },
+                            content = it,
+                            insert = insert,
+                            baseSpan = bodySpan,
+                            tokenSpan = tokenSpan,
+                            boldColor = markdownBoldColor,
+                        )
+                    }
+                }
+
+                // ✅ GOOD TO KNOW
+                goodToKnow?.let {
+                    item {
+                        DynamicSectionCard(
+                            title = "Bon à savoir",
+                            icon = { Icon(Icons.Outlined.Info, null) },
+                            content = it,
+                            insert = insert,
+                            baseSpan = bodySpan,
+                            tokenSpan = tokenSpan,
+                            boldColor = markdownBoldColor,
+                        )
+                    }
                 }
             }
         }
     }
 }
+
 
 @Composable
 private fun GoodToKnowHeader(

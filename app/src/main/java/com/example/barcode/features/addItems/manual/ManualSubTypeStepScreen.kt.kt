@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -53,11 +55,12 @@ fun ManualSubtypeStepScreen(
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
-    val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
+
+    val taxonomy = rememberManualTaxonomy()
 
     val typeCode: String? = draft.manualTypeCode
-    val list = typeCode?.let { taxonomy.subtypesOf(it) }.orEmpty()
-    val typeMeta = typeCode?.let { taxonomy.typeMeta(it) }
+    val list = typeCode?.let { taxonomy?.subtypesOf(it) }.orEmpty()
+    val typeMeta = typeCode?.let { taxonomy?.typeMeta(it) }
 
     var query by rememberSaveable(typeCode) { mutableStateOf("") }
     val q = remember(query) { normalizeForSearch(query) }
@@ -71,6 +74,19 @@ fun ManualSubtypeStepScreen(
         onBack = onBack,
         onCancel = onCancel
     ) { innerPadding ->
+
+        if (draft.manualTypeCode != null && taxonomy == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+            return@AddItemStepScaffold
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()

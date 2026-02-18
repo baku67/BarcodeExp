@@ -70,6 +70,7 @@ import com.example.barcode.data.local.entities.ItemNoteEntity
 import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
+import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
 import org.json.JSONObject
 import java.time.Instant
 import java.time.ZoneId
@@ -113,7 +114,11 @@ fun ItemDetailsBottomSheet(
         isManual && itemEntity.manualType?.equals("LEFTOVERS", ignoreCase = true) == true
     }
 
+    // ✅ charge la taxonomy en arrière-plan (et alimente le cache pour les images)
+    val taxonomy = rememberManualTaxonomy()
+
     val effectivePreviewUrl = remember(
+        taxonomy, // ✅ déclenche recomposition quand loaded -> images resolver OK
         itemEntity.addMode,
         itemEntity.manualType,
         itemEntity.manualSubtype,
@@ -251,10 +256,9 @@ fun ItemDetailsBottomSheet(
                                 ?: itemEntity.manualType?.trim().takeIf { !it.isNullOrBlank() }
                                 ?: ""
 
-                        val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
-                        val displayTitle = remember(goodToKnowCode) {
-                            taxonomy.subtypeMeta(goodToKnowCode)?.title
-                                ?: taxonomy.typeMeta(goodToKnowCode)?.title
+                        val displayTitle = remember(goodToKnowCode, taxonomy) {
+                            taxonomy?.subtypeMeta(goodToKnowCode)?.title
+                                ?: taxonomy?.typeMeta(goodToKnowCode)?.title
                                 ?: prettifyTaxonomyCodeForUi(goodToKnowCode)
                         }
 

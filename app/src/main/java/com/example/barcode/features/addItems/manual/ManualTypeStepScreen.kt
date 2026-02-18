@@ -45,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -75,13 +76,14 @@ private data class SubtypeHit(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManualTypeStepScreen(
+    taxonomy: ManualTaxonomy,
     onPick: (String) -> Unit,
     onBack: () -> Unit,
     onCancel: () -> Unit,
     onPickSubtype: ((typeCode: String, subtypeCode: String) -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
+
     val types = taxonomy.types
 
     var query by rememberSaveable { mutableStateOf("") }

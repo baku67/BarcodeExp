@@ -26,6 +26,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -52,13 +53,13 @@ fun ManualLeftoversDetailsStepScreen(
 ) {
     val context = LocalContext.current
 
-    val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
+    val taxonomy = rememberManualTaxonomy()
 
     val typeCode = draft.manualTypeCode
     val subtypeCode = draft.manualSubtypeCode
 
-    val typeMeta = typeCode?.let { taxonomy.typeMeta(it) }
-    val subtypeMeta = subtypeCode?.let { taxonomy.subtypeMeta(it) }
+    val typeMeta = typeCode?.let { taxonomy?.typeMeta(it) }
+    val subtypeMeta = subtypeCode?.let { taxonomy?.subtypeMeta(it) }
 
     // Header = SubType (fallback = Type). Si rien, on force une valeur "Restes".
     val headerTitle = subtypeMeta?.title ?: typeMeta?.title ?: "Restes / Tupperware"

@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -32,7 +33,7 @@ fun ManualDetailsStepScreen(
 ) {
     val context = LocalContext.current
 
-    val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
+    val taxonomy = rememberManualTaxonomy()
 
     val prefsStore = remember(context) { UserPreferencesStore(context) }
 
@@ -49,21 +50,27 @@ fun ManualDetailsStepScreen(
     val typeCode = draft.manualTypeCode
     val subtypeCode = draft.manualSubtypeCode
 
-    val typeMeta = typeCode?.let { taxonomy.typeMeta(it) }
-    val subtypeMeta = subtypeCode?.let { taxonomy.subtypeMeta(it) }
+    val typeMeta = typeCode?.let { taxonomy?.typeMeta(it) }
+    val subtypeMeta = subtypeCode?.let { taxonomy?.subtypeMeta(it) }
 
     // Header = SubType (fallback = Type si pas de subtype)
     val headerTitle = subtypeMeta?.title ?: typeMeta?.title ?: ""
     val headerImageResId = drawableId(context, subtypeMeta?.image ?: typeMeta?.image)
     val headerPaletteCode = typeCode ?: subtypeMeta?.parentCode ?: ""
 
-    val suggestedName = remember(draft.name, draft.manualTypeCode, draft.manualSubtypeCode) {
-        draft.name ?: subtypeMeta?.title ?: typeMeta?.title ?: ""
+    var name by rememberSaveable(draft.name, typeCode, subtypeCode) {
+        mutableStateOf(draft.name.orEmpty())
     }
 
-    var name by remember(draft.name, draft.manualTypeCode, draft.manualSubtypeCode) {
-        mutableStateOf(suggestedName)
+    val autoName = (subtypeMeta?.title ?: typeMeta?.title).orEmpty()
+
+    LaunchedEffect(taxonomy, typeCode, subtypeCode) {
+        // ✅ ne remplit que si l'user n’a rien tapé et que draft.name est vide
+        if (draft.name.isNullOrBlank() && name.isBlank() && autoName.isNotBlank()) {
+            name = autoName
+        }
     }
+
     var brand by remember(draft.brand) { mutableStateOf(draft.brand.orEmpty()) }
 
     var expiryMs by remember(draft.expiryDate) { mutableStateOf(draft.expiryDate) }

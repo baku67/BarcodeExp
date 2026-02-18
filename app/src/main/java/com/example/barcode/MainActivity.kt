@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -16,7 +17,9 @@ import com.example.barcode.features.bootstrap.GlobalLoaderScreen
 import androidx.navigation.compose.navigation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.barcode.features.addItems.AddItemViewModel
@@ -44,7 +47,9 @@ import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.AppBackground
 import com.example.barcode.common.ui.theme.Theme
 import com.example.barcode.features.addItems.manual.ManualLeftoversDetailsStepScreen
+import com.example.barcode.features.addItems.manual.ManualTaxonomy
 import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
+import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
 import com.example.barcode.features.fridge.components.bottomSheetDetails.GoodToKnowScreen
 import com.example.barcode.sync.SyncScheduler
 
@@ -216,6 +221,10 @@ class MainActivity : ComponentActivity() {
                                     }
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
 
+                                    LaunchedEffect(Unit) {
+                                        ManualTaxonomyRepository.preload(appContext)
+                                    }
+
                                     AddItemChooseScreen(
                                         onPickScan = {
                                             addVm.setAddMode(ItemAddMode.BARCODE_SCAN)
@@ -323,12 +332,21 @@ class MainActivity : ComponentActivity() {
                                     }
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
 
-                                    val context = LocalContext.current
-                                    val taxonomy = remember(context) { ManualTaxonomyRepository.get(context) }
+                                    val taxonomy = rememberManualTaxonomy()
+
+                                    if (taxonomy == null) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator()
+                                        }
+                                        return@composable
+                                    }
 
                                     ManualTypeStepScreen(
+                                        taxonomy = taxonomy,
                                         onPick = { typeCode: String ->
-                                            // doit setter manualTypeCode + reset manualSubtypeCode
                                             addVm.setManualType(typeCode)
 
                                             val hasSubtypes = taxonomy.subtypesOf(typeCode).isNotEmpty()
@@ -344,10 +362,7 @@ class MainActivity : ComponentActivity() {
                                                     navController.navigate("addItem/manual/details")
                                             }
                                         },
-
-                                        // ✅ signature corrigée: (typeCode, subtypeCode)
                                         onPickSubtype = { typeCode: String, subtypeCode: String ->
-                                            // important: set le type d'abord (et reset subtype), puis set le subtype
                                             addVm.setManualType(typeCode)
                                             addVm.setManualSubtype(subtypeCode)
 
@@ -357,10 +372,10 @@ class MainActivity : ComponentActivity() {
                                                 navController.navigate("addItem/manual/details")
                                             }
                                         },
-
                                         onCancel = { close() },
                                         onBack = { navController.popBackStack() }
                                     )
+
                                 }
 
 
