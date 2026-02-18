@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.barcode.common.ui.components.MonthWheelFormat
 import com.example.barcode.common.ui.components.WheelDatePickerDialog
 import com.example.barcode.core.UserPreferencesStore
@@ -110,8 +111,14 @@ fun ManualDetailsStepScreen(
                     typeTitle = headerTitle,
                     typeImageResId = headerImageResId,
                     palette = paletteForType(headerPaletteCode),
-                    // ✅ override pour reprendre le tri-color du SUBTYPE
                     gradientColors = headerGradientColors,
+
+                    // ✅ centre un peu plus le titre + l'image
+                    centerContent = true,
+
+                    titleFontWeight = FontWeight.Light,
+                    titleFontSize = 30.sp,
+                    titleLineHeight = 28.sp,
                 )
             }
 

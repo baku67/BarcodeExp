@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
@@ -212,19 +214,24 @@ internal fun ManualSubtypeFullBleedHeader(
     typeTitle: String,
     typeImageResId: Int,
     palette: TypePalette,
-    gradientColors: List<Color>? = null, // ✅ tri-color SUBTYPE pour ManualDetailsStepScreen
-    isLarge: Boolean = false,            // ✅ default inchangé
-    height: Dp = if (isLarge) 220.dp else 188.dp, // ✅ default inchangé
+    gradientColors: List<Color>? = null,
+    isLarge: Boolean = false,
+    height: Dp = if (isLarge) 220.dp else 188.dp,
+
+    // ✅ NOUVEAU : centrer le duo (titre + image) sans impacter les autres écrans
+    centerContent: Boolean = false,
+
+    // ✅ overrides (ManualDetails)
+    titleFontWeight: FontWeight = FontWeight.Black,
+    titleFontSize: TextUnit? = null,
+    titleLineHeight: TextUnit? = null,
 ) {
-    // Fallback historique (TYPE)
     val fallbackTopColor = lerp(palette.bg0, palette.accent, 0.28f)
 
-    // Tri-color (SUBTYPE) si fourni
     val c0 = gradientColors?.getOrNull(0)
     val c1 = gradientColors?.getOrNull(1) ?: c0
     val c2 = gradientColors?.getOrNull(2) ?: c1 ?: c0
 
-    // Layout : uniquement ajusté en mode "large"
     val hPad = if (isLarge) 18.dp else 16.dp
     val vPad = if (isLarge) 14.dp else 8.dp
     val imageSize = if (isLarge) 104.dp else 96.dp
@@ -235,7 +242,6 @@ internal fun ManualSubtypeFullBleedHeader(
 
     val heroBrush = remember(c0, c1, c2, fallbackTopColor, isLarge, bg, endY) {
         if (!isLarge) {
-            // ====== MODE DEFAULT : ton rendu original ======
             if (c0 != null) {
                 Brush.verticalGradient(
                     colors = listOf(
@@ -255,7 +261,6 @@ internal fun ManualSubtypeFullBleedHeader(
                 )
             }
         } else {
-            // ====== MODE LARGE : plus smooth ======
             if (c0 != null) {
                 Brush.verticalGradient(
                     colorStops = arrayOf(
@@ -292,11 +297,20 @@ internal fun ManualSubtypeFullBleedHeader(
     val isLight = luminanceBase > 0.65f
     val fallbackTitleColor = if (isLight) Color(0xFF0F172A) else Color.White
 
-    val titleStyle = if (titleBrush != null) {
+    val baseTitleStyle = if (titleBrush != null) {
         MaterialTheme.typography.headlineSmall.copy(brush = titleBrush)
     } else {
         MaterialTheme.typography.headlineSmall
     }
+
+    val finalTitleStyle = remember(baseTitleStyle, titleFontSize, titleLineHeight) {
+        baseTitleStyle.copy(
+            fontSize = titleFontSize ?: baseTitleStyle.fontSize,
+            lineHeight = titleLineHeight ?: baseTitleStyle.lineHeight
+        )
+    }
+
+    val titleTextAlign = if (centerContent) TextAlign.Center else TextAlign.Start
 
     Box(
         modifier = Modifier
@@ -309,31 +323,74 @@ internal fun ManualSubtypeFullBleedHeader(
                 .background(heroBrush)
         )
 
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = hPad, vertical = vPad),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = typeTitle,
-                modifier = Modifier.weight(1f),
-                style = titleStyle,
-                fontWeight = FontWeight.Black,
-                color = if (titleBrush != null) Color.Unspecified else fallbackTitleColor,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            if (typeImageResId != 0) {
-                if (gap > 0.dp) Spacer(Modifier.width(gap))
-                Image(
-                    painter = painterResource(typeImageResId),
-                    contentDescription = null,
-                    modifier = Modifier.size(imageSize),
-                    contentScale = ContentScale.Fit
+        if (!centerContent) {
+            // ✅ rendu actuel (Type/Subtype screens)
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = hPad, vertical = vPad),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = typeTitle,
+                    modifier = Modifier.weight(1f),
+                    style = finalTitleStyle,
+                    fontWeight = titleFontWeight,
+                    color = if (titleBrush != null) Color.Unspecified else fallbackTitleColor,
+                    textAlign = titleTextAlign,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+
+                if (typeImageResId != 0) {
+                    if (gap > 0.dp) Spacer(Modifier.width(gap))
+                    Image(
+                        painter = painterResource(typeImageResId),
+                        contentDescription = null,
+                        modifier = Modifier.size(imageSize),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
+        } else {
+            // ✅ mode centré (ManualDetails)
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = hPad, vertical = vPad)
+            ) {
+                val hasImage = typeImageResId != 0
+                val centerGap = if (hasImage) 12.dp else 0.dp
+                val maxTextWidth =
+                    if (hasImage) (maxWidth - imageSize - centerGap).coerceAtLeast(0.dp) else maxWidth
+
+                Row(
+                    modifier = Modifier.align(Alignment.Center),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = typeTitle,
+                        modifier = Modifier.widthIn(max = maxTextWidth),
+                        style = finalTitleStyle,
+                        fontWeight = titleFontWeight,
+                        color = if (titleBrush != null) Color.Unspecified else fallbackTitleColor,
+                        textAlign = titleTextAlign,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    if (hasImage) {
+                        Spacer(Modifier.width(centerGap))
+                        Image(
+                            painter = painterResource(typeImageResId),
+                            contentDescription = null,
+                            modifier = Modifier.size(imageSize),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                }
             }
         }
     }
 }
+

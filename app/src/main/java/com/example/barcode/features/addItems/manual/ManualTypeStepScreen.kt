@@ -130,7 +130,7 @@ fun ManualTypeStepScreen(
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = "Rechercher un produit..."
+                placeholder = "Rechercher un aliment..."
             )
 
             Spacer(Modifier.height(6.dp))

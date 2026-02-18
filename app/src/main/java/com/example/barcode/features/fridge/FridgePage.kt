@@ -911,7 +911,7 @@ fun FridgePage(
                             ) {
                                 Icon(Icons.Filled.Add, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Ajouter un produit")
+                                Text("Ajouter un aliment")
                             }
                         }
                     }
