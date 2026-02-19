@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -163,14 +164,25 @@ fun ManualSubtypeStepScreen(
                     val cols = ManualTaxonomyUiSpec.colsFor(maxWidth)
                     val palette = remember(typeCode) { paletteForType(typeCode ?: "") }
 
-                    val gridState = rememberLazyGridState()
+                    val gridState = rememberSaveable(typeCode, saver = LazyGridState.Saver) {
+                        LazyGridState()
+                    }
+
+                    // évite le scroll-to-top au 1er affichage (et donc au retour écran)
+                    var lastQ by rememberSaveable(typeCode) { mutableStateOf(q) }
+
                     val showTopScrim by remember {
                         derivedStateOf {
                             gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0
                         }
                     }
 
-                    LaunchedEffect(q) { runCatching { gridState.scrollToItem(0) } }
+                    LaunchedEffect(q) {
+                        if (q != lastQ) {
+                            runCatching { gridState.scrollToItem(0) }
+                            lastQ = q
+                        }
+                    }
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         LazyVerticalGrid(
