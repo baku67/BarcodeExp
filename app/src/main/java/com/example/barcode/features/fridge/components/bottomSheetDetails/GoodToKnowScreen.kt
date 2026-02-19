@@ -199,7 +199,7 @@ fun GoodToKnowScreen(
                     fridgeAdvise?.let {
                         item {
                             DynamicSectionCard(
-                                title = "Conseils frigo",
+                                title = "Astuces de stockage",
                                 icon = {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
@@ -220,7 +220,7 @@ fun GoodToKnowScreen(
                     healthGood?.let {
                         item {
                             DynamicSectionCard(
-                                title = "Bon pour la santé",
+                                title = "Bienfaits",
                                 icon = { Icon(Icons.Outlined.HealthAndSafety, null) },
                                 content = it,
                                 insert = insert,

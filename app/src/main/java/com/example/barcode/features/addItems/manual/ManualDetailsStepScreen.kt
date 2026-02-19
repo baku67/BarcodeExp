@@ -1,21 +1,42 @@
 package com.example.barcode.features.addItems.manual
 
 import android.graphics.Color as AndroidColor
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.barcode.R
 import com.example.barcode.common.ui.components.MonthWheelFormat
 import com.example.barcode.common.ui.components.WheelDatePickerDialog
 import com.example.barcode.core.UserPreferencesStore
@@ -71,6 +92,27 @@ fun ManualDetailsStepScreen(
             runCatching { Color(AndroidColor.parseColor(hex)) }.getOrNull()
         }
         parsed.takeIf { it.size >= 3 }
+    }
+
+    // ✅ "{ITEM}" pour le contenu taxonomy (comme GoodToKnowScreen)
+    val itemTitleForContent = remember(subtypeMeta?.title, typeMeta?.title) {
+        (subtypeMeta?.title ?: typeMeta?.title).orEmpty().ifBlank { "Cet aliment" }
+    }
+    val insert = remember(itemTitleForContent) { itemTitleForContent.lowercaseFirstEachLine() }
+
+    val cs = MaterialTheme.colorScheme
+    val gradientColorsForContent = remember(headerGradientColors, cs) {
+        headerGradientColors ?: listOf(cs.primary, cs.tertiary, cs.secondary)
+    }
+    val tokenSpan = remember(gradientColorsForContent) {
+        SpanStyle(
+            brush = Brush.linearGradient(gradientColorsForContent),
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+    val baseSpan = remember(cs) { SpanStyle(color = cs.onSurfaceVariant) }
+    val accentColor = remember(gradientColorsForContent, cs) {
+        gradientColorsForContent.getOrNull(1) ?: cs.primary
     }
 
     var name by rememberSaveable(draft.name, typeCode, subtypeCode) {
@@ -205,6 +247,18 @@ fun ManualDetailsStepScreen(
                             }
                         }
 
+                        // ✅ Volet "Conseils frigo" (taxonomy) — uniquement ici
+                        subtypeMeta?.fridgeAdvise?.let { content ->
+                            Spacer(Modifier.height(6.dp))
+                            FridgeAdviseSectionCard(
+                                content = content,
+                                insert = insert,
+                                baseSpan = baseSpan,
+                                tokenSpan = tokenSpan,
+                                accentColor = accentColor,
+                            )
+                        }
+
                         Spacer(Modifier.height(12.dp))
                     }
 
@@ -247,3 +301,245 @@ fun ManualDetailsStepScreen(
         }
     }
 }
+
+private const val ITEM_TOKEN = "{ITEM}"
+
+@Composable
+private fun FridgeAdviseSectionCard(
+    content: ManualContent,
+    insert: String,
+    baseSpan: SpanStyle,
+    tokenSpan: SpanStyle,
+    accentColor: Color,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        label = "fridgeAdviseArrowRotation"
+    )
+
+    val cs = MaterialTheme.colorScheme
+
+    // Fond très léger (un poil plus présent quand ouvert)
+    val sectionBgAlpha = if (expanded) 0.24f else 0.18f
+    val sectionBg = cs.surfaceVariant.copy(alpha = sectionBgAlpha)
+
+    val borderColor = remember(accentColor) { accentColor.copy(alpha = 0.28f) }
+    val chevronTint = remember(accentColor) { accentColor.copy(alpha = 0.60f) }
+    val bulletTint = remember(accentColor) { accentColor.copy(alpha = 0.75f) }
+
+    // Halo smooth derrière l’icône
+    val density = LocalDensity.current
+    val haloBrush = remember(accentColor, density) {
+        val r = with(density) { 18.dp.toPx() }
+        Brush.radialGradient(
+            colors = listOf(
+                accentColor.copy(alpha = 0.18f),
+                Color.Transparent
+            ),
+            radius = r
+        )
+    }
+
+    OutlinedCard(
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, borderColor),
+        colors = CardDefaults.outlinedCardColors(containerColor = sectionBg),
+        elevation = CardDefaults.outlinedCardElevation(defaultElevation = 0.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(haloBrush, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                        tint = cs.onSurface
+                    )
+                }
+
+                Spacer(Modifier.width(10.dp))
+
+                Text(
+                    text = "Astuces de stockage",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = cs.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Icon(
+                    imageVector = Icons.Outlined.ExpandMore,
+                    contentDescription = if (expanded) "Réduire" else "Développer",
+                    modifier = Modifier.rotate(rotation),
+                    tint = chevronTint
+                )
+            }
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                ) {
+                    Spacer(Modifier.height(2.dp))
+
+                    when (content) {
+                        is ManualContent.Markdown -> {
+                            val paragraphs = remember(content.text) {
+                                content.text
+                                    .split("\n\n")
+                                    .map { it.trim() }
+                                    .filter { it.isNotBlank() }
+                            }
+
+                            paragraphs.forEachIndexed { idx, p ->
+                                ManualInlineMarkdownText(
+                                    template = p,
+                                    insert = insert,
+                                    baseSpan = baseSpan,
+                                    tokenSpan = tokenSpan,
+                                    boldColor = accentColor,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                if (idx != paragraphs.lastIndex) Spacer(Modifier.height(10.dp))
+                            }
+                        }
+
+                        is ManualContent.Bullets -> {
+                            content.items.forEach { b ->
+                                Row(Modifier.fillMaxWidth()) {
+                                    Text(
+                                        text = "•  ",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = bulletTint
+                                    )
+
+                                    ManualInlineMarkdownText(
+                                        template = b,
+                                        insert = insert,
+                                        baseSpan = baseSpan,
+                                        tokenSpan = tokenSpan,
+                                        boldColor = accentColor,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                                Spacer(Modifier.height(6.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ManualInlineMarkdownText(
+    template: String,
+    insert: String,
+    baseSpan: SpanStyle,
+    tokenSpan: SpanStyle,
+    boldColor: Color,
+    style: androidx.compose.ui.text.TextStyle,
+    modifier: Modifier = Modifier,
+) {
+    val boldSpan = remember(baseSpan, boldColor) { baseSpan.copy(color = boldColor) }
+
+    val annotated = remember(template, insert, baseSpan, tokenSpan, boldSpan) {
+        buildInlineMarkdownAnnotatedString(
+            template = template,
+            insert = insert,
+            baseSpan = baseSpan,
+            tokenSpan = tokenSpan,
+            boldSpan = boldSpan,
+        )
+    }
+
+    Text(text = annotated, style = style, modifier = modifier)
+}
+
+/**
+ * Markdown inline (subset) :
+ * - **gras**
+ * - *italique*
+ * + support du placeholder {ITEM} injecté en gradient
+ */
+private fun buildInlineMarkdownAnnotatedString(
+    template: String,
+    insert: String,
+    baseSpan: SpanStyle,
+    tokenSpan: SpanStyle,
+    boldSpan: SpanStyle? = null,
+): AnnotatedString {
+    var i = 0
+    var bold = false
+    var italic = false
+
+    val out = AnnotatedString.Builder()
+    val buf = StringBuilder()
+
+    fun currentSpan(isToken: Boolean): SpanStyle {
+        val base = when {
+            isToken -> tokenSpan
+            bold && boldSpan != null -> boldSpan
+            else -> baseSpan
+        }
+
+        val weight = when {
+            isToken && bold -> FontWeight.Bold
+            bold -> FontWeight.SemiBold
+            else -> base.fontWeight
+        }
+
+        val fStyle = if (italic) FontStyle.Italic else base.fontStyle
+        return base.copy(fontWeight = weight, fontStyle = fStyle)
+    }
+
+    fun flush(isToken: Boolean = false) {
+        if (buf.isEmpty()) return
+        out.withStyle(currentSpan(isToken)) { append(buf.toString()) }
+        buf.setLength(0)
+    }
+
+    while (i < template.length) {
+        if (template.startsWith("**", i)) { flush(); bold = !bold; i += 2; continue }
+        if (template[i] == '*') { flush(); italic = !italic; i += 1; continue }
+
+        if (template.startsWith(ITEM_TOKEN, i)) {
+            flush()
+            buf.append(insert)
+            flush(isToken = true)
+            i += ITEM_TOKEN.length
+            continue
+        }
+
+        buf.append(template[i])
+        i += 1
+    }
+
+    flush()
+    return out.toAnnotatedString()
+}
+
+private fun String.lowercaseFirstEachLine(): String =
+    split('\n').joinToString("\n") { line ->
+        val trimmed = line.trim()
+        if (trimmed.isBlank()) line
+        else trimmed.replaceFirstChar { ch -> ch.lowercase() }
+    }
