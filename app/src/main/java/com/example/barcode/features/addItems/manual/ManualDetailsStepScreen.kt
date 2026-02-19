@@ -213,8 +213,8 @@ fun ManualDetailsStepScreen(
                                 blurRadius = 1f
                             ),*/
                             titleShadow = Shadow(
-                                color = Color.White.copy(alpha = 0.99f),
-                                offset = Offset(0f, 1.5f),
+                                color = Color.White,
+                                offset = Offset(0f, 2f),
                                 blurRadius = 1f
                             )
                         )
@@ -223,7 +223,7 @@ fun ManualDetailsStepScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 16.dp, vertical = 0.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         TextField(
