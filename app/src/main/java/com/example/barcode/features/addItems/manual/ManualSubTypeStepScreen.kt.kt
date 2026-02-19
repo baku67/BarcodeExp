@@ -191,6 +191,7 @@ fun ManualSubtypeStepScreen(
                                     palette = palette,
                                     imageResId = imageRes,
                                     selected = draft.manualSubtypeCode == subMeta.code,
+                                    gradientMeta = subMeta.gradient, // ✅ gradient du produit dans la card
                                     onClick = { onPick(subMeta.code) }
                                 )
                             }
@@ -393,4 +394,3 @@ internal fun ManualSubtypeFullBleedHeader(
         }
     }
 }
-

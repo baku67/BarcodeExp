@@ -30,6 +30,8 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -38,6 +40,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.hypot
+import kotlin.math.sin
 
 val MANUAL_TYPES_WITH_SUBTYPE_IMAGE = setOf("VEGETABLES", "FRUITS", "MEAT", "FISH", "DAIRY")
 val MANUAL_TYPES_DRAWER = setOf("VEGETABLES", "FRUITS")
@@ -148,11 +154,6 @@ object ManualTaxonomyImageResolver {
     }
 }
 
-
-
-
-
-
 @Composable
 internal fun ManualTaxonomyTileCard(
     modifier: Modifier = Modifier,
@@ -160,6 +161,7 @@ internal fun ManualTaxonomyTileCard(
     palette: TypePalette,
     @DrawableRes imageResId: Int,
     selected: Boolean = false,
+    gradientMeta: ManualGradientMeta? = null,
     onClick: () -> Unit
 ) {
     val surface = MaterialTheme.colorScheme.surface
@@ -175,8 +177,24 @@ internal fun ManualTaxonomyTileCard(
     }
 
     val shape = RoundedCornerShape(22.dp)
-    val gradient: Brush = Brush.linearGradient(listOf(bg0, bg1))
     val imageSize = 60.dp
+
+    // ✅ gradient SUBTYPE (optionnel)
+    val overlayBase = androidx.compose.runtime.remember(gradientMeta) {
+        gradientMeta?.colors
+            ?.asSequence()
+            ?.map { it.trim() }
+            ?.filter { it.isNotBlank() }
+            ?.mapNotNull(::parseHexColorOrNull)
+            ?.take(3)
+            ?.toList()
+            ?.takeIf { it.size >= 2 }
+    }
+    val overlayAlpha = if (selected) 0.24f else 0.16f
+    val overlayColors = androidx.compose.runtime.remember(overlayBase, overlayAlpha) {
+        overlayBase?.map { it.copy(alpha = overlayAlpha) }
+    }
+    val overlayAngleDeg = gradientMeta?.angleDeg ?: 0f
 
     Surface(
         onClick = onClick,
@@ -190,7 +208,47 @@ internal fun ManualTaxonomyTileCard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(gradient)
+                .drawWithCache {
+                    val baseBrush = Brush.linearGradient(listOf(bg0, bg1))
+
+                    // pick une couleur "signature" du produit (middle > first)
+                    val spotBase = overlayBase?.getOrNull(1) ?: overlayBase?.firstOrNull()
+                    val spotAlpha = if (selected) 0.26f else 0.18f
+                    val spotColor = spotBase?.copy(alpha = spotAlpha)
+
+                    // ✅ halo centré sur la zone image (un peu au-dessus du milieu)
+                    val spotCenter = Offset(size.width * 0.5f, size.height * 0.34f)
+                    val spotRadius = size.minDimension * 0.78f
+
+                    val spotBrush = spotColor?.let {
+                        Brush.radialGradient(
+                            colors = listOf(it, Color.Transparent),
+                            center = spotCenter,
+                            radius = spotRadius
+                        )
+                    }
+
+                    // ✅ petit glare blanc en haut (micro-détail “premium”)
+                    val glareBrush = Brush.radialGradient(
+                        colors = listOf(Color.White.copy(alpha = 0.06f), Color.Transparent),
+                        center = Offset(size.width * 0.25f, size.height * 0.15f),
+                        radius = size.minDimension * 0.55f
+                    )
+
+                    // ✅ scrim bas neutre pour protéger le titre
+                    val textScrim = Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, surface.copy(alpha = 0.48f)),
+                        startY = size.height * 0.45f,
+                        endY = size.height
+                    )
+
+                    onDrawBehind {
+                        drawRect(baseBrush)
+                        if (spotBrush != null) drawRect(spotBrush)
+                        drawRect(glareBrush)
+                        drawRect(textScrim)
+                    }
+                }
                 .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 3.dp)
         ) {
             Column(
@@ -250,6 +308,36 @@ internal fun ManualTaxonomyTileCard(
     }
 }
 
+private fun parseHexColorOrNull(hex: String?): Color? {
+    if (hex.isNullOrBlank()) return null
+    val clean = hex.trim().removePrefix("#")
+    return try {
+        val argb = when (clean.length) {
+            6 -> (0xFF000000 or clean.toLong(16)).toInt()
+            8 -> clean.toLong(16).toInt()
+            else -> return null
+        }
+        Color(argb)
+    } catch (_: Throwable) {
+        null
+    }
+}
+
+private fun linearGradientEndpoints(w: Float, h: Float, angleDeg: Float): Pair<Offset, Offset> {
+    val rad = (angleDeg / 180f) * PI.toFloat()
+    val vx = cos(rad)
+    val vy = sin(rad)
+
+    val cx = w / 2f
+    val cy = h / 2f
+
+    // couvre bien les coins, quel que soit l’angle
+    val half = (hypot(w.toDouble(), h.toDouble()) / 2.0).toFloat()
+
+    val start = Offset(cx - vx * half, cy - vy * half)
+    val end = Offset(cx + vx * half, cy + vy * half)
+    return start to end
+}
 
 object ManualTaxonomyUiSpec {
     // IMPORTANT: c’est ça qui faisait basculer ManualType en 2 colonnes (padding trop grand)
