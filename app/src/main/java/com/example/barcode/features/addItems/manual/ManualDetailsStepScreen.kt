@@ -165,6 +165,14 @@ fun ManualDetailsStepScreen(
         expiryMs?.let { dateFormatter.format(Date(it)) } ?: "Choisir une date"
     }
 
+    val isShortHeaderTitle = remember(headerTitle) {
+        headerTitle.count { it.isLetterOrDigit() } <= 10
+    }
+
+    val detailsCenterGap = remember(isShortHeaderTitle) {
+        if (isShortHeaderTitle) 28.dp else 12.dp
+    }
+
     AddItemStepScaffold(
         step = 3,
         onBack = onBack,
@@ -194,6 +202,7 @@ fun ManualDetailsStepScreen(
                             gradientColors = headerGradientColors,
 
                             centerContent = true,
+                            centerGap = detailsCenterGap,
 
                             titleFontWeight = FontWeight.Light,
                             titleFontSize = 30.sp,
@@ -206,7 +215,7 @@ fun ManualDetailsStepScreen(
                             titleShadow = Shadow(
                                 color = Color.White.copy(alpha = 0.99f),
                                 offset = Offset(0f, 1.5f),
-                                blurRadius = 3f
+                                blurRadius = 1f
                             )
                         )
                     }

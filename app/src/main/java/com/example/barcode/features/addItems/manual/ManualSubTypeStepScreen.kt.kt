@@ -220,8 +220,14 @@ internal fun ManualSubtypeFullBleedHeader(
     isLarge: Boolean = false,
     height: Dp = if (isLarge) 220.dp else 188.dp,
 
-    // ✅ NOUVEAU : centrer le duo (titre + image) sans impacter les autres écrans
+    // ✅ mode “compact centré” (ManualDetails)
     centerContent: Boolean = false,
+
+    // ✅ NEW: réglages optionnels pour ManualDetails (sans impacter ailleurs)
+    // - centerGap: espace fixe entre titre et image en mode compact-centre
+    // - centerEdgePadding: si > 0 => layout “semi-centré” (pas aux extrêmes) avec padding latéral interne
+    centerGap: Dp = 12.dp,
+    centerEdgePadding: Dp = 0.dp,
 
     // ✅ overrides (ManualDetails)
     titleFontWeight: FontWeight = FontWeight.Black,
@@ -238,7 +244,7 @@ internal fun ManualSubtypeFullBleedHeader(
     val hPad = if (isLarge) 18.dp else 16.dp
     val vPad = if (isLarge) 14.dp else 8.dp
     val imageSize = if (isLarge) 104.dp else 96.dp
-    val gap = if (isLarge) 10.dp else 0.dp
+    val imageGapIfLarge = if (isLarge) 10.dp else 0.dp
 
     val bg = MaterialTheme.colorScheme.background
     val endY = with(LocalDensity.current) { height.toPx() * 1.35f }
@@ -300,14 +306,12 @@ internal fun ManualSubtypeFullBleedHeader(
     val isLight = luminanceBase > 0.65f
     val fallbackTitleColor = if (isLight) Color(0xFF0F172A) else Color.White
 
-    // baseTitleStyle : tu gardes EXACTEMENT ta logique brush / non-brush
     val baseTitleStyle = if (titleBrush != null) {
         MaterialTheme.typography.headlineSmall.copy(brush = titleBrush)
     } else {
         MaterialTheme.typography.headlineSmall
     }
 
-    // finalTitleStyle : on conserve fontSize + lineHeight, et on ajoute shadow sans écraser le reste
     val finalTitleStyle = remember(baseTitleStyle, titleFontSize, titleLineHeight, titleShadow) {
         baseTitleStyle.copy(
             fontSize = titleFontSize ?: baseTitleStyle.fontSize,
@@ -316,7 +320,8 @@ internal fun ManualSubtypeFullBleedHeader(
         )
     }
 
-    val titleTextAlign = if (centerContent) TextAlign.Center else TextAlign.Start
+    val compactCenter = centerContent && centerEdgePadding == 0.dp
+    val titleTextAlign = if (compactCenter) TextAlign.Center else TextAlign.Start
 
     Box(
         modifier = Modifier
@@ -349,7 +354,7 @@ internal fun ManualSubtypeFullBleedHeader(
                 )
 
                 if (typeImageResId != 0) {
-                    if (gap > 0.dp) Spacer(Modifier.width(gap))
+                    if (imageGapIfLarge > 0.dp) Spacer(Modifier.width(imageGapIfLarge))
                     Image(
                         painter = painterResource(typeImageResId),
                         contentDescription = null,
@@ -359,34 +364,76 @@ internal fun ManualSubtypeFullBleedHeader(
                 }
             }
         } else {
-            // ✅ mode centré (ManualDetails)
+            // ✅ mode centré (ManualDetails) : compact OU “semi-centré” si centerEdgePadding > 0
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = hPad, vertical = vPad)
             ) {
                 val hasImage = typeImageResId != 0
-                val centerGap = if (hasImage) 12.dp else 0.dp
-                val maxTextWidth =
-                    if (hasImage) (maxWidth - imageSize - centerGap).coerceAtLeast(0.dp) else maxWidth
 
-                Row(
-                    modifier = Modifier.align(Alignment.Center),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                if (!hasImage) {
                     Text(
                         text = typeTitle,
-                        modifier = Modifier.widthIn(max = maxTextWidth),
+                        modifier = Modifier.align(Alignment.Center),
                         style = finalTitleStyle,
                         fontWeight = titleFontWeight,
                         color = if (titleBrush != null) Color.Unspecified else fallbackTitleColor,
-                        textAlign = titleTextAlign,
+                        textAlign = TextAlign.Center,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
+                } else if (centerEdgePadding > 0.dp) {
+                    // ✅ “semi-centré” : pas collé au centre, pas aux extrêmes (padding interne)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = centerEdgePadding)
+                            .align(Alignment.Center),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = typeTitle,
+                            modifier = Modifier.weight(1f),
+                            style = finalTitleStyle,
+                            fontWeight = titleFontWeight,
+                            color = if (titleBrush != null) Color.Unspecified else fallbackTitleColor,
+                            textAlign = TextAlign.Start,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
 
-                    if (hasImage) {
+                        Spacer(Modifier.width(12.dp))
+
+                        Image(
+                            painter = painterResource(typeImageResId),
+                            contentDescription = null,
+                            modifier = Modifier.size(imageSize),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                } else {
+                    // ✅ compact centré : le duo (titre + image) reste groupé et centré, avec un gap réglable
+                    val maxTextWidth =
+                        (maxWidth - imageSize - centerGap).coerceAtLeast(0.dp)
+
+                    Row(
+                        modifier = Modifier.align(Alignment.Center),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = typeTitle,
+                            modifier = Modifier.widthIn(max = maxTextWidth),
+                            style = finalTitleStyle,
+                            fontWeight = titleFontWeight,
+                            color = if (titleBrush != null) Color.Unspecified else fallbackTitleColor,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
                         Spacer(Modifier.width(centerGap))
+
                         Image(
                             painter = painterResource(typeImageResId),
                             contentDescription = null,
