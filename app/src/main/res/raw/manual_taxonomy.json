@@ -510,9 +510,9 @@
       "image": "manual_subtype_veg_pepper",
       "gradient": {
         "colors": [
-          "#EDDA85",
-          "#EE2F28",
-          "#486114"
+          "#F1E0C9",
+          "#C46B3A",
+          "#4A2A3D"
         ],
         "angleDeg": 0
       },
@@ -568,6 +568,14 @@
       "parent": "VEGETABLES",
       "title": "Pommes de terre",
       "image": "manual_subtype_veg_potato",
+      "gradient": {
+        "colors": [
+          "#E9D4AD",
+          "#C89B5A",
+          "#6A4A2B"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
