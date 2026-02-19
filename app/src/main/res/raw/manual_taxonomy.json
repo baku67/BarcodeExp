@@ -216,7 +216,7 @@
     {
       "code": "VEG_SALAD",
       "parent": "VEGETABLES",
-      "title": "Salade",
+      "title": "Salade iceberg",
       "image": "manual_subtype_veg_salad",
       "gradient": {
         "colors": [
@@ -780,6 +780,14 @@
       "parent": "FRUITS",
       "title": "Avocat",
       "image": "manual_subtype_fruits_avocado",
+      "gradient": {
+        "colors": [
+          "#E6E680",
+          "#88A845",
+          "#1F3A1F"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -792,6 +800,14 @@
       "parent": "FRUITS",
       "title": "Pomme",
       "image": "manual_subtype_fruits_apple",
+      "gradient": {
+        "colors": [
+          "#F06A6A",
+          "#D61F1F",
+          "#7A0F12"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -804,6 +820,14 @@
       "parent": "FRUITS",
       "title": "Poire",
       "image": "manual_subtype_fruits_pear",
+      "gradient": {
+        "colors": [
+          "#F4E7B2",
+          "#D7C14F",
+          "#8C4A2E"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -816,6 +840,14 @@
       "parent": "FRUITS",
       "title": "Pêche",
       "image": "manual_subtype_fruits_peach",
+      "gradient": {
+        "colors": [
+          "#F6D7B8",
+          "#E8A15E",
+          "#B84A3A"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -828,6 +860,14 @@
       "parent": "FRUITS",
       "title": "Raisins",
       "image": "manual_subtype_fruits_grape",
+      "gradient": {
+        "colors": [
+          "#E9F2B8",
+          "#D8B36A",
+          "#5A0F2A"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -840,6 +880,14 @@
       "parent": "FRUITS",
       "title": "Cerises",
       "image": "manual_subtype_fruits_cherry",
+      "gradient": {
+        "colors": [
+          "#F24A5A",
+          "#C4152C",
+          "#520815"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -852,6 +900,14 @@
       "parent": "FRUITS",
       "title": "Citron jaune",
       "image": "manual_subtype_fruits_lemon",
+      "gradient": {
+        "colors": [
+          "#FFF2A3",
+          "#FFD338",
+          "#C78A00"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -864,6 +920,14 @@
       "parent": "FRUITS",
       "title": "Citron vert",
       "image": "manual_subtype_fruits_lime",
+      "gradient": {
+        "colors": [
+          "#DDF48A",
+          "#78C63A",
+          "#2C5F18"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -876,6 +940,14 @@
       "parent": "FRUITS",
       "title": "Melon",
       "image": "manual_subtype_fruits_melon",
+      "gradient": {
+        "colors": [
+          "#F3E7CC",
+          "#F2A251",
+          "#5F6F2F"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -888,6 +960,14 @@
       "parent": "FRUITS",
       "title": "Pastèque",
       "image": "manual_subtype_fruits_watermelon",
+      "gradient": {
+        "colors": [
+          "#F7D7D1",
+          "#F2403D",
+          "#0F4D2E"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -900,6 +980,14 @@
       "parent": "FRUITS",
       "title": "Orange",
       "image": "manual_subtype_fruits_orange",
+      "gradient": {
+        "colors": [
+          "#FFD2A8",
+          "#F58A1F",
+          "#B34A14"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -912,6 +1000,14 @@
       "parent": "FRUITS",
       "title": "Mandarine",
       "image": "manual_subtype_fruits_tangerine",
+      "gradient": {
+        "colors": [
+          "#FFD1A3",
+          "#FF7A1A",
+          "#B84212"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -924,6 +1020,14 @@
       "parent": "FRUITS",
       "title": "Pamplemousse",
       "image": "manual_subtype_fruits_grapefruit",
+      "gradient": {
+        "colors": [
+          "#FFE6D6",
+          "#FF6B5A",
+          "#B3192F"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -936,6 +1040,14 @@
       "parent": "FRUITS",
       "title": "Grenade",
       "image": "manual_subtype_fruits_pomegranate",
+      "gradient": {
+        "colors": [
+          "#F7E2D2",
+          "#D61A2C",
+          "#6E0C1B"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -948,6 +1060,14 @@
       "parent": "FRUITS",
       "title": "Figue",
       "image": "manual_subtype_fruits_fig",
+      "gradient": {
+        "colors": [
+          "#F6E2C8",
+          "#D84B5A",
+          "#3A2354"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -960,6 +1080,14 @@
       "parent": "FRUITS",
       "title": "Kiwi",
       "image": "manual_subtype_fruits_kiwi",
+      "gradient": {
+        "colors": [
+          "#F3E8C7",
+          "#79B63A",
+          "#6A4A2F"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -972,6 +1100,14 @@
       "parent": "FRUITS",
       "title": "Abricot",
       "image": "manual_subtype_fruits_apricot",
+      "gradient": {
+        "colors": [
+          "#FFD6B1",
+          "#FF8C3A",
+          "#C64A22"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -984,6 +1120,14 @@
       "parent": "FRUITS",
       "title": "Mangue",
       "image": "manual_subtype_fruits_mango",
+      "gradient": {
+        "colors": [
+          "#FFE5A6",
+          "#F6A22C",
+          "#C93B2B"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -996,6 +1140,14 @@
       "parent": "FRUITS",
       "title": "Banana",
       "image": "manual_subtype_fruits_banana",
+      "gradient": {
+        "colors": [
+          "#FFF2B5",
+          "#F6D23A",
+          "#B47414"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -1008,6 +1160,14 @@
       "parent": "FRUITS",
       "title": "Ananas",
       "image": "manual_subtype_fruits_pineapple",
+      "gradient": {
+        "colors": [
+          "#F1D789",
+          "#F4BA36",
+          "#8C4E19"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -1020,6 +1180,14 @@
       "parent": "FRUITS",
       "title": "Fraises",
       "image": "manual_subtype_fruits_strawberries",
+      "gradient": {
+        "colors": [
+          "#FBA496",
+          "#D72E29",
+          "#AA0907"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -1032,6 +1200,14 @@
       "parent": "FRUITS",
       "title": "Framboises",
       "image": "manual_subtype_fruits_raspberries",
+      "gradient": {
+        "colors": [
+          "#F46C7A",
+          "#D3203A",
+          "#7A0B22"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -1044,6 +1220,14 @@
       "parent": "FRUITS",
       "title": "Mûres",
       "image": "manual_subtype_fruits_blackberries",
+      "gradient": {
+        "colors": [
+          "#5A4F78",
+          "#241A3A",
+          "#0B0812"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -1056,6 +1240,14 @@
       "parent": "FRUITS",
       "title": "Myrtilles",
       "image": "manual_subtype_fruits_blueberries",
+      "gradient": {
+        "colors": [
+          "#8FA9D8",
+          "#3E5F9A",
+          "#0E1B3A"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
