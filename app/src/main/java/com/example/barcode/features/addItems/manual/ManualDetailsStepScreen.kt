@@ -10,7 +10,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,14 +32,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,16 +62,17 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.barcode.R
-import com.example.barcode.common.ui.components.MonthWheelFormat
-import com.example.barcode.common.ui.components.WheelDatePickerDialog
-import com.example.barcode.core.UserPreferencesStore
-import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.features.addItems.AddItemDraft
 import com.example.barcode.features.addItems.AddItemStepScaffold
-import kotlinx.coroutines.flow.map
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Composable
 fun ManualDetailsStepScreen(
@@ -87,17 +84,6 @@ fun ManualDetailsStepScreen(
     val context = LocalContext.current
 
     val taxonomy = rememberManualTaxonomy()
-
-    val prefsStore = remember(context) { UserPreferencesStore(context) }
-    val themeMode by prefsStore.preferences
-        .map { it.theme }
-        .collectAsState(initial = ThemeMode.SYSTEM)
-
-    val useDarkTheme = when (themeMode) {
-        ThemeMode.DARK -> true
-        ThemeMode.LIGHT -> false
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-    }
 
     val typeCode = draft.manualTypeCode
     val subtypeCode = draft.manualSubtypeCode
@@ -157,12 +143,55 @@ fun ManualDetailsStepScreen(
 
     var brand by remember(draft.brand) { mutableStateOf(draft.brand.orEmpty()) }
 
-    var expiryMs by remember(draft.expiryDate) { mutableStateOf(draft.expiryDate) }
-    var showWheel by remember { mutableStateOf(false) }
+    // ---- Date (délai moyen) ----
+    val zoneId = remember { ZoneId.systemDefault() }
 
-    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
-    val expiryLabel = remember(expiryMs) {
-        expiryMs?.let { dateFormatter.format(Date(it)) } ?: "Choisir une date"
+    val storageMinDays = subtypeMeta?.storageDaysMin
+    val storageMaxDays = subtypeMeta?.storageDaysMax
+
+    val avgDays: Int? = remember(storageMinDays, storageMaxDays) {
+        val min = storageMinDays ?: return@remember null
+        val max = storageMaxDays ?: min
+        ((min + max) / 2f).roundToInt()
+    }
+
+    val recommendedExpiryMs: Long? = remember(avgDays, zoneId) {
+        val d = avgDays ?: return@remember null
+        localDateToEpochMillis(LocalDate.now(zoneId).plusDays(d.toLong()), zoneId)
+    }
+
+    val fallbackTodayMs = remember(zoneId) {
+        localDateToEpochMillis(LocalDate.now(zoneId), zoneId)
+    }
+
+    var expiryMs by rememberSaveable(draft.expiryDate, recommendedExpiryMs) {
+        mutableStateOf(draft.expiryDate ?: recommendedExpiryMs ?: fallbackTodayMs)
+    }
+
+    val plusJText by remember(zoneId) {
+        derivedStateOf {
+            val today = LocalDate.now(zoneId)
+            val selected = epochMillisToLocalDate(expiryMs, zoneId)
+            val delta = ChronoUnit.DAYS.between(today, selected).toInt()
+
+            "(${if (delta >= 0) "+" else "-"} ${abs(delta)}j.)"
+        }
+    }
+
+    val displayDateFormatter = remember {
+        // Exemple attendu: "22 Jan. 2026"
+        SimpleDateFormat("dd MMM. yyyy", Locale.ENGLISH)
+    }
+
+    val expiryDisplay = remember(expiryMs) {
+        displayDateFormatter.format(Date(expiryMs))
+    }
+
+    val storageLineText = remember(storageMinDays, storageMaxDays) {
+        val min = storageMinDays ?: return@remember null
+        val max = storageMaxDays ?: min
+        val rangeText = if (max != min) "$min-$max" else "$min"
+        "Conservation approximative: $rangeText jours"
     }
 
     val isShortHeaderTitle = remember(headerTitle) {
@@ -207,11 +236,6 @@ fun ManualDetailsStepScreen(
                             titleFontWeight = FontWeight.Light,
                             titleFontSize = 30.sp,
                             titleLineHeight = 28.sp,
-/*                            titleShadow = Shadow(
-                                color = Color.Black.copy(alpha = 0.99f),
-                                offset = Offset(0f, 2f),
-                                blurRadius = 1f
-                            ),*/
                             titleShadow = Shadow(
                                 color = Color.White,
                                 offset = Offset(0f, 2f),
@@ -261,61 +285,91 @@ fun ManualDetailsStepScreen(
 
                         Spacer(Modifier.height(8.dp))
 
-                        val storageLine = remember(
-                            subtypeMeta?.title,
-                            subtypeMeta?.storageDaysMin,
-                            subtypeMeta?.storageDaysMax
+                        // ---- Section Date (même fond + outline que "Conseils frigo") ----
+                        val dateSectionBg = cs.surfaceVariant.copy(alpha = 0.18f)
+                        val dateBorderColor = remember(accentColor) { accentColor.copy(alpha = 0.28f) }
+
+                        OutlinedCard(
+                            shape = MaterialTheme.shapes.large,
+                            border = BorderStroke(1.dp, dateBorderColor),
+                            colors = CardDefaults.outlinedCardColors(containerColor = dateSectionBg),
+                            elevation = CardDefaults.outlinedCardElevation(defaultElevation = 0.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            val label = subtypeMeta?.title?.lowercase(Locale.getDefault())
-                            val min = subtypeMeta?.storageDaysMin
-                            val max = subtypeMeta?.storageDaysMax
-
-                            if (label == null || min == null) return@remember null
-
-                            val daysText = when {
-                                max != null && max != min -> "$min–$max jours"
-                                else -> "$min jours"
-                            }
-
-                            "Temps de conservation conseillé pour $label : $daysText"
-                        }
-
-
-
-                        // Date limite via WheelDatePicker
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = "Date limite (optionnel)",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-
-                            if (storageLine != null) {
-                                Text(
-                                    text = storageLine!!,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                OutlinedButton(
-                                    onClick = { showWheel = true },
-                                    modifier = Modifier.weight(1f)
-                                ) {
+                                Text(
+                                    text = "Date limite",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = accentColor.copy(alpha = 0.70f),
+                                    modifier = Modifier.padding(start = 4.dp)
+                                )
+
+                                if (storageLineText != null) {
                                     Text(
-                                        text = expiryLabel,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        text = storageLineText!!,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
 
-                                if (expiryMs != null) {
-                                    TextButton(onClick = { expiryMs = null }) {
-                                        Text("Effacer")
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            val d = epochMillisToLocalDate(expiryMs, zoneId).minusDays(1)
+                                            expiryMs = localDateToEpochMillis(d, zoneId)
+                                        },
+                                        modifier = Modifier.size(44.dp),
+                                        shape = CircleShape,
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                                    ) {
+                                        Text("-")
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(horizontal = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = expiryDisplay,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+
+                                            if (plusJText.isNotEmpty()) {
+                                                Text(
+                                                    text = plusJText,
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = accentColor,
+                                                    modifier = Modifier.padding(start = 4.dp) // collé
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            val d = epochMillisToLocalDate(expiryMs, zoneId).plusDays(1)
+                                            expiryMs = localDateToEpochMillis(d, zoneId)
+                                        },
+                                        modifier = Modifier.size(44.dp),
+                                        shape = CircleShape,
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                                    ) {
+                                        Text("+")
                                     }
                                 }
                             }
@@ -359,21 +413,6 @@ fun ManualDetailsStepScreen(
                 enabled = name.trim().isNotEmpty()
             ) {
                 Text("Ajouter")
-            }
-
-            if (showWheel) {
-                WheelDatePickerDialog(
-                    initialMillis = expiryMs,
-                    onConfirm = { pickedMillis ->
-                        expiryMs = pickedMillis
-                        showWheel = false
-                    },
-                    onDismiss = { showWheel = false },
-                    title = "Date limite",
-                    monthFormat = MonthWheelFormat.ShortText,
-                    showExpiredHint = true,
-                    useDarkTheme = useDarkTheme,
-                )
             }
         }
     }
@@ -592,8 +631,18 @@ private fun buildInlineMarkdownAnnotatedString(
     }
 
     while (i < template.length) {
-        if (template.startsWith("**", i)) { flush(); bold = !bold; i += 2; continue }
-        if (template[i] == '*') { flush(); italic = !italic; i += 1; continue }
+        if (template.startsWith("**", i)) {
+            flush()
+            bold = !bold
+            i += 2
+            continue
+        }
+        if (template[i] == '*') {
+            flush()
+            italic = !italic
+            i += 1
+            continue
+        }
 
         if (template.startsWith(ITEM_TOKEN, i)) {
             flush()
@@ -617,3 +666,11 @@ private fun String.lowercaseFirstEachLine(): String =
         if (trimmed.isBlank()) line
         else trimmed.replaceFirstChar { ch -> ch.lowercase() }
     }
+
+private fun epochMillisToLocalDate(epochMs: Long, zoneId: ZoneId): LocalDate {
+    return Instant.ofEpochMilli(epochMs).atZone(zoneId).toLocalDate()
+}
+
+private fun localDateToEpochMillis(date: LocalDate, zoneId: ZoneId): Long {
+    return date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+}
