@@ -812,19 +812,31 @@ fun Modifier.iconGlowRightAndFadeLeft(
     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
     .drawWithCache {
 
+        // --- "SHINE" : vrai dégradé PRIMARY -> TRANSPARENT sur l’icône (diagonal, plus premium)
+        //     Objectif : garder l’icône neutre, mais lui donner un reflet coloré côté droit.
+        val shine = Brush.linearGradient(
+            colorStops = arrayOf(
+                0.00f to Color.Transparent,
+                0.55f to glowColor.copy(alpha = 0.12f * glowStrength),
+                1.00f to glowColor.copy(alpha = 0.65f * glowStrength)
+            ),
+            start = Offset(0f, size.height * 0.85f),
+            end = Offset(size.width, size.height * 0.15f)
+        )
+
         // --- HALO (vient de la droite)
         val haloCenter = Offset(size.width, size.height * 0.5f)
 
         val softHalo = Brush.radialGradient(
-            colors = listOf(glowColor.copy(alpha = 0.5f * glowStrength), Color.Transparent),
+            colors = listOf(glowColor.copy(alpha = 0.28f * glowStrength), Color.Transparent),
             center = haloCenter,
-            radius = size.minDimension * 1.20f
+            radius = size.minDimension * 1.25f
         )
 
         val coreHalo = Brush.radialGradient(
-            colors = listOf(glowColor.copy(alpha = 0.9f * glowStrength), Color.Transparent),
+            colors = listOf(glowColor.copy(alpha = 0.52f * glowStrength), Color.Transparent),
             center = haloCenter,
-            radius = size.minDimension * 0.7f
+            radius = size.minDimension * 0.72f
         )
 
         // --- FADE (gauche -> transparent vers la gauche)
@@ -833,9 +845,10 @@ fun Modifier.iconGlowRightAndFadeLeft(
 
         val fadeMask = Brush.horizontalGradient(
             colorStops = arrayOf(
-                0f to Color.Transparent,   // bord gauche invisible
-                stop to Color.White,       // redevient opaque
-                1f to Color.White          // reste opaque jusqu’à droite
+                0f to Color.White.copy(alpha = 0.06f),          // légère présence à gauche (plus joli)
+                (stop * 0.6f) to Color.White.copy(alpha = 0.70f),
+                stop to Color.White,                            // redevient opaque
+                1f to Color.White                               // reste opaque jusqu’à droite
             )
         )
 
@@ -843,11 +856,14 @@ fun Modifier.iconGlowRightAndFadeLeft(
             // 1) icône normale
             drawContent()
 
-            // 2) halo sur les pixels de l’icône uniquement
+            // 2) reflet primaire (dégradé) sur les pixels de l’icône uniquement
+            drawRect(shine, blendMode = BlendMode.SrcAtop)
+
+            // 3) halo sur les pixels de l’icône uniquement
             drawRect(softHalo, blendMode = BlendMode.SrcAtop)
             drawRect(coreHalo, blendMode = BlendMode.SrcAtop)
 
-            // 3) mask alpha pour rendre la gauche transparente
+            // 4) mask alpha pour estomper la gauche
             drawRect(fadeMask, blendMode = BlendMode.DstIn)
         }
     }
