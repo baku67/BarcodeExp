@@ -302,7 +302,7 @@ fun ManualDetailsStepScreen(
                             ) {
                                 Text(
                                     text = "Date limite",
-                                    style = MaterialTheme.typography.labelLarge,
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = accentColor.copy(alpha = 0.70f),
                                     modifier = Modifier.padding(start = 4.dp)
                                 )
