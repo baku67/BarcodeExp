@@ -22,9 +22,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -89,6 +91,12 @@ fun ManualTypeStepScreen(
     var query by rememberSaveable { mutableStateOf("") }
     val q = remember(query) { normalizeForSearch(query) }
 
+    val typeListState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val searchGridState = rememberSaveable(saver = LazyGridState.Saver) { LazyGridState() }
+
+    // évite le scrollToTop au 1er affichage / au retour écran
+    var lastQ by rememberSaveable { mutableStateOf(q) }
+
     val allSubtypeHits = remember(types, taxonomy) {
         types.flatMap { t ->
             taxonomy.subtypesOf(t.code).map { s ->
@@ -136,14 +144,20 @@ fun ManualTypeStepScreen(
             Spacer(Modifier.height(6.dp))
 
             if (q.isBlank()) {
-                val listState = rememberLazyListState()
+
+                val listState = typeListState
                 val showTopScrim by remember {
                     derivedStateOf {
                         listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
                     }
                 }
 
-                LaunchedEffect(q) { runCatching { listState.scrollToItem(0) } }
+                LaunchedEffect(q) {
+                    if (q != lastQ) {
+                        runCatching { listState.scrollToItem(0) }
+                        lastQ = q
+                    }
+                }
 
                 Box(
                     modifier = Modifier
@@ -186,14 +200,19 @@ fun ManualTypeStepScreen(
                         .weight(1f)
                 ) {
                     val cols = ManualTaxonomyUiSpec.colsFor(maxWidth)
-                    val gridState = rememberLazyGridState()
+                    val gridState = searchGridState
                     val showTopScrim by remember {
                         derivedStateOf {
                             gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0
                         }
                     }
 
-                    LaunchedEffect(q) { runCatching { gridState.scrollToItem(0) } }
+                    LaunchedEffect(q) {
+                        if (q != lastQ) {
+                            runCatching { gridState.scrollToItem(0) }
+                            lastQ = q
+                        }
+                    }
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         if (filteredHits.isEmpty()) {
