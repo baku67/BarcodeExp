@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
@@ -226,6 +227,7 @@ internal fun ManualSubtypeFullBleedHeader(
     titleFontWeight: FontWeight = FontWeight.Black,
     titleFontSize: TextUnit? = null,
     titleLineHeight: TextUnit? = null,
+    titleShadow: Shadow? = null,
 ) {
     val fallbackTopColor = lerp(palette.bg0, palette.accent, 0.28f)
 
@@ -298,16 +300,19 @@ internal fun ManualSubtypeFullBleedHeader(
     val isLight = luminanceBase > 0.65f
     val fallbackTitleColor = if (isLight) Color(0xFF0F172A) else Color.White
 
+    // baseTitleStyle : tu gardes EXACTEMENT ta logique brush / non-brush
     val baseTitleStyle = if (titleBrush != null) {
         MaterialTheme.typography.headlineSmall.copy(brush = titleBrush)
     } else {
         MaterialTheme.typography.headlineSmall
     }
 
-    val finalTitleStyle = remember(baseTitleStyle, titleFontSize, titleLineHeight) {
+    // finalTitleStyle : on conserve fontSize + lineHeight, et on ajoute shadow sans écraser le reste
+    val finalTitleStyle = remember(baseTitleStyle, titleFontSize, titleLineHeight, titleShadow) {
         baseTitleStyle.copy(
             fontSize = titleFontSize ?: baseTitleStyle.fontSize,
-            lineHeight = titleLineHeight ?: baseTitleStyle.lineHeight
+            lineHeight = titleLineHeight ?: baseTitleStyle.lineHeight,
+            shadow = titleShadow ?: baseTitleStyle.shadow
         )
     }
 

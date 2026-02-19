@@ -11,25 +11,54 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,7 +89,6 @@ fun ManualDetailsStepScreen(
     val taxonomy = rememberManualTaxonomy()
 
     val prefsStore = remember(context) { UserPreferencesStore(context) }
-
     val themeMode by prefsStore.preferences
         .map { it.theme }
         .collectAsState(initial = ThemeMode.SYSTEM)
@@ -84,8 +112,7 @@ fun ManualDetailsStepScreen(
     // Palette fallback (si pas de gradient sur le subtype)
     val headerPaletteCode = typeCode ?: subtypeMeta?.parentCode ?: ""
 
-    // ✅ Couleurs item (SUBTYPE) pour gradient background + gradient titre (comme GoodToKnowScreen)
-    // (si absent => le header continue à utiliser le paletteForType() comme avant)
+    // Couleurs item (SUBTYPE) pour gradient background header + gradient titre
     val headerGradientColors: List<Color>? = remember(subtypeMeta) {
         val hexes = subtypeMeta?.gradient?.colors?.take(3) ?: return@remember null
         val parsed = hexes.mapNotNull { hex ->
@@ -94,7 +121,7 @@ fun ManualDetailsStepScreen(
         parsed.takeIf { it.size >= 3 }
     }
 
-    // ✅ "{ITEM}" pour le contenu taxonomy (comme GoodToKnowScreen)
+    // "{ITEM}" pour le contenu taxonomy
     val itemTitleForContent = remember(subtypeMeta?.title, typeMeta?.title) {
         (subtypeMeta?.title ?: typeMeta?.title).orEmpty().ifBlank { "Cet aliment" }
     }
@@ -122,7 +149,7 @@ fun ManualDetailsStepScreen(
     val autoName = (subtypeMeta?.title ?: typeMeta?.title).orEmpty()
 
     LaunchedEffect(taxonomy, typeCode, subtypeCode) {
-        // ✅ ne remplit que si l'user n’a rien tapé et que draft.name est vide
+        // Remplit uniquement si l'user n’a rien tapé et que draft.name est vide
         if (draft.name.isNullOrBlank() && name.isBlank() && autoName.isNotBlank()) {
             name = autoName
         }
@@ -143,51 +170,87 @@ fun ManualDetailsStepScreen(
         onBack = onBack,
         onCancel = onCancel
     ) { innerPadding ->
+        // ✅ Header scrollable uniquement sur cet écran
+        val scrollState = rememberScrollState()
+        val showTopScrim by remember { derivedStateOf { scrollState.value > 0 } }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding) // header collé sous topbar
+                .padding(innerPadding) // topbar fixe
         ) {
-            if (headerTitle.isNotBlank() && headerPaletteCode.isNotBlank()) {
-                ManualSubtypeFullBleedHeader(
-                    typeTitle = headerTitle,
-                    typeImageResId = headerImageResId,
-                    palette = paletteForType(headerPaletteCode),
-                    gradientColors = headerGradientColors,
+            Box(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                ) {
+                    // ✅ header DANS le scroll => il bouge avec la page
+                    if (headerTitle.isNotBlank() && headerPaletteCode.isNotBlank()) {
+                        ManualSubtypeFullBleedHeader(
+                            typeTitle = headerTitle,
+                            typeImageResId = headerImageResId,
+                            palette = paletteForType(headerPaletteCode),
+                            gradientColors = headerGradientColors,
 
-                    // ✅ centre un peu plus le titre + l'image
-                    centerContent = true,
+                            centerContent = true,
 
-                    titleFontWeight = FontWeight.Light,
-                    titleFontSize = 30.sp,
-                    titleLineHeight = 28.sp,
-                )
-            }
+                            titleFontWeight = FontWeight.Light,
+                            titleFontSize = 30.sp,
+                            titleLineHeight = 28.sp,
+/*                            titleShadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.99f),
+                                offset = Offset(0f, 2f),
+                                blurRadius = 1f
+                            ),*/
+                            titleShadow = Shadow(
+                                color = Color.White.copy(alpha = 0.99f),
+                                offset = Offset(0f, 1.5f),
+                                blurRadius = 3f
+                            )
+                        )
+                    }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                val scrollState = rememberScrollState()
-                val showTopScrim by remember { derivedStateOf { scrollState.value > 0 } }
-
-                Box(modifier = Modifier.weight(1f)) {
                     Column(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(scrollState),
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        OutlinedTextField(
+                        TextField(
                             value = name,
                             onValueChange = { name = it },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text("Nom") },
-                            placeholder = { Text("ex: Blanc de poulet, Carottes, Omelette...") },
-                            singleLine = true
+                            placeholder = {
+                                Text(
+                                    text = if (autoName.isNotBlank()) "ex: $autoName…" else "ex: Carottes…"
+                                )
+                            },
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+
+                                // ✅ label “Nom” en couleur produit
+                                focusedLabelColor = accentColor.copy(alpha = 0.90f),
+                                unfocusedLabelColor = accentColor.copy(alpha = 0.70f),
+
+                                // ✅ bottom line en couleur produit
+                                focusedIndicatorColor = accentColor.copy(alpha = 0.70f),
+                                unfocusedIndicatorColor = accentColor.copy(alpha = 0.40f),
+                                disabledIndicatorColor = accentColor.copy(alpha = 0.25f),
+
+                                cursorColor = accentColor,
+
+                                // (optionnel) garde le texte neutre
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            )
                         )
+
+                        Spacer(Modifier.height(8.dp))
 
                         val storageLine = remember(
                             subtypeMeta?.title,
@@ -208,21 +271,23 @@ fun ManualDetailsStepScreen(
                             "Temps de conservation conseillé pour $label : $daysText"
                         }
 
-                        if (storageLine != null) {
-                            Text(
-                                text = storageLine!!,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
 
-                        // ✅ Date limite via WheelDatePicker
+
+                        // Date limite via WheelDatePicker
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
                                 text = "Date limite (optionnel)",
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold
                             )
+
+                            if (storageLine != null) {
+                                Text(
+                                    text = storageLine!!,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -261,43 +326,46 @@ fun ManualDetailsStepScreen(
 
                         Spacer(Modifier.height(12.dp))
                     }
-
-                    if (showTopScrim) {
-                        TopEdgeFadeScrim(
-                            modifier = Modifier.align(Alignment.TopCenter),
-                            height = 18.dp
-                        )
-                    }
                 }
 
-                Button(
-                    onClick = {
-                        val cleanedName = name.trim()
-                        if (cleanedName.isNotEmpty()) {
-                            onNext(cleanedName, brand.trim().ifBlank { null }, expiryMs)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = name.trim().isNotEmpty()
-                ) {
-                    Text("Ajouter")
+                if (showTopScrim) {
+                    TopEdgeFadeScrim(
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        height = 18.dp
+                    )
                 }
             }
-        }
 
-        if (showWheel) {
-            WheelDatePickerDialog(
-                initialMillis = expiryMs,
-                onConfirm = { pickedMillis ->
-                    expiryMs = pickedMillis
-                    showWheel = false
+            // ✅ CTA reste fixe en bas
+            Button(
+                onClick = {
+                    val cleanedName = name.trim()
+                    if (cleanedName.isNotEmpty()) {
+                        onNext(cleanedName, brand.trim().ifBlank { null }, expiryMs)
+                    }
                 },
-                onDismiss = { showWheel = false },
-                title = "Date limite",
-                monthFormat = MonthWheelFormat.ShortText,
-                showExpiredHint = true,
-                useDarkTheme = useDarkTheme,
-            )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                enabled = name.trim().isNotEmpty()
+            ) {
+                Text("Ajouter")
+            }
+
+            if (showWheel) {
+                WheelDatePickerDialog(
+                    initialMillis = expiryMs,
+                    onConfirm = { pickedMillis ->
+                        expiryMs = pickedMillis
+                        showWheel = false
+                    },
+                    onDismiss = { showWheel = false },
+                    title = "Date limite",
+                    monthFormat = MonthWheelFormat.ShortText,
+                    showExpiredHint = true,
+                    useDarkTheme = useDarkTheme,
+                )
+            }
         }
     }
 }
@@ -329,15 +397,12 @@ private fun FridgeAdviseSectionCard(
     val bulletTint = remember(accentColor) { accentColor.copy(alpha = 0.75f) }
 
     // Halo smooth derrière l’icône
-    val density = LocalDensity.current
-    val haloBrush = remember(accentColor, density) {
-        val r = with(density) { 18.dp.toPx() }
+    val haloBrush = remember(accentColor) {
         Brush.radialGradient(
             colors = listOf(
                 accentColor.copy(alpha = 0.18f),
                 Color.Transparent
-            ),
-            radius = r
+            )
         )
     }
 
@@ -372,7 +437,7 @@ private fun FridgeAdviseSectionCard(
                 Spacer(Modifier.width(10.dp))
 
                 Text(
-                    text = "Astuces de stockage",
+                    text = "Conseils frigo",
                     style = MaterialTheme.typography.titleMedium,
                     color = cs.onSurface,
                     modifier = Modifier.weight(1f)
@@ -456,7 +521,7 @@ private fun ManualInlineMarkdownText(
     baseSpan: SpanStyle,
     tokenSpan: SpanStyle,
     boldColor: Color,
-    style: androidx.compose.ui.text.TextStyle,
+    style: TextStyle,
     modifier: Modifier = Modifier,
 ) {
     val boldSpan = remember(baseSpan, boldColor) { baseSpan.copy(color = boldColor) }
