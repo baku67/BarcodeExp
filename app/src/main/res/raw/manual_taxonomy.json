@@ -448,6 +448,14 @@
       "parent": "VEGETABLES",
       "title": "Courgette",
       "image": "manual_subtype_veg_zucchini",
+      "gradient": {
+        "colors": [
+          "#D8DEB2",
+          "#74883F",
+          "#293B17"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -460,6 +468,14 @@
       "parent": "VEGETABLES",
       "title": "Brocoli",
       "image": "manual_subtype_veg_broccoli",
+      "gradient": {
+        "colors": [
+          "#C8DE71",
+          "#618C63",
+          "#25481E"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -472,6 +488,14 @@
       "parent": "VEGETABLES",
       "title": "Chou-fleur",
       "image": "manual_subtype_veg_cauliflower",
+      "gradient": {
+        "colors": [
+          "#F3E9D4",
+          "#DCC7A1",
+          "#8A7050"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -484,6 +508,14 @@
       "parent": "VEGETABLES",
       "title": "Poivron",
       "image": "manual_subtype_veg_pepper",
+      "gradient": {
+        "colors": [
+          "#EDDA85",
+          "#EE2F28",
+          "#486114"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -496,6 +528,14 @@
       "parent": "VEGETABLES",
       "title": "Champignons",
       "image": "manual_subtype_veg_mushroom",
+      "gradient": {
+        "colors": [
+          "#F2E9DC",
+          "#D3C1AD",
+          "#7A5C44"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -508,6 +548,14 @@
       "parent": "VEGETABLES",
       "title": "Oignons",
       "image": "manual_subtype_veg_onion",
+      "gradient": {
+        "colors": [
+          "#F5EBDD",
+          "#D6A24E",
+          "#6D1F3A"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -532,6 +580,14 @@
       "parent": "VEGETABLES",
       "title": "Poireau",
       "image": "manual_subtype_veg_leek",
+      "gradient": {
+        "colors": [
+          "#F2EEDC",
+          "#7FA07A",
+          "#1F3D2A"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -544,6 +600,14 @@
       "parent": "VEGETABLES",
       "title": "Aubergine",
       "image": "manual_subtype_veg_eggplant",
+      "gradient": {
+        "colors": [
+          "#C58BD9",
+          "#5C1E6B",
+          "#220A2C"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -556,6 +620,14 @@
       "parent": "VEGETABLES",
       "title": "Radis",
       "image": "manual_subtype_veg_radish",
+      "gradient": {
+        "colors": [
+          "#F7EBD8",
+          "#C24741",
+          "#631A16"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -568,6 +640,14 @@
       "parent": "VEGETABLES",
       "title": "Betterave rouge",
       "image": "manual_subtype_veg_beetroot",
+      "gradient": {
+        "colors": [
+          "#E0556A",
+          "#9B1B30",
+          "#3A0B14"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -580,6 +660,14 @@
       "parent": "VEGETABLES",
       "title": "Navet",
       "image": "manual_subtype_veg_turnip",
+      "gradient": {
+        "colors": [
+          "#F1E9DD",
+          "#C08AAE",
+          "#5B2A4B"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -592,6 +680,14 @@
       "parent": "VEGETABLES",
       "title": "Celeri",
       "image": "manual_subtype_veg_celery",
+      "gradient": {
+        "colors": [
+          "#F2E9D1",
+          "#AFC86A",
+          "#3F5C1E"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -604,6 +700,14 @@
       "parent": "VEGETABLES",
       "title": "Artichaut",
       "image": "manual_subtype_veg_artichoke",
+      "gradient": {
+        "colors": [
+          "#C7D98B",
+          "#6F9B4F",
+          "#2E4A2E"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -616,6 +720,14 @@
       "parent": "VEGETABLES",
       "title": "Asperges",
       "image": "manual_subtype_veg_asparagus",
+      "gradient": {
+        "colors": [
+          "#F1E6C8",
+          "#9FC55E",
+          "#2E5A2A"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -628,6 +740,14 @@
       "parent": "VEGETABLES",
       "title": "Choux de Bruxelles",
       "image": "manual_subtype_veg_brussels_sprouts",
+      "gradient": {
+        "colors": [
+          "#DDEB9A",
+          "#7FAF3E",
+          "#2F5A1C"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
@@ -640,6 +760,14 @@
       "parent": "VEGETABLES",
       "title": "Courge",
       "image": "manual_subtype_veg_squash",
+      "gradient": {
+        "colors": [
+          "#F2D7AE",
+          "#D97A2E",
+          "#7A3A1C"
+        ],
+        "angleDeg": 0
+      },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
       "fridgeAdvise": "",
