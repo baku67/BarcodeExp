@@ -61,75 +61,141 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 
+import com.example.barcode.data.local.entities.ItemEntity
+import java.util.Calendar
 
 
-// TODO: vraies données route dashboard (counts et 5 nextExpiring)
+
+
+
+
+
+// ---- Produits (données réelles depuis Items) ----
+
+private const val SOON_THRESHOLD_DAYS = 2
+
 private enum class ExpiryKind { EXPIRED, SOON, FRESH }
+
 private data class ExpiringLine(
     val name: String,
-    val note: String,   // ex: "hier", "1j", "5j", ya une fonction pour ça dans ItemsContent
+    val note: String,   // ex: "hier", "aujourd'hui", "1j", "6j"...
     val kind: ExpiryKind
 )
-private data class FakeDashboardProducts(
+
+private data class DashboardProductsUi(
+    val total: Int,
     val fresh: Int,
     val soon: Int,
     val expired: Int,
     val nextExpiring: List<ExpiringLine>
-) {
-    val total: Int get() = fresh + soon + expired
+)
+
+private const val DAY_MS: Long = 86_400_000L
+
+private fun startOfDay(ms: Long): Long {
+    val cal = Calendar.getInstance()
+    cal.timeInMillis = ms
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    return cal.timeInMillis
 }
-@Composable
-private fun rememberFakeDashboardProducts(): FakeDashboardProducts {
-    // Stable entre recompositions (pas de flicker)
-    return remember {
-        val fresh = 18
-        val soon = 3
-        val expired = 1
 
-        // ✅ cohérent avec les counts (1 EXPIRED, 2 SOON, 2 FRESH = 5 lignes)
-        val nextExpiring = listOf(
-            ExpiringLine("Jambon", "hier", ExpiryKind.EXPIRED),
-            ExpiringLine("Yaourt nature", "1j", ExpiryKind.SOON),
-            ExpiringLine("Salade", "2j", ExpiryKind.SOON),
-            ExpiringLine("Poulet", "3j", ExpiryKind.FRESH),
-            ExpiringLine("Fromage râpé", "6j", ExpiryKind.FRESH),
-        )
+private fun diffDays(expiryMs: Long, nowMs: Long): Int {
+    val e = startOfDay(expiryMs)
+    val n = startOfDay(nowMs)
+    return ((e - n) / DAY_MS).toInt()
+}
 
-        FakeDashboardProducts(
-            fresh = fresh,
-            soon = soon,
-            expired = expired,
-            nextExpiring = nextExpiring
-        )
+private fun expiryNote(diffDays: Int): String = when {
+    diffDays <= -2 -> "il y a ${-diffDays}j"
+    diffDays == -1 -> "hier"
+    diffDays == 0 -> "aujourd'hui"
+    diffDays == 1 -> "1j"
+    else -> "${diffDays}j"
+}
+
+private fun expiryKind(diffDays: Int): ExpiryKind = when {
+    diffDays < 0 -> ExpiryKind.EXPIRED
+    diffDays <= SOON_THRESHOLD_DAYS -> ExpiryKind.SOON
+    else -> ExpiryKind.FRESH
+}
+
+private fun buildDashboardProductsUi(
+    items: List<ItemEntity>,
+    nowMs: Long = System.currentTimeMillis(),
+): DashboardProductsUi {
+    var fresh = 0
+    var soon = 0
+    var expired = 0
+
+    items.forEach { item ->
+        val expiryMs = item.expiryDate?.takeIf { it > 0L }
+        if (expiryMs == null) {
+            // Pas de date => on le compte dans "frais" pour l'instant (sinon ajoute une 4e catégorie "Sans date")
+            fresh++
+        } else {
+            val d = diffDays(expiryMs, nowMs)
+            when (expiryKind(d)) {
+                ExpiryKind.EXPIRED -> expired++
+                ExpiryKind.SOON -> soon++
+                ExpiryKind.FRESH -> fresh++
+            }
+        }
     }
+
+    val nextExpiring = items
+        .asSequence()
+        .mapNotNull { item ->
+            item.expiryDate
+                ?.takeIf { it > 0L }
+                ?.let { expiry -> item to expiry }
+        }
+        .sortedBy { (_, expiry) -> expiry }
+        .take(5)
+        .map { (item, expiryMs) ->
+            val d = diffDays(expiryMs, nowMs)
+            ExpiringLine(
+                name = item.name?.trim()?.takeIf { it.isNotBlank() } ?: "Produit",
+                note = expiryNote(d),
+                kind = expiryKind(d)
+            )
+        }
+        .toList()
+
+    return DashboardProductsUi(
+        total = items.size,
+        fresh = fresh,
+        soon = soon,
+        expired = expired,
+        nextExpiring = nextExpiring
+    )
 }
-// Fin TODO
 
-
-
-
-
-
+/**
+ * ✅ Version recommandée : tu passes directement la liste des items.
+ * Le comptage + la mini-liste "à consommer" sont calculés ici.
+ */
 @Composable
 fun Dashboard(
-    totalProducts: Int,
-    freshCount: Int,
-    expiringSoonCount: Int,
-    expiredCount: Int,
+    items: List<ItemEntity>,
     onNavigateToItems: () -> Unit,
     onNavigateToListeCourses: () -> Unit,
     onNavigateToRecipes: () -> Unit,
 ) {
+    val productsUi = buildDashboardProductsUi(items)
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-
         DashboardCardProductsWide(
-            total = totalProducts,
-            fresh = freshCount,
-            soon = expiringSoonCount,
-            expired = expiredCount,
+            total = productsUi.total,
+            fresh = productsUi.fresh,
+            soon = productsUi.soon,
+            expired = productsUi.expired,
+            nextExpiring = productsUi.nextExpiring,
             onClick = onNavigateToItems
         )
 
@@ -155,26 +221,15 @@ fun Dashboard(
 }
 
 
-
-
-
 @Composable
 private fun DashboardCardProductsWide(
     total: Int,
     fresh: Int,
     soon: Int,
     expired: Int,
+    nextExpiring: List<ExpiringLine>,
     onClick: () -> Unit,
 ) {
-    // TODO Fake “x prochains” (à remplacer plus tard par tes vrais items triés par expiryDate)
-    // TODO: n'afficher que les items qui ont -3/-4 jours de conserv (parmis les 4-5 max)
-    val fake = rememberFakeDashboardProducts()
-
-    val total = fake.total
-    val fresh = fake.fresh
-    val soon = fake.soon
-    val expired = fake.expired
-    val nextExpiring = fake.nextExpiring
 
     Card(
         modifier = Modifier

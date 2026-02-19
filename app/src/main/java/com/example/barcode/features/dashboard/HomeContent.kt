@@ -16,7 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-
+import com.example.barcode.data.local.entities.ItemEntity
 
 @Composable
 fun HomeContent(
@@ -24,12 +24,8 @@ fun HomeContent(
     onNavigateToRecipes: () -> Unit,
     onNavigateToItems: () -> Unit,
     innerPadding: PaddingValues,
-    totalProducts: Int,
-    freshCount: Int,
-    expiringSoonCount: Int,
-    expiredCount: Int,
+    items: List<ItemEntity>,
 ) {
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -37,8 +33,6 @@ fun HomeContent(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-
-        // 1) Bloc bienvenue
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -54,23 +48,16 @@ fun HomeContent(
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-
             }
         }
 
-
-        // 2) Dashboard (Card Items et Card ListeCourses)
         item {
             Dashboard(
-                totalProducts = totalProducts,
-                freshCount = freshCount,
-                expiringSoonCount = expiringSoonCount,
-                expiredCount = expiredCount,
+                items = items,
                 onNavigateToItems = onNavigateToItems,
                 onNavigateToListeCourses = onNavigateToListeCourses,
                 onNavigateToRecipes = onNavigateToRecipes
             )
         }
     }
-
 }

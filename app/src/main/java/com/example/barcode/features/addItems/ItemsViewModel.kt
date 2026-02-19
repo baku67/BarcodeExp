@@ -27,7 +27,13 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // La UI collecte ce Flow (Compose: collectAsState)
-    val items: Flow<List<ItemEntity>> = repo.observeItems()
+    // ✅ StateFlow — partagé, toujours à jour, Compose-friendly
+    val items: StateFlow<List<ItemEntity>> = repo.observeItems()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
 
     private val session by lazy { SessionManager(app) }
 

@@ -23,10 +23,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.example.barcode.core.SessionManager
+import com.example.barcode.features.addItems.ItemsViewModel
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.features.dashboard.HomeContent
 import com.example.barcode.features.fridge.FridgePage
@@ -65,6 +67,9 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
     val selectedRoute = tabs[pagerState.currentPage]
 
     val context = LocalContext.current
+
+    val itemsVm: ItemsViewModel = viewModel()
+    val items by itemsVm.items.collectAsState()
 
     val prefs = remember { SyncPreferences(context) }
     val lastSuccessAt by prefs.lastSuccessAt.collectAsState(initial = null)
@@ -118,11 +123,8 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
                     onNavigateToRecipes = { goToTab("recipes") },
                     onNavigateToItems = { goToTab("items") },
                     innerPadding = PaddingValues(),
-                    14,
-                    10,
-                    3,
-                    0
-                ) // TODO Data Dashboard factices pour l'instant
+                    items = items
+                )
 
                 "listeCourses" -> ListeCoursesContent(
                     innerPadding = PaddingValues(),
