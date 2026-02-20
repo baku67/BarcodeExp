@@ -53,8 +53,13 @@ fun GlobalLoaderScreen(nav: NavHostController) {
 
     // ✅ Gradient basé sur le thème (plus cohérent que bleu/vert hardcodés)
     val cs = MaterialTheme.colorScheme
-    val gradient = remember(cs.primary, cs.tertiary) {
-        Brush.horizontalGradient(listOf(cs.primary, cs.tertiary))
+    val gradient = remember {
+        Brush.horizontalGradient(
+            listOf(
+                Color(0xFF2196F3), // bleu
+                Color(0xFF4CAF50)  // vert
+            )
+        )
     }
 
     // Navigation (évite les doubles triggers)
