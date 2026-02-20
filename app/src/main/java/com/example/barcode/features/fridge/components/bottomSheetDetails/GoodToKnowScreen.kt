@@ -134,6 +134,33 @@ fun GoodToKnowScreen(
     val healthWarning = subtype?.healthWarning
     val goodToKnow = subtype?.goodToKnow
 
+    // ✅ Astuce "Astuces de stockage" : injecte la durée de conservation en 1er bullet (si dispo)
+    val storageRangeBullet = remember(subtype?.storageDaysMin, subtype?.storageDaysMax) {
+        val min = subtype?.storageDaysMin
+        val max = subtype?.storageDaysMax
+        when {
+            min == null && max == null -> null
+            min != null && max != null -> {
+                val low = min.coerceAtMost(max)
+                val high = min.coerceAtLeast(max)
+                "Temps de conservation approximatif: **$low - $high j.**"
+            }
+            min != null -> "Temps de conservation approximatif: **$min - $min j.**"
+            else -> "Temps de conservation approximatif: **$max - $max j.**"
+        }
+    }
+
+    val fridgeAdviseWithStorage = remember(fridgeAdvise, storageRangeBullet) {
+        when {
+            fridgeAdvise == null -> null
+            storageRangeBullet.isNullOrBlank() -> fridgeAdvise
+            fridgeAdvise is ManualContent.Bullets -> ManualContent.Bullets(
+                items = listOf(storageRangeBullet) + fridgeAdvise.items
+            )
+            else -> fridgeAdvise // pas une liste → on n'injecte rien
+        }
+    }
+
     // ✅ Saison EU_TEMPERATE (mois 1..12)
     val temperateMonths = remember(subtype) {
         subtype?.seasons
@@ -196,7 +223,7 @@ fun GoodToKnowScreen(
                         }
                     }
 
-                    fridgeAdvise?.let {
+                    fridgeAdviseWithStorage?.let {
                         item {
                             DynamicSectionCard(
                                 title = "Astuces de stockage",
