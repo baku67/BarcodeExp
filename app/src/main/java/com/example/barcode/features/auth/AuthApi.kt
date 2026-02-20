@@ -1,6 +1,5 @@
 package com.example.barcode.features.auth
 
-import com.example.barcode.features.auth.data.remote.dto.RefreshRequestDto
 import com.example.barcode.features.auth.data.remote.dto.RefreshResponseDto
 import com.example.barcode.domain.models.LoginRequest
 import com.example.barcode.domain.models.LoginResponse
@@ -8,15 +7,11 @@ import com.example.barcode.domain.models.RegisterRequest
 import com.example.barcode.domain.models.RegisterResponse
 import com.example.barcode.domain.models.UserProfile
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.Header
-import retrofit2.http.POST
-import retrofit2.http.GET
-import retrofit2.http.DELETE
-import retrofit2.http.PATCH
+import retrofit2.http.*
 
 interface AuthApi {
-    @POST("auth/login")
+
+    @POST("auth/login_check")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
     @POST("auth/register")
@@ -25,11 +20,10 @@ interface AuthApi {
     @POST("auth/verify/resend")
     suspend fun resendEmailVerification(@Header("Authorization") token: String): Response<Unit>
 
-    @POST("api/token/refresh")
-    suspend fun refresh(@Body request: RefreshRequestDto): Response<RefreshResponseDto>
+    @FormUrlEncoded
+    @POST("auth/token/refresh")
+    suspend fun refresh(@Field("refresh_token") refreshToken: String): Response<RefreshResponseDto>
 
-
-    // /me
     @GET("api/me")
     suspend fun me(@Header("Authorization") authorization: String): Response<UserProfile>
 

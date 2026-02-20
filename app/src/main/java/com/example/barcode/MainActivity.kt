@@ -17,7 +17,6 @@ import com.example.barcode.features.bootstrap.GlobalLoaderScreen
 import androidx.navigation.compose.navigation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -38,7 +37,6 @@ import com.example.barcode.features.addItems.manual.ManualTypeStepScreen
 import com.example.barcode.features.auth.RegisterScreen
 import com.example.barcode.common.ui.navigation.MainTabsScreen
 import com.example.barcode.features.bootstrap.TimelineIntroScreen
-import com.example.barcode.features.auth.AuthRepository
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.core.SessionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -47,7 +45,6 @@ import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.AppBackground
 import com.example.barcode.common.ui.theme.Theme
 import com.example.barcode.features.addItems.manual.ManualLeftoversDetailsStepScreen
-import com.example.barcode.features.addItems.manual.ManualTaxonomy
 import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
 import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
 import com.example.barcode.features.fridge.components.bottomSheetDetails.GoodToKnowScreen
@@ -73,8 +70,9 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             val appContext = LocalContext.current.applicationContext
+            val app = appContext as BarcodeApp
 
-            val repo = remember { AuthRepository() }
+            val repo = remember { app.authRepository }
             val session = remember(appContext) { SessionManager(appContext) }
             val authVm = remember { AuthViewModel(repo, session) }
 

@@ -11,9 +11,7 @@ import com.example.barcode.domain.models.UserProfile
 import retrofit2.Response
 import kotlinx.coroutines.CancellationException
 
-class AuthRepository {
-
-    private val api = ApiClient.createApi(AuthApi::class.java)
+class AuthRepository(private val api: AuthApi) {
 
     suspend fun login(email: String, password: String): Result<LoginResponse> {
         return try {
@@ -62,7 +60,7 @@ class AuthRepository {
     // Refresh token
     suspend fun refresh(refreshToken: String): Result<RefreshResponseDto> {
         return try {
-            val res = api.refresh(RefreshRequestDto(refresh_token = refreshToken))
+            val res = api.refresh(refreshToken)
             if (res.isSuccessful && res.body() != null) Result.success(res.body()!!)
             else Result.failure(Exception("HTTP ${res.code()} - ${res.message()}"))
         } catch (e: CancellationException) {

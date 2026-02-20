@@ -14,9 +14,7 @@ data class LoginResponse(
     @SerializedName("refresh_token") val refreshToken: String? = null
 )
 data class RegisterResponse(
-    val id: String,
-    val token: String,
-    @SerializedName("refresh_token") val refreshToken: String? = null
+    val id: String
 )
 
 

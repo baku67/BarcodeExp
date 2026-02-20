@@ -153,7 +153,6 @@ class AuthViewModel(
 
 
     fun onRegister(email: String, password: String, confirmPassword: String) {
-        // petit garde-fou front (évite un call inutile)
         if (password != confirmPassword) {
             uiState.value = uiState.value.copy(error = "Les mots de passe ne correspondent pas")
             return
@@ -163,14 +162,35 @@ class AuthViewModel(
             uiState.value = uiState.value.copy(loading = true, error = null)
 
             repo.register(email, password, confirmPassword)
-                .onSuccess { res ->
-                    // res.token vient de /auth/register
-                    session.saveToken(res.token)
-                    res.refreshToken?.let { session.saveRefreshToken(it) }
-                    session.saveUser(UserProfile(id = res.id, email = email, isVerified = false))
-                    session.setAppMode(AppMode.AUTH)
+                .onSuccess { reg ->
+                    // ✅ login standard (retourne token + refresh_token)
+                    repo.login(email.trim(), password)
+                        .onSuccess { login ->
+                            session.saveToken(login.token)
+                            login.refreshToken?.let { session.saveRefreshToken(it) }
+                            session.setAppMode(AppMode.AUTH)
 
-                    _events.send(AuthEvent.GoHome)
+                            _events.trySend(AuthEvent.GoHome)
+
+                            // /me en background
+                            viewModelScope.launch {
+                                repo.me(login.token)
+                                    .onSuccess { profile ->
+                                        session.saveUser(profile)
+                                        session.savePreferences(profile.toUserPreferences())
+                                    }
+                                    .onFailure {
+                                        // fallback minimal
+                                        session.saveUser(UserProfile(id = reg.id, email = email, isVerified = false))
+                                    }
+                            }
+                        }
+                        .onFailure { err ->
+                            uiState.value = uiState.value.copy(
+                                loading = false,
+                                error = "Compte créé (id=${reg.id}) mais login auto KO: ${err.message ?: err}"
+                            )
+                        }
                 }
                 .onFailure { err ->
                     uiState.value = uiState.value.copy(error = err.message ?: "Erreur", loading = false)

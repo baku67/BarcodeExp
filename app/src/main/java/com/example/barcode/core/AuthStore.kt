@@ -6,8 +6,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.barcode.domain.models.UserProfile
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-
 
 private val TOKEN_KEY = stringPreferencesKey("token")
 private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
@@ -37,6 +37,10 @@ class AuthStore(private val context: Context) {
     val userEmail: Flow<String?> = ds.data.map { it[USER_EMAIL_KEY] }
     val userIsVerified: Flow<Boolean?> = ds.data.map { it[USER_IS_VERIFIED_KEY] }
 
+    // ✅ utile pour OkHttp (runBlocking)
+    suspend fun getTokenOnce(): String? = token.first()
+    suspend fun getRefreshTokenOnce(): String? = refreshToken.first()
+
     suspend fun setAppMode(mode: AppMode) {
         ds.edit { it[APP_MODE_KEY] = mode.name }
     }
@@ -47,6 +51,13 @@ class AuthStore(private val context: Context) {
 
     suspend fun saveRefreshToken(token: String) {
         ds.edit { it[REFRESH_TOKEN_KEY] = token }
+    }
+
+    suspend fun saveTokens(token: String, refreshToken: String?) {
+        ds.edit {
+            it[TOKEN_KEY] = token
+            refreshToken?.takeIf { it.isNotBlank() }?.let { rt -> it[REFRESH_TOKEN_KEY] = rt }
+        }
     }
 
     suspend fun saveUser(profile: UserProfile) {

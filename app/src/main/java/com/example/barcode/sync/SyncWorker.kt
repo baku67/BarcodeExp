@@ -3,6 +3,7 @@ package com.example.barcode.sync
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.barcode.BarcodeApp
 import com.example.barcode.core.network.ApiClient
 import com.example.barcode.core.SessionManager
 import com.example.barcode.data.local.AppDb
@@ -41,9 +42,9 @@ class SyncWorker(
         val itemDao = db.itemDao()
         val noteDao = db.itemNoteDao()
 
-        val itemsApi = ApiClient.createApi(ItemsApi::class.java)
-        val notesApi = ApiClient.createApi(ItemNotesApi::class.java)
-
+        val app = applicationContext as BarcodeApp
+        val itemsApi = app.apiClient.createApi(ItemsApi::class.java)
+        val notesApi = app.apiClient.createApi(ItemNotesApi::class.java)
 
         val prefs = SyncPreferences(applicationContext)
 

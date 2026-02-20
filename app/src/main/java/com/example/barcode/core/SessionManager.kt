@@ -1,11 +1,11 @@
 package com.example.barcode.core
 
 import android.content.Context
+import androidx.datastore.preferences.preferencesDataStore
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
 import com.example.barcode.domain.models.UserProfile
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -29,9 +29,17 @@ class SessionManager(context: Context) {
     suspend fun setAppMode(mode: AppMode) = auth.setAppMode(mode)
     suspend fun saveToken(token: String) = auth.saveToken(token)
     suspend fun saveRefreshToken(token: String) = auth.saveRefreshToken(token)
+
+    /** ✅ login/refresh + rotation éventuelle du refresh_token */
+    suspend fun saveTokens(token: String, refreshToken: String?) {
+        auth.saveToken(token)
+        refreshToken?.takeIf { it.isNotBlank() }?.let { auth.saveRefreshToken(it) }
+    }
+
     suspend fun saveUser(profile: UserProfile) = auth.saveUser(profile)
 
     suspend fun clear() = auth.clearTokensOnly()
+
     suspend fun logout() = withContext(NonCancellable) {
         auth.logout()
     }
@@ -43,6 +51,7 @@ class SessionManager(context: Context) {
     suspend fun setTheme(theme: ThemeMode) = prefs.setTheme(theme)
     suspend fun setLang(lang: String) = prefs.setLang(lang)
     suspend fun setFrigoLayout(layout: FrigoLayout) = prefs.setFrigoLayout(layout)
+
     suspend fun isAuthenticated(): Boolean {
         val modeOk = appMode.first() == AppMode.AUTH
         val tokenOk = !token.first().isNullOrBlank()
