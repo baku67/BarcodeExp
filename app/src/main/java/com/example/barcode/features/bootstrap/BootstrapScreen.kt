@@ -135,14 +135,6 @@ fun GlobalLoaderScreen(nav: NavHostController) {
                 strokeWidth = 3.dp,
                 modifier = Modifier.size(32.dp)
             )
-
-            // ✅ micro-UX: petit hint discret, sans spam visuel
-            Text(
-                text = "Initialisation…",
-                style = MaterialTheme.typography.bodySmall,
-                color = cs.onSurface.copy(alpha = 0.55f),
-                modifier = Modifier.padding(top = 14.dp)
-            )
         }
     }
 }
