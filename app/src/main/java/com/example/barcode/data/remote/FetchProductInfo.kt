@@ -66,8 +66,8 @@ suspend fun fetchProductInfo(code: String): FetchResult =
         try {
             conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                connectTimeout = 8000
-                readTimeout = 8000
+                connectTimeout = 10000
+                readTimeout = 14000
                 setRequestProperty("User-Agent", "FrigoZen/0.1 (Android; contact: basile08@hotmail.fr)")
                 setRequestProperty("Accept", "application/json")
                 setRequestProperty("Accept-Language", Locale.getDefault().toLanguageTag())
