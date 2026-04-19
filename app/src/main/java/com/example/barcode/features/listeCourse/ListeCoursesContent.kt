@@ -72,6 +72,14 @@ import androidx.compose.material.icons.rounded.Person
 import com.example.barcode.common.ui.components.LocalAppTopBarState
 import com.example.barcode.domain.models.AppIcon
 import com.example.barcode.features.fridge.components.shared.SegIcon
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import com.example.barcode.common.bus.AppSnackbarEvent
+import com.example.barcode.common.bus.SnackbarBus
 
 private enum class CoursesTab(val label: String) {
     SHARED("Partagée"),
@@ -106,6 +114,7 @@ fun ListeCoursesContent(innerPadding: PaddingValues, isActive: Boolean) {
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val session = remember { SessionManager(appContext) }
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val mode = session.appMode.collectAsState(initial = AppMode.AUTH).value
     val token = session.token.collectAsState(initial = null).value
@@ -193,6 +202,33 @@ fun ListeCoursesContent(innerPadding: PaddingValues, isActive: Boolean) {
         )
     }
 
+    fun clearCheckedItemsWithUndo() {
+        val removed = items
+            .mapIndexedNotNull { index, item ->
+                if (item.tab == tab && item.isChecked) index to item else null
+            }
+
+        if (removed.isEmpty()) return
+
+        removed.asReversed().forEach { (index, _) ->
+            items.removeAt(index)
+        }
+
+        SnackbarBus.show(
+            AppSnackbarEvent(
+                message = "Liste vidée",
+                actionLabel = "Annuler",
+                duration = SnackbarDuration.Long,
+                onAction = {
+                    removed.forEach { (index, item) ->
+                        val safeIndex = index.coerceIn(0, items.size)
+                        items.add(safeIndex, item)
+                    }
+                }
+            )
+        )
+    }
+
     LaunchedEffect(isActive, mode, token) {
         val canLoad = isActive && mode == AppMode.AUTH && !token.isNullOrBlank()
         if (!canLoad) return@LaunchedEffect
@@ -271,8 +307,21 @@ fun ListeCoursesContent(innerPadding: PaddingValues, isActive: Boolean) {
                     Spacer(Modifier.height(2.dp))
                     SectionTitle(
                         icon = Icons.Rounded.ShoppingCartCheckout,
-                        title = "Dans le panier",
-                        count = inCart.size
+                        title = "Terminé",
+                        count = inCart.size,
+                        trailing = {
+                            if (inCart.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { clearCheckedItemsWithUndo() }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Delete,
+                                        contentDescription = "Vider les éléments terminés",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
                     )
                 }
 
@@ -294,29 +343,16 @@ fun ListeCoursesContent(innerPadding: PaddingValues, isActive: Boolean) {
                         )
                     }
                 }
-
-                item {
-                    Spacer(Modifier.height(6.dp))
-                    Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Astuce: swipe = action (plus tard)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                        )
-                        TextButton(onClick = { items.removeAll { it.tab == tab && it.isChecked } }) {
-                            Text("Vider le panier")
-                        }
-                    }
-                }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 84.dp + bottomInset)
+        )
 
         // ✅ Bouton fixed en bas : "+ Ajouter" (style type FridgePage)
         BottomAddBar(
@@ -468,20 +504,30 @@ private fun SectionTitle(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     count: Int,
+    trailing: @Composable (() -> Unit)? = null,
 ) {
     val cs = MaterialTheme.colorScheme
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = cs.onSurfaceVariant.copy(alpha = 0.8f))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = cs.onSurfaceVariant.copy(alpha = 0.8f)
+        )
+
         Spacer(Modifier.width(8.dp))
+
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             color = cs.onSurface
         )
+
         Spacer(Modifier.width(8.dp))
+
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(999.dp))
@@ -494,6 +540,10 @@ private fun SectionTitle(
                 color = cs.onSurfaceVariant
             )
         }
+
+        Spacer(Modifier.weight(1f))
+
+        trailing?.invoke()
     }
 }
 
