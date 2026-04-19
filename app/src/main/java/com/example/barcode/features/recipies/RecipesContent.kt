@@ -156,6 +156,23 @@ fun RecipesContent(innerPadding: PaddingValues, isActive: Boolean) {
                         }
                     }
                 }
+
+                item {
+                    // Btn Recette IA
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Recettes", style = MaterialTheme.typography.titleMedium)
+                            Button(
+                                onClick = {
+                                    SnackbarBus.show("Fonction “Proposer une recette” : à venir 🙂")
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Créer une recette")
+                            }
+                        }
+                    }
+                }
             }
 
         }

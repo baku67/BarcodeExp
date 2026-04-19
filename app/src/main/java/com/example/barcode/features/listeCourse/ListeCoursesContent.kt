@@ -1,13 +1,20 @@
 package com.example.barcode.features.listeCourse
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -62,6 +70,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -82,6 +91,7 @@ import com.example.barcode.core.SessionManager
 import com.example.barcode.domain.models.AppIcon
 import com.example.barcode.features.fridge.components.shared.SegIcon
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -111,7 +121,7 @@ private data class CourseItemUi(
     val isChecked: Boolean = false,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ListeCoursesContent(
     innerPadding: PaddingValues,
@@ -228,7 +238,7 @@ fun ListeCoursesContent(
                         fontWeight = FontWeight.SemiBold
                     )
 
-                    ShoppingHelpRow("👆", "Appui court sur un article pour le basculer entre À acheter et Dans le panier")
+                    ShoppingHelpRow("👆", "Appui court sur un article pour le basculer entre À acheter et Terminé")
                     ShoppingHelpRow("✋", "Appui long sur un article pour ouvrir le menu d’options")
                     ShoppingHelpRow("⭐", "Ajoute ou retire un produit des favoris depuis le menu")
                     ShoppingHelpRow("🗑", "Supprime un article depuis l’appui long ou vide les articles cochés")
@@ -279,6 +289,53 @@ fun ListeCoursesContent(
         onDispose {
             topBarState.clearActions(owner)
             topBarState.clearTitleTrailing(owner)
+        }
+    }
+
+    val availableFilters by remember(tab) {
+        derivedStateOf {
+            val present = items
+                .asSequence()
+                .filter { it.tab == tab }
+                .map { it.category }
+                .toSet()
+
+            buildList {
+                add(CourseFilter.ALL)
+                addAll(CourseFilter.values().filter { it != CourseFilter.ALL && it in present })
+            }
+        }
+    }
+
+    LaunchedEffect(availableFilters) {
+        if (filter != CourseFilter.ALL && filter !in availableFilters) {
+            filter = CourseFilter.ALL
+        }
+    }
+
+    val listState = rememberLazyListState()
+    var stickyFiltersVisible by rememberSaveable { mutableStateOf(true) }
+
+    LaunchedEffect(listState) {
+        var previousIndex = 0
+        var previousOffset = 0
+
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { (index, offset) ->
+            val isAtTop = index == 0 && offset <= 8
+            val scrollingDown = index > previousIndex || (index == previousIndex && offset > previousOffset + 6)
+            val scrollingUp = index < previousIndex || (index == previousIndex && offset < previousOffset - 6)
+
+            stickyFiltersVisible = when {
+                isAtTop -> true
+                scrollingDown -> false
+                scrollingUp -> true
+                else -> stickyFiltersVisible
+            }
+
+            previousIndex = index
+            previousOffset = offset
         }
     }
 
@@ -416,17 +473,25 @@ fun ListeCoursesContent(
                 .fillMaxSize()
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 96.dp + bottomInset)
             ) {
-                item {
-                    ListeCoursesHeader(
-                        filter = filter,
-                        onFilterChange = { filter = it },
-                    )
+                stickyHeader {
+                    AnimatedVisibility(
+                        visible = stickyFiltersVisible,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        StickyListeCoursesHeader(
+                            filter = filter,
+                            availableFilters = availableFilters,
+                            onFilterChange = { filter = it },
+                        )
+                    }
                 }
 
                 item {
@@ -509,37 +574,68 @@ fun ListeCoursesContent(
 }
 
 @Composable
-private fun ListeCoursesHeader(
+private fun StickyListeCoursesHeader(
     filter: CourseFilter,
+    availableFilters: List<CourseFilter>,
     onFilterChange: (CourseFilter) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
+    val cs = MaterialTheme.colorScheme
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(cs.surface.copy(alpha = 0.98f))
+            .border(
+                width = 1.dp,
+                color = cs.outlineVariant.copy(alpha = 0.45f),
+                shape = RoundedCornerShape(16.dp)
+            )
+    ) {
+        ListeCoursesHeader(
+            filter = filter,
+            availableFilters = availableFilters,
+            onFilterChange = onFilterChange,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ListeCoursesHeader(
+    filter: CourseFilter,
+    availableFilters: List<CourseFilter>,
+    onFilterChange: (CourseFilter) -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(cs.primary.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Rounded.Tune,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-                modifier = Modifier.size(16.dp)
+                contentDescription = "Filtres",
+                tint = cs.primary,
+                modifier = Modifier.size(13.dp)
             )
+        }
 
+        availableFilters.forEach { currentFilter ->
             FilterChipCompact(
-                selected = filter == CourseFilter.ALL,
-                label = CourseFilter.ALL.label,
-                onClick = { onFilterChange(CourseFilter.ALL) }
-            )
-            FilterChipCompact(
-                selected = filter == CourseFilter.FRUITS_LEGUMES,
-                label = CourseFilter.FRUITS_LEGUMES.label,
-                onClick = { onFilterChange(CourseFilter.FRUITS_LEGUMES) }
-            )
-            FilterChipCompact(
-                selected = filter == CourseFilter.FRAIS,
-                label = CourseFilter.FRAIS.label,
-                onClick = { onFilterChange(CourseFilter.FRAIS) }
+                selected = filter == currentFilter,
+                label = currentFilter.label,
+                onClick = { onFilterChange(currentFilter) }
             )
         }
     }
@@ -583,7 +679,7 @@ private fun FilterChipCompact(
 ) {
     val cs = MaterialTheme.colorScheme
     val bg by animateColorAsState(
-        targetValue = if (selected) cs.primary.copy(alpha = 0.14f) else cs.onSurface.copy(alpha = 0.045f),
+        targetValue = if (selected) cs.primary.copy(alpha = 0.14f) else cs.onSurface.copy(alpha = 0.04f),
         label = "chipBg"
     )
     val fg by animateColorAsState(
@@ -596,7 +692,7 @@ private fun FilterChipCompact(
             .clip(RoundedCornerShape(999.dp))
             .background(bg)
             .clickable(onClick = onClick)
-            .padding(horizontal = 9.dp, vertical = 3.dp),
+            .padding(horizontal = 9.dp, vertical = 5.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
