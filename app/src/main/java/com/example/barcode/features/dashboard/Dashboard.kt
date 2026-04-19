@@ -19,7 +19,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.outlined.Eco
@@ -89,6 +95,34 @@ private data class DashboardProductsUi(
     val expired: Int,
     val nextExpiring: List<ExpiringLine>
 )
+
+private data class SeasonalItemUi(
+    val title: String,
+    val imageName: String
+)
+
+private val fakeSeasonalVegetables = listOf(
+    SeasonalItemUi("Asperges", "manual_subtype_veg_asparagus"),
+    SeasonalItemUi("Carottes", "manual_subtype_veg_carrot"),
+    SeasonalItemUi("Radis", "manual_subtype_veg_radish"),
+    SeasonalItemUi("Salade iceberg", "manual_subtype_veg_salad"),
+    SeasonalItemUi("Concombre", "manual_subtype_veg_cucumber"),
+    SeasonalItemUi("Tomates", "manual_subtype_veg_tomato"),
+    SeasonalItemUi("Poireau", "manual_subtype_veg_leek"),
+    SeasonalItemUi("Artichaut", "manual_subtype_veg_artichoke"),
+)
+
+private val fakeSeasonalFruits = listOf(
+    SeasonalItemUi("Fraises", "manual_subtype_fruits_strawberries"),
+    SeasonalItemUi("Cerises", "manual_subtype_fruits_cherry"),
+    SeasonalItemUi("Abricot", "manual_subtype_fruits_apricot"),
+    SeasonalItemUi("Kiwi", "manual_subtype_fruits_kiwi"),
+    SeasonalItemUi("Citron jaune", "manual_subtype_fruits_lemon"),
+    SeasonalItemUi("Pomme", "manual_subtype_fruits_apple"),
+    SeasonalItemUi("Poire", "manual_subtype_fruits_pear"),
+    SeasonalItemUi("Myrtilles", "manual_subtype_fruits_blueberries"),
+)
+
 
 private const val DAY_MS: Long = 86_400_000L
 
@@ -217,8 +251,131 @@ fun Dashboard(
                 onClick = onNavigateToRecipes
             )
         }
+
+        DashboardCardSeasonalFake(
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
+
+
+@Composable
+private fun DashboardCardSeasonalFake(
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Eco,
+                    contentDescription = "De saison",
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                    modifier = Modifier.size(22.dp)
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "De saison",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Fake pour l'instant",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                    )
+                }
+            }
+
+            CompactSeasonCategoryRow(
+                title = "Fruits",
+                items = fakeSeasonalFruits
+            )
+
+            CompactSeasonCategoryRow(
+                title = "Légumes",
+                items = fakeSeasonalVegetables
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CompactSeasonCategoryRow(
+    title: String,
+    items: List<SeasonalItemUi>
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items.take(5).forEach { item ->
+                TaxonomyDrawableThumb(
+                    imageName = item.imageName,
+                    contentDescription = item.title,
+                    modifier = Modifier.size(42.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaxonomyDrawableThumb(
+    imageName: String,
+    contentDescription: String?,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val resId = remember(imageName) {
+        context.resources.getIdentifier(imageName, "drawable", context.packageName)
+    }
+
+    if (resId != 0) {
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = ContentScale.Fit
+        )
+    } else {
+        Icon(
+            imageVector = Icons.Outlined.Eco,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f),
+            modifier = modifier
+        )
+    }
+}
+
 
 
 @Composable
