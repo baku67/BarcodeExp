@@ -1,12 +1,13 @@
 package com.example.barcode.features.listeCourse
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -77,6 +78,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -314,28 +316,21 @@ fun ListeCoursesContent(
     }
 
     val listState = rememberLazyListState()
-    var stickyFiltersVisible by rememberSaveable { mutableStateOf(true) }
+    val density = LocalDensity.current
+    val collapseThresholdPx = with(density) { 28.dp.roundToPx() }
+    val expandThresholdPx = with(density) { 2.dp.roundToPx() }
+    var showExpandedFilters by rememberSaveable { mutableStateOf(true) }
 
-    LaunchedEffect(listState) {
-        var previousIndex = 0
-        var previousOffset = 0
-
+    LaunchedEffect(listState, collapseThresholdPx, expandThresholdPx) {
         snapshotFlow {
             listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
         }.collect { (index, offset) ->
-            val isAtTop = index == 0 && offset <= 8
-            val scrollingDown = index > previousIndex || (index == previousIndex && offset > previousOffset + 6)
-            val scrollingUp = index < previousIndex || (index == previousIndex && offset < previousOffset - 6)
-
-            stickyFiltersVisible = when {
-                isAtTop -> true
-                scrollingDown -> false
-                scrollingUp -> true
-                else -> stickyFiltersVisible
+            showExpandedFilters = when {
+                index > 0 -> false
+                showExpandedFilters && offset > collapseThresholdPx -> false
+                !showExpandedFilters && offset <= expandThresholdPx -> true
+                else -> showExpandedFilters
             }
-
-            previousIndex = index
-            previousOffset = offset
         }
     }
 
@@ -481,16 +476,35 @@ fun ListeCoursesContent(
                 contentPadding = PaddingValues(bottom = 96.dp + bottomInset)
             ) {
                 stickyHeader {
-                    AnimatedVisibility(
-                        visible = stickyFiltersVisible,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
-                        StickyListeCoursesHeader(
-                            filter = filter,
-                            availableFilters = availableFilters,
-                            onFilterChange = { filter = it },
-                        )
+                    AnimatedContent(
+                        targetState = showExpandedFilters,
+                        label = "filtersHeaderState",
+                        transitionSpec = {
+                            (fadeIn() + expandVertically(expandFrom = Alignment.Top)) togetherWith
+                                    (fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top))
+                        }
+                    ) { expanded  ->
+                        if (expanded ) {
+                            StickyListeCoursesHeader(
+                                filter = filter,
+                                availableFilters = availableFilters,
+                                onFilterChange = { filter = it },
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.TopEnd
+                            ) {
+                                ActiveFilterCapsule(
+                                    label = filter.label,
+                                    onClick = {
+                                        scope.launch {
+                                            listState.animateScrollToItem(0)
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -596,6 +610,37 @@ private fun StickyListeCoursesHeader(
             filter = filter,
             availableFilters = availableFilters,
             onFilterChange = onFilterChange,
+        )
+    }
+}
+
+@Composable
+private fun ActiveFilterCapsule(
+    label: String,
+    onClick: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(cs.surface.copy(alpha = 0.98f))
+            .border(
+                width = 1.dp,
+                color = cs.primary.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(999.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = cs.primary,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.SemiBold
+            ),
+            maxLines = 1
         )
     }
 }
