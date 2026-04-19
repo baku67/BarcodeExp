@@ -269,17 +269,17 @@ fun FridgePage(
 
     // ✅ Re-clique sur l’onglet actif => scroll-to-top (animation visible)
     LaunchedEffect(scrollToTopToken, selectedViewMode, emptyCenterLabel) {
-            if (scrollToTopToken == 0) return@LaunchedEffect
+        if (scrollToTopToken == 0) return@LaunchedEffect
 
-            val canScrollToTop = when (selectedViewMode) {
-                    ViewMode.Fridge -> true // shelves >= 5 donc item 0 existe toujours
-                    ViewMode.List -> emptyCenterLabel == null // LazyColumn présent uniquement si non vide
-                }
-
-            if (canScrollToTop) {
-                    runCatching { listState.animateScrollToItem(0) }
-                }
+        val canScrollToTop = when (selectedViewMode) {
+            ViewMode.Fridge -> true // shelves >= 5 donc item 0 existe toujours
+            ViewMode.List -> emptyCenterLabel == null // LazyColumn présent uniquement si non vide
         }
+
+        if (canScrollToTop) {
+            runCatching { listState.animateScrollToItem(0) }
+        }
+    }
 
     // --- Fridge "turn on" effect (dimming uniquement sur les rangées)
     var fridgeOn by remember { mutableStateOf(false) }
@@ -538,7 +538,7 @@ fun FridgePage(
     }
 
     val owner = "items"
-    LaunchedEffect(isActive, selectedViewMode) {
+    DisposableEffect(topBarState, isActive, selectedViewMode) {
         if (isActive) {
             topBarState.setTitleTrailing(owner) {
                 IconButton(
@@ -561,7 +561,11 @@ fun FridgePage(
                 )
             }
         } else {
-            // ✅ important : page inactive => elle ne possède plus le header
+            topBarState.clearActions(owner)
+            topBarState.clearTitleTrailing(owner)
+        }
+
+        onDispose {
             topBarState.clearActions(owner)
             topBarState.clearTitleTrailing(owner)
         }

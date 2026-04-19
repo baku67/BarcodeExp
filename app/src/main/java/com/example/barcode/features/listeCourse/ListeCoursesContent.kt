@@ -49,6 +49,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -208,14 +209,10 @@ fun ListeCoursesContent(
     val topBarState = LocalAppTopBarState.current
     val owner = "shopping_list"
 
-    SideEffect {
+    DisposableEffect(topBarState, isActive, tab) {
         if (isActive) {
             topBarState.subtitle = tab.label
-        }
-    }
-
-    LaunchedEffect(isActive, tab) {
-        if (isActive) {
+            topBarState.clearTitleTrailing("items")
             topBarState.setActions(owner) {
                 CoursesScopeIconToggle(
                     selected = tab,
@@ -223,6 +220,10 @@ fun ListeCoursesContent(
                 )
             }
         } else {
+            topBarState.clearActions(owner)
+        }
+
+        onDispose {
             topBarState.clearActions(owner)
         }
     }
