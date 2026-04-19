@@ -51,11 +51,11 @@ fun AppContentWithBars(
 
     // Titre et subtitle du HeaderBar
     val (title, subtitle) = when {
-        selectedRoute.startsWith("home") -> "Tableau de bord" to "Tableau de bord"
-        selectedRoute.startsWith("listeCourses") -> "Liste de courses" to "Liste de courses"
-        selectedRoute.startsWith("items") -> "Frigo" to "Produits"
-        selectedRoute.startsWith("recipes") -> "Recettes" to "Recettes"
-        selectedRoute.startsWith("settings") -> "Réglages" to "Réglages"
+        selectedRoute.startsWith("home") -> "Tableau de bord" to null
+        selectedRoute.startsWith("listeCourses") -> "Liste de courses" to null
+        selectedRoute.startsWith("items") -> "Frigo" to null
+        selectedRoute.startsWith("recipes") -> "Recettes" to null
+        selectedRoute.startsWith("settings") -> "Réglages" to null
         else -> "FrigoZen" to null
     }
 

@@ -50,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -206,6 +207,12 @@ fun ListeCoursesContent(
 
     val topBarState = LocalAppTopBarState.current
     val owner = "shopping_list"
+
+    SideEffect {
+        if (isActive) {
+            topBarState.subtitle = tab.label
+        }
+    }
 
     LaunchedEffect(isActive, tab) {
         if (isActive) {
