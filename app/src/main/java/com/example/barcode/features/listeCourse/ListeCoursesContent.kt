@@ -66,6 +66,12 @@ import com.example.barcode.core.SessionManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.rounded.Person
+import com.example.barcode.common.ui.components.LocalAppTopBarState
+import com.example.barcode.domain.models.AppIcon
+import com.example.barcode.features.fridge.components.shared.SegIcon
 
 private enum class CoursesTab(val label: String) {
     SHARED("Partagée"),
@@ -77,7 +83,9 @@ private enum class CourseFilter(val label: String) {
     FRUITS_LEGUMES("Fruits & légumes"),
     FRAIS("Frais"),
     EPICERIE("Épicerie"),
-    MAISON("Maison"),
+    VIANDE("Viande"),
+    POiSSON("poisson"),
+    MAISON("maison")
 }
 
 private data class CourseItemUi(
@@ -130,6 +138,22 @@ fun ListeCoursesContent(innerPadding: PaddingValues, isActive: Boolean) {
 
     var filter by rememberSaveable { mutableStateOf(CourseFilter.ALL) }
     var tab by rememberSaveable { mutableStateOf(CoursesTab.SHARED) }
+
+    val topBarState = LocalAppTopBarState.current
+    val owner = "shopping_list"
+
+    LaunchedEffect(isActive, tab) {
+        if (isActive) {
+            topBarState.setActions(owner) {
+                CoursesScopeIconToggle(
+                    selected = tab,
+                    onSelect = { tab = it }
+                )
+            }
+        } else {
+            topBarState.clearActions(owner)
+        }
+    }
 
     val filtered by remember(items, filter, tab) {
         derivedStateOf {
@@ -211,8 +235,6 @@ fun ListeCoursesContent(innerPadding: PaddingValues, isActive: Boolean) {
 
                 item {
                     ListeCoursesHeader(
-                        tab = tab,
-                        onTabChange = { tab = it },
                         filter = filter,
                         onFilterChange = { filter = it },
                     )
@@ -309,21 +331,11 @@ fun ListeCoursesContent(innerPadding: PaddingValues, isActive: Boolean) {
 
 @Composable
 private fun ListeCoursesHeader(
-    tab: CoursesTab,
-    onTabChange: (CoursesTab) -> Unit,
     filter: CourseFilter,
     onFilterChange: (CourseFilter) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
-        // ✅ Tabs beaucoup plus “en avant” : fond primary pour l’onglet sélectionné
-        CoursesTabsPill(
-            selected = tab,
-            onSelect = onTabChange,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        // ✅ Barre de filtres plus fine
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -355,70 +367,33 @@ private fun ListeCoursesHeader(
     }
 }
 
+
 @Composable
-private fun CoursesTabsPill(
+private fun CoursesScopeIconToggle(
     selected: CoursesTab,
-    onSelect: (CoursesTab) -> Unit,
-    modifier: Modifier = Modifier,
+    onSelect: (CoursesTab) -> Unit
 ) {
-    val cs = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(14.dp)
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
 
     Row(
-        modifier = modifier
-            .height(42.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(cs.onSurface.copy(alpha = 0.06f))
-            .padding(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier
+            .clip(shape)
+            .border(1.dp, borderColor, shape)
+            .padding(2.dp)
     ) {
-        CoursesTabPillItem(
-            label = CoursesTab.SHARED.label,
-            selected = selected == CoursesTab.SHARED,
+        SegIcon(
+            active = selected == CoursesTab.SHARED,
+            icon = AppIcon.Vector(Icons.Rounded.People),
             onClick = { onSelect(CoursesTab.SHARED) },
-            modifier = Modifier.weight(1f)
+            shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
         )
-        CoursesTabPillItem(
-            label = CoursesTab.PERSONAL.label,
-            selected = selected == CoursesTab.PERSONAL,
+
+        SegIcon(
+            active = selected == CoursesTab.PERSONAL,
+            icon = AppIcon.Vector(Icons.Rounded.Person),
             onClick = { onSelect(CoursesTab.PERSONAL) },
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-private fun CoursesTabPillItem(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val cs = MaterialTheme.colorScheme
-
-    val bg by animateColorAsState(
-        targetValue = if (selected) cs.primary else Color.Transparent,
-        label = "tabBg"
-    )
-    val fg by animateColorAsState(
-        targetValue = if (selected) cs.onPrimary else cs.onSurfaceVariant,
-        label = "tabFg"
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(36.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(bg)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            color = fg,
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            maxLines = 1
+            shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
         )
     }
 }
@@ -481,7 +456,7 @@ private fun BottomAddBar(
             Icon(Icons.Rounded.Add, contentDescription = null)
             Spacer(Modifier.width(10.dp))
             Text(
-                text = "+ Ajouter",
+                text = "Ajouter",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
             )
         }
@@ -586,6 +561,8 @@ private fun CourseRow(
                         CourseFilter.FRUITS_LEGUMES -> "🥕"
                         CourseFilter.FRAIS -> "🧀"
                         CourseFilter.EPICERIE -> "🍚"
+                        CourseFilter.VIANDE -> "\uD83E\uDD69"
+                        CourseFilter.POiSSON -> "\uD83D\uDC1F"
                         CourseFilter.MAISON -> "🧼"
                         CourseFilter.ALL -> "🛒"
                     },
