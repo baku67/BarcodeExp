@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Comment
 import androidx.compose.material.icons.rounded.Delete
@@ -72,6 +73,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.example.barcode.common.bus.AppSnackbarEvent
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.LocalAppTopBarState
@@ -208,11 +210,61 @@ fun ListeCoursesContent(
 
     val topBarState = LocalAppTopBarState.current
     val owner = "shopping_list"
+    var showHelp by rememberSaveable { mutableStateOf(false) }
+
+    if (showHelp) {
+        Dialog(onDismissRequest = { showHelp = false }) {
+            ElevatedCard(
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        text = "Comment utiliser la liste de courses",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    ShoppingHelpRow("👆", "Appui court sur un article pour le basculer entre À acheter et Dans le panier")
+                    ShoppingHelpRow("✋", "Appui long sur un article pour ouvrir le menu d’options")
+                    ShoppingHelpRow("⭐", "Ajoute ou retire un produit des favoris depuis le menu")
+                    ShoppingHelpRow("🗑", "Supprime un article depuis l’appui long ou vide les articles cochés")
+                    ShoppingHelpRow("👥", "Utilise le switch en haut pour passer entre la liste partagée et personnelle")
+                    ShoppingHelpRow("⬇️", "Tire vers le bas pour rafraîchir la liste")
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Button(
+                        onClick = { showHelp = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("J’ai compris")
+                    }
+                }
+            }
+        }
+    }
 
     DisposableEffect(topBarState, isActive, tab) {
         if (isActive) {
             topBarState.subtitle = tab.label
             topBarState.clearTitleTrailing("items")
+            topBarState.setTitleTrailing(owner) {
+                IconButton(
+                    onClick = { showHelp = true },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.HelpOutline,
+                        contentDescription = "Aide",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    )
+                }
+            }
             topBarState.setActions(owner) {
                 CoursesScopeIconToggle(
                     selected = tab,
@@ -221,10 +273,12 @@ fun ListeCoursesContent(
             }
         } else {
             topBarState.clearActions(owner)
+            topBarState.clearTitleTrailing(owner)
         }
 
         onDispose {
             topBarState.clearActions(owner)
+            topBarState.clearTitleTrailing(owner)
         }
     }
 
@@ -844,5 +898,14 @@ private fun CourseRow(
                 }
             )
         }
+    }
+}
+
+@Composable
+private fun ShoppingHelpRow(icon: String, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(text = icon)
+        Spacer(Modifier.width(10.dp))
+        Text(text = text)
     }
 }
