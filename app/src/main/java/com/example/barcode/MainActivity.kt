@@ -48,6 +48,9 @@ import com.example.barcode.features.addItems.manual.ManualLeftoversDetailsStepSc
 import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
 import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
 import com.example.barcode.features.fridge.components.bottomSheetDetails.GoodToKnowScreen
+import com.example.barcode.features.listeCourse.ShoppingListAddScreen
+import com.example.barcode.features.listeCourse.ShoppingListScope
+import com.example.barcode.features.listeCourse.ShoppingListViewModel
 import com.example.barcode.sync.SyncScheduler
 
 
@@ -201,6 +204,33 @@ class MainActivity : ComponentActivity() {
                                 GoodToKnowScreen(
                                     itemName = itemName,
                                     onClose = { navController.popBackStack() }
+                                )
+                            }
+
+                            composable("shoppingList/add/{scope}") { backStackEntry ->
+                                val scopeArg = backStackEntry.arguments?.getString("scope")
+                                val initialScope = ShoppingListScope.fromRoute(scopeArg)
+
+                                val tabsEntry = remember(backStackEntry) {
+                                    navController.getBackStackEntry("tabs")
+                                }
+
+                                val shoppingVm: ShoppingListViewModel = viewModel(tabsEntry)
+
+                                ShoppingListAddScreen(
+                                    initialScope = initialScope,
+                                    onClose = { navController.popBackStack() },
+                                    onSubmit = { name, quantity, note, isImportant ->
+                                        shoppingVm.addCustomItem(
+                                            scope = initialScope,
+                                            name = name,
+                                            quantity = quantity,
+                                            note = note,
+                                            isImportant = isImportant
+                                        )
+                                        SnackbarBus.show("Produit ajouté")
+                                        navController.popBackStack()
+                                    }
                                 )
                             }
 

@@ -14,10 +14,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -55,17 +55,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -85,7 +82,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.example.barcode.common.bus.AppSnackbarEvent
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.LocalAppTopBarState
 import com.example.barcode.core.AppMode
@@ -95,39 +91,14 @@ import com.example.barcode.features.fridge.components.shared.SegIcon
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import java.util.UUID
-
-private enum class CoursesTab(val label: String) {
-    SHARED("Partagée"),
-    PERSONAL("Personnelle"),
-}
-
-private enum class CourseFilter(val label: String) {
-    ALL("Tout"),
-    FRUITS_LEGUMES("Fruits & légumes"),
-    FRAIS("Frais"),
-    EPICERIE("Épicerie"),
-    VIANDE("Viande"),
-    POISSON("Poisson"),
-    MAISON("Maison"),
-}
-
-private data class CourseItemUi(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val qty: String,
-    val category: CourseFilter,
-    val tab: CoursesTab,
-    val note: String? = null,
-    val isFavorite: Boolean = false,
-    val isChecked: Boolean = false,
-)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ListeCoursesContent(
     innerPadding: PaddingValues,
     isActive: Boolean,
+    onAddItem: (ShoppingListScope) -> Unit,
+    vm: ShoppingListViewModel,
 ) {
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val session = remember { SessionManager(appContext) }
@@ -137,88 +108,11 @@ fun ListeCoursesContent(
     val token = session.token.collectAsState(initial = null).value
 
     var refreshing by rememberSaveable { mutableStateOf(false) }
-    var initialLoading by rememberSaveable { mutableStateOf(false) }
     var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val items = remember {
-        mutableStateListOf(
-            CourseItemUi(
-                name = "Carottes fanes extra fraîches",
-                qty = "1 kg",
-                category = CourseFilter.FRUITS_LEGUMES,
-                tab = CoursesTab.SHARED,
-                note = "Prendre bio si possible"
-            ),
-            CourseItemUi(
-                name = "Avocats",
-                qty = "x2",
-                category = CourseFilter.FRUITS_LEGUMES,
-                tab = CoursesTab.SHARED
-            ),
-            CourseItemUi(
-                name = "Tomates cerises",
-                qty = "1 barquette",
-                category = CourseFilter.FRUITS_LEGUMES,
-                tab = CoursesTab.PERSONAL
-            ),
-            CourseItemUi(
-                name = "Citron jaune non traité",
-                qty = "x3",
-                category = CourseFilter.FRUITS_LEGUMES,
-                tab = CoursesTab.PERSONAL
-            ),
-            CourseItemUi(
-                name = "Saumon",
-                qty = "2 filets",
-                category = CourseFilter.FRAIS,
-                tab = CoursesTab.SHARED,
-                note = "Pour bowl du soir",
-                isFavorite = true
-            ),
-            CourseItemUi(
-                name = "Yaourt grec",
-                qty = "1 pot",
-                category = CourseFilter.FRAIS,
-                tab = CoursesTab.PERSONAL
-            ),
-            CourseItemUi(
-                name = "Fromage râpé",
-                qty = "200 g",
-                category = CourseFilter.FRAIS,
-                tab = CoursesTab.SHARED,
-                isChecked = true
-            ),
-            CourseItemUi(
-                name = "Riz basmati",
-                qty = "1 kg",
-                category = CourseFilter.EPICERIE,
-                tab = CoursesTab.SHARED
-            ),
-            CourseItemUi(
-                name = "Sauce soja",
-                qty = "1 bouteille",
-                category = CourseFilter.EPICERIE,
-                tab = CoursesTab.PERSONAL,
-                isChecked = true
-            ),
-            CourseItemUi(
-                name = "Liquide vaisselle",
-                qty = "1",
-                category = CourseFilter.MAISON,
-                tab = CoursesTab.PERSONAL
-            ),
-            CourseItemUi(
-                name = "Sacs poubelle",
-                qty = "30 L",
-                category = CourseFilter.MAISON,
-                tab = CoursesTab.SHARED,
-                note = "Lien coulissant"
-            ),
-        )
-    }
-
-    var filter by rememberSaveable { mutableStateOf(CourseFilter.ALL) }
-    var tab by rememberSaveable { mutableStateOf(CoursesTab.SHARED) }
+    val items by vm.items.collectAsState()
+    var filter by rememberSaveable { mutableStateOf(ShoppingFilter.ALL) }
+    var tab by rememberSaveable { mutableStateOf(ShoppingListScope.SHARED) }
 
     val topBarState = LocalAppTopBarState.current
     val owner = "shopping_list"
@@ -245,7 +139,7 @@ fun ListeCoursesContent(
                     ShoppingHelpRow("⭐", "Ajoute ou retire un produit des favoris depuis le menu")
                     ShoppingHelpRow("🗑", "Supprime un article depuis l’appui long ou vide les articles cochés")
                     ShoppingHelpRow("👥", "Utilise le switch en haut pour passer entre la liste partagée et personnelle")
-                    ShoppingHelpRow("⬇️", "Tire vers le bas pour rafraîchir la liste")
+                    ShoppingHelpRow("⬇️", "Tire vers le bas pour actualiser visuellement la liste")
 
                     Spacer(Modifier.height(8.dp))
 
@@ -294,24 +188,29 @@ fun ListeCoursesContent(
         }
     }
 
-    val availableFilters by remember(tab) {
+    val availableFilters by remember(items, tab) {
         derivedStateOf {
             val present = items
                 .asSequence()
-                .filter { it.tab == tab }
+                .filter { it.scope == tab }
                 .map { it.category }
                 .toSet()
 
             buildList {
-                add(CourseFilter.ALL)
-                addAll(CourseFilter.values().filter { it != CourseFilter.ALL && it in present })
+                add(ShoppingFilter.ALL)
+                addAll(
+                    ShoppingFilter.entries.filter { currentFilter ->
+                        currentFilter != ShoppingFilter.ALL &&
+                                present.any { it.name == currentFilter.name }
+                    }
+                )
             }
         }
     }
 
     LaunchedEffect(availableFilters) {
-        if (filter != CourseFilter.ALL && filter !in availableFilters) {
-            filter = CourseFilter.ALL
+        if (filter != ShoppingFilter.ALL && filter !in availableFilters) {
+            filter = ShoppingFilter.ALL
         }
     }
 
@@ -338,8 +237,8 @@ fun ListeCoursesContent(
         derivedStateOf {
             items
                 .asSequence()
-                .filter { it.tab == tab }
-                .filter { filter == CourseFilter.ALL || it.category == filter }
+                .filter { it.scope == tab }
+                .filter { filter.matches(it.category) }
                 .toList()
         }
     }
@@ -347,106 +246,28 @@ fun ListeCoursesContent(
     val (toBuy, inCart) = remember(filtered) { filtered.partition { !it.isChecked } }
 
     suspend fun refreshListeCourses() {
-        if (mode == AppMode.AUTH && !token.isNullOrBlank()) delay(650) else delay(450)
-
-        val pool = items.filter { it.tab == tab }
-        if (pool.isNotEmpty()) {
-            val pick = pool.random()
-            val idx = items.indexOfFirst { it.id == pick.id }
-            if (idx >= 0) items[idx] = items[idx].copy(isFavorite = !items[idx].isFavorite)
-        }
+        if (mode == AppMode.AUTH && !token.isNullOrBlank()) delay(350) else delay(250)
     }
 
-    fun addFakeItem() {
-        val itemCategory = if (filter == CourseFilter.ALL) CourseFilter.EPICERIE else filter
-        items.add(
-            0,
-            CourseItemUi(
-                name = "Nouveau produit",
-                qty = "x1",
-                category = itemCategory,
-                tab = tab,
-            )
-        )
-        SnackbarBus.show("Produit ajouté")
-    }
-
-    fun toggleChecked(itemId: String) {
-        val idx = items.indexOfFirst { it.id == itemId }
-        if (idx < 0) return
-
-        val updated = items[idx].copy(isChecked = !items[idx].isChecked)
-        items[idx] = updated
-    }
+    fun toggleChecked(itemId: String) = vm.toggleChecked(itemId)
 
     fun toggleFavoriteWithFeedback(itemId: String) {
-        val idx = items.indexOfFirst { it.id == itemId }
-        if (idx < 0) return
-
-        val updated = items[idx].copy(isFavorite = !items[idx].isFavorite)
-        items[idx] = updated
-
-        SnackbarBus.show(
-            if (updated.isFavorite) "Ajouté aux favoris" else "Retiré des favoris"
-        )
+        vm.toggleFavorite(itemId)
+        SnackbarBus.show("Favori mis à jour")
     }
 
-    fun removeItemWithUndo(itemId: String) {
-        val idx = items.indexOfFirst { it.id == itemId }
-        if (idx < 0) return
+    fun removeItem(itemId: String) = vm.delete(itemId)
 
-        val removed = items[idx]
-        items.removeAt(idx)
-
-        SnackbarBus.show(
-            AppSnackbarEvent(
-                message = "Produit supprimé",
-                actionLabel = "Annuler",
-                duration = SnackbarDuration.Long,
-                onAction = {
-                    val safeIndex = idx.coerceIn(0, items.size)
-                    items.add(safeIndex, removed)
-                }
-            )
-        )
-    }
-
-    fun clearCheckedItemsWithUndo() {
-        val removed = items.mapIndexedNotNull { index, item ->
-            if (item.tab == tab && item.isChecked) index to item else null
-        }
-
-        if (removed.isEmpty()) return
-
-        removed
-            .asReversed()
-            .forEach { (index, _) -> items.removeAt(index) }
-
-        SnackbarBus.show(
-            AppSnackbarEvent(
-                message = "Liste vidée",
-                actionLabel = "Annuler",
-                duration = SnackbarDuration.Long,
-                onAction = {
-                    removed.forEach { (index, item) ->
-                        val safeIndex = index.coerceIn(0, items.size)
-                        items.add(safeIndex, item)
-                    }
-                }
-            )
-        )
-    }
+    fun clearCheckedItems() = vm.clearChecked(tab)
 
     LaunchedEffect(isActive, mode, token) {
         val canLoad = isActive && mode == AppMode.AUTH && !token.isNullOrBlank()
         if (!canLoad) return@LaunchedEffect
         if (loadedForToken == token) return@LaunchedEffect
 
-        initialLoading = true
         try {
             refreshListeCourses()
         } finally {
-            initialLoading = false
             loadedForToken = token
         }
     }
@@ -483,8 +304,8 @@ fun ListeCoursesContent(
                             (fadeIn() + expandVertically(expandFrom = Alignment.Top)) togetherWith
                                     (fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top))
                         }
-                    ) { expanded  ->
-                        if (expanded ) {
+                    ) { expanded ->
+                        if (expanded) {
                             StickyListeCoursesHeader(
                                 filter = filter,
                                 availableFilters = availableFilters,
@@ -517,14 +338,16 @@ fun ListeCoursesContent(
                 }
 
                 if (toBuy.isEmpty()) {
-                    item { EmptyHint(text = "Rien à acheter — tu es à jour 👌") }
+                    item {
+                        EmptyHint(text = "Rien à acheter — tu es à jour 👌")
+                    }
                 } else {
                     items(toBuy, key = { it.id }) { item ->
                         CourseRow(
                             item = item,
                             onToggleChecked = { toggleChecked(item.id) },
                             onToggleFav = { toggleFavoriteWithFeedback(item.id) },
-                            onRemove = { removeItemWithUndo(item.id) }
+                            onRemove = { removeItem(item.id) }
                         )
                     }
                 }
@@ -537,7 +360,7 @@ fun ListeCoursesContent(
                         count = inCart.size,
                         trailing = {
                             if (inCart.isNotEmpty()) {
-                                IconButton(onClick = { clearCheckedItemsWithUndo() }) {
+                                IconButton(onClick = { clearCheckedItems() }) {
                                     Icon(
                                         imageVector = Icons.Rounded.Delete,
                                         contentDescription = "Vider les éléments terminés",
@@ -550,14 +373,16 @@ fun ListeCoursesContent(
                 }
 
                 if (inCart.isEmpty()) {
-                    item { EmptyHint(text = "Aucun item validé pour l’instant.") }
+                    item {
+                        EmptyHint(text = "Aucun item validé pour l’instant.")
+                    }
                 } else {
                     items(inCart, key = { it.id }) { item ->
                         CourseRow(
                             item = item,
                             onToggleChecked = { toggleChecked(item.id) },
                             onToggleFav = { toggleFavoriteWithFeedback(item.id) },
-                            onRemove = { removeItemWithUndo(item.id) }
+                            onRemove = { removeItem(item.id) }
                         )
                     }
                 }
@@ -582,16 +407,16 @@ fun ListeCoursesContent(
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 12.dp + bottomInset),
-            onClick = { addFakeItem() }
+            onClick = { onAddItem(tab) }
         )
     }
 }
 
 @Composable
 private fun StickyListeCoursesHeader(
-    filter: CourseFilter,
-    availableFilters: List<CourseFilter>,
-    onFilterChange: (CourseFilter) -> Unit,
+    filter: ShoppingFilter,
+    availableFilters: List<ShoppingFilter>,
+    onFilterChange: (ShoppingFilter) -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
 
@@ -648,9 +473,9 @@ private fun ActiveFilterCapsule(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ListeCoursesHeader(
-    filter: CourseFilter,
-    availableFilters: List<CourseFilter>,
-    onFilterChange: (CourseFilter) -> Unit,
+    filter: ShoppingFilter,
+    availableFilters: List<ShoppingFilter>,
+    onFilterChange: (ShoppingFilter) -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
 
@@ -688,8 +513,8 @@ private fun ListeCoursesHeader(
 
 @Composable
 private fun CoursesScopeIconToggle(
-    selected: CoursesTab,
-    onSelect: (CoursesTab) -> Unit,
+    selected: ShoppingListScope,
+    onSelect: (ShoppingListScope) -> Unit,
 ) {
     val shape = RoundedCornerShape(14.dp)
     val borderColor = MaterialTheme.colorScheme.outlineVariant
@@ -701,16 +526,16 @@ private fun CoursesScopeIconToggle(
             .padding(2.dp)
     ) {
         SegIcon(
-            active = selected == CoursesTab.SHARED,
+            active = selected == ShoppingListScope.SHARED,
             icon = AppIcon.Vector(Icons.Rounded.People),
-            onClick = { onSelect(CoursesTab.SHARED) },
+            onClick = { onSelect(ShoppingListScope.SHARED) },
             shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
         )
 
         SegIcon(
-            active = selected == CoursesTab.PERSONAL,
+            active = selected == ShoppingListScope.PERSONAL,
             icon = AppIcon.Vector(Icons.Rounded.Person),
-            onClick = { onSelect(CoursesTab.PERSONAL) },
+            onClick = { onSelect(ShoppingListScope.PERSONAL) },
             shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
         )
     }
@@ -724,7 +549,11 @@ private fun FilterChipCompact(
 ) {
     val cs = MaterialTheme.colorScheme
     val bg by animateColorAsState(
-        targetValue = if (selected) cs.primary.copy(alpha = 0.14f) else cs.onSurface.copy(alpha = 0.04f),
+        targetValue = if (selected) {
+            cs.primary.copy(alpha = 0.14f)
+        } else {
+            cs.onSurface.copy(alpha = 0.04f)
+        },
         label = "chipBg"
     )
     val fg by animateColorAsState(
@@ -850,7 +679,7 @@ private fun EmptyHint(text: String) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CourseRow(
-    item: CourseItemUi,
+    item: ShoppingListItemUi,
     onToggleChecked: () -> Unit,
     onToggleFav: () -> Unit,
     onRemove: () -> Unit,
@@ -879,13 +708,13 @@ private fun CourseRow(
     )
 
     val emoji = when (item.category) {
-        CourseFilter.FRUITS_LEGUMES -> "🥕"
-        CourseFilter.FRAIS -> "🧀"
-        CourseFilter.EPICERIE -> "🍚"
-        CourseFilter.VIANDE -> "🥩"
-        CourseFilter.POISSON -> "🐟"
-        CourseFilter.MAISON -> "🧼"
-        CourseFilter.ALL -> "🛒"
+        ShoppingCategory.FRUITS_LEGUMES -> "🥕"
+        ShoppingCategory.FRAIS -> "🧀"
+        ShoppingCategory.EPICERIE -> "🍚"
+        ShoppingCategory.VIANDE -> "🥩"
+        ShoppingCategory.POISSON -> "🐟"
+        ShoppingCategory.MAISON -> "🧼"
+        ShoppingCategory.OTHER -> "🛒"
     }
 
     val titleDecoration = if (item.isChecked) TextDecoration.LineThrough else TextDecoration.None
@@ -957,29 +786,43 @@ private fun CourseRow(
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        if (item.isFavorite) {
-                            Spacer(Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.Rounded.Favorite,
-                                contentDescription = "Favori",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier
-                                    .padding(top = 2.dp)
-                                    .size(16.dp)
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (item.isImportant) {
+                                Text(
+                                    text = "Important",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+
+                            if (item.isFavorite) {
+                                Spacer(Modifier.width(8.dp))
+                                Icon(
+                                    imageVector = Icons.Rounded.Favorite,
+                                    contentDescription = "Favori",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .padding(top = 2.dp)
+                                        .size(16.dp)
+                                )
+                            }
                         }
                     }
 
-                    Text(
-                        text = item.qty,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = cs.onSurfaceVariant
-                    )
+                    if (!item.quantity.isNullOrBlank()) {
+                        Text(
+                            text = item.quantity,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = cs.onSurfaceVariant
+                        )
+                    }
 
                     if (!item.note.isNullOrBlank()) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Rounded.Comment,
                                 contentDescription = null,

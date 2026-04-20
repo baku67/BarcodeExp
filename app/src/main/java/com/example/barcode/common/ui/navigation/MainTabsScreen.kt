@@ -27,12 +27,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.example.barcode.BarcodeApp
 import com.example.barcode.core.SessionManager
 import com.example.barcode.features.addItems.ItemsViewModel
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.features.dashboard.HomeContent
 import com.example.barcode.features.fridge.FridgePage
 import com.example.barcode.features.listeCourse.ListeCoursesContent
+import com.example.barcode.features.listeCourse.ShoppingListViewModel
+import com.example.barcode.features.listeCourse.ShoppingListViewModelFactory
 import com.example.barcode.features.recipies.RecipesContent
 import com.example.barcode.features.settings.SettingsContent
 import com.example.barcode.sync.SyncPreferences
@@ -40,16 +43,19 @@ import com.example.barcode.sync.SyncScheduler
 import com.example.barcode.sync.SyncUiState
 import kotlinx.coroutines.launch
 
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
-
+fun MainTabsScreen(
+    navController: NavHostController,
+    authVm: AuthViewModel
+) {
     val tabs = listOf("home", "listeCourses", "items", "recipes", "settings")
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { tabs.size })
+    val pagerState = rememberPagerState(
+        initialPage = 0,
+        pageCount = { tabs.size }
+    )
     val scope = rememberCoroutineScope()
 
-    // ✅ Re-clique sur l’onglet actif = scroll-to-top (token incrémental)
     var itemsReselectToken by rememberSaveable { mutableStateOf(0) }
 
     fun goToTab(route: String) {
@@ -58,18 +64,25 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
             scope.launch {
                 pagerState.animateScrollToPage(
                     page = idx,
-                    animationSpec = tween(durationMillis = 550, easing = FastOutSlowInEasing)
+                    animationSpec = tween(
+                        durationMillis = 550,
+                        easing = FastOutSlowInEasing
+                    )
                 )
             }
         }
     }
 
     val selectedRoute = tabs[pagerState.currentPage]
-
     val context = LocalContext.current
+    val app = context.applicationContext as BarcodeApp
 
     val itemsVm: ItemsViewModel = viewModel()
     val items by itemsVm.items.collectAsState()
+
+    val shoppingListVm: ShoppingListViewModel = viewModel(
+        factory = ShoppingListViewModelFactory(app.shoppingListDao)
+    )
 
     val prefs = remember { SyncPreferences(context) }
     val lastSuccessAt by prefs.lastSuccessAt.collectAsState(initial = null)
@@ -79,17 +92,17 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
         .getWorkInfosByTagLiveData(SyncScheduler.SYNC_TAG)
         .observeAsState(emptyList())
 
-    val isSyncing = workInfos.any {
-        it.state == WorkInfo.State.RUNNING
-    }
+    val isSyncing = workInfos.any { it.state == WorkInfo.State.RUNNING }
 
     val isOnline = isOnline(context)
     val sessionManager = remember { SessionManager(context) }
-    val isAuthenticated by produceState(initialValue = false, key1 = sessionManager) {
+    val isAuthenticated by produceState(
+        initialValue = false,
+        key1 = sessionManager
+    ) {
         value = sessionManager.isAuthenticated()
     }
 
-    // Optionnel : renomme pour éviter la confusion visuelle
     val barSyncState: SyncUiState = when {
         authRequired || (isOnline && !isAuthenticated) -> SyncUiState.AuthRequired
         !isOnline -> SyncUiState.Offline
@@ -104,9 +117,9 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
         onTabReselect = { route ->
             if (route == "items") itemsReselectToken++
         },
-        syncState = barSyncState, // ✅ TESTs (remplacer par SyncUiState.Syncing ou autre enum pour forcer)
+        syncState = barSyncState,
         onSyncRetry = { SyncScheduler.enqueueSync(context) }
-    ) { innerPadding, snackbarHostState  ->
+    ) { innerPadding, _ ->
 
         HorizontalPager(
             state = pagerState,
@@ -128,7 +141,13 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
 
                 "listeCourses" -> ListeCoursesContent(
                     innerPadding = PaddingValues(),
-                    isActive = isActive
+                    isActive = isActive,
+                    onAddItem = { scopeArg ->
+                        navController.navigate("shoppingList/add/${scopeArg.routeValue}") {
+                            launchSingleTop = true
+                        }
+                    },
+                    vm = shoppingListVm
                 )
 
                 "items" -> FridgePage(
@@ -169,7 +188,6 @@ fun MainTabsScreen(navController: NavHostController, authVm: AuthViewModel) {
         }
     }
 }
-
 
 private fun isOnline(context: Context): Boolean {
     val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager

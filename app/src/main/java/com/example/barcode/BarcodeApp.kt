@@ -3,9 +3,10 @@ package com.example.barcode
 import android.app.Application
 import com.example.barcode.core.AuthStore
 import com.example.barcode.core.network.ApiClient
+import com.example.barcode.data.local.AppDb
+import com.example.barcode.data.local.dao.ShoppingListDao
 import com.example.barcode.features.auth.AuthApi
 import com.example.barcode.features.auth.AuthRepository
-import com.google.android.datatransport.BuildConfig
 
 class BarcodeApp : Application() {
 
@@ -21,6 +22,12 @@ class BarcodeApp : Application() {
     lateinit var authRepository: AuthRepository
         private set
 
+    lateinit var appDb: AppDb
+        private set
+
+    val shoppingListDao: ShoppingListDao
+        get() = appDb.shoppingListDao()
+
     override fun onCreate() {
         super.onCreate()
 
@@ -34,6 +41,8 @@ class BarcodeApp : Application() {
 
         authApi = apiClient.createApi(AuthApi::class.java)
         authRepository = AuthRepository(authApi)
+
+        appDb = AppDb.get(applicationContext)
     }
 
     companion object {
