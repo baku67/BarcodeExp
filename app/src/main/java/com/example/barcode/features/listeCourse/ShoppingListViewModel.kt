@@ -3,7 +3,9 @@ package com.example.barcode.features.listeCourse
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.barcode.data.local.dao.ShoppingListDao
+import com.example.barcode.data.local.entities.PendingOperation
 import com.example.barcode.data.local.entities.ShoppingListItemEntity
+import com.example.barcode.data.local.entities.SyncState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -14,11 +16,11 @@ class ShoppingListViewModel(
     private val dao: ShoppingListDao
 ) : ViewModel() {
 
-    private val currentHomeId = ShoppingListItemEntity.LOCAL_HOME_ID
-    private val currentUserId = ShoppingListItemEntity.LOCAL_USER_ID
+    private val currentHomeId = "local_home"
+    private val currentUserId = "local_user"
 
     val items: StateFlow<List<ShoppingListItemUi>> =
-        dao.observeVisibleForUser(currentHomeId, currentUserId)
+        dao.observeVisible(currentHomeId, currentUserId)
             .map { list -> list.map { it.toUi() } }
             .stateIn(
                 scope = viewModelScope,
@@ -33,64 +35,45 @@ class ShoppingListViewModel(
         note: String?,
         isImportant: Boolean,
     ) {
-        val now = System.currentTimeMillis()
-        val normalizedName = name.trim()
-        val normalizedQuantity = quantity?.trim()?.takeIf { it.isNotEmpty() }
-        val normalizedNote = note?.trim()?.takeIf { it.isNotEmpty() }
-        val ownerUserId = if (scope == ShoppingListScope.PERSONAL) currentUserId else null
-
         viewModelScope.launch {
             dao.upsert(
                 ShoppingListItemEntity(
                     homeId = currentHomeId,
                     scope = scope.name,
-                    ownerUserId = ownerUserId,
-                    name = normalizedName,
-                    quantity = normalizedQuantity,
-                    note = normalizedNote,
+                    ownerUserId = if (scope == ShoppingListScope.PERSONAL) currentUserId else null,
+                    name = name.trim(),
+                    quantity = quantity?.trim()?.takeIf { it.isNotEmpty() },
+                    note = note?.trim()?.takeIf { it.isNotEmpty() },
                     isImportant = isImportant,
                     category = ShoppingCategory.OTHER.name,
-                    createdAt = now,
-                    updatedAt = now,
-                    createdByUserId = currentUserId,
-                    updatedByUserId = currentUserId,
+                    pendingOperation = PendingOperation.CREATE,
+                    syncState = SyncState.OK
                 )
             )
         }
     }
 
     fun toggleChecked(id: String) = viewModelScope.launch {
-        dao.toggleChecked(
-            id = id,
-            homeId = currentHomeId,
-            userId = currentUserId,
-            updatedByUserId = currentUserId,
-        )
+        val local = dao.getById(id) ?: return@launch
+        dao.setChecked(id, !local.isChecked)
     }
 
     fun toggleFavorite(id: String) = viewModelScope.launch {
-        dao.toggleFavorite(
-            id = id,
-            homeId = currentHomeId,
-            userId = currentUserId,
-            updatedByUserId = currentUserId,
-        )
+        val local = dao.getById(id) ?: return@launch
+        dao.setFavorite(id, !local.isFavorite)
     }
 
     fun delete(id: String) = viewModelScope.launch {
-        dao.deleteVisibleById(
-            id = id,
-            homeId = currentHomeId,
-            userId = currentUserId,
-        )
+        val local = dao.getById(id) ?: return@launch
+        if (local.pendingOperation == PendingOperation.CREATE) {
+            dao.hardDelete(id)
+        } else {
+            dao.softDelete(id)
+        }
     }
 
     fun clearChecked(scope: ShoppingListScope) = viewModelScope.launch {
-        dao.deleteCheckedByScope(
-            homeId = currentHomeId,
-            scope = scope.name,
-            userId = currentUserId,
-        )
+        dao.softDeleteCheckedByScope(scope.name)
     }
 }
 
@@ -113,7 +96,7 @@ private fun ShoppingListItemEntity.toUi(): ShoppingListItemUi {
         isImportant = isImportant,
         isFavorite = isFavorite,
         isChecked = isChecked,
-        createdByUserId = createdByUserId,
-        updatedByUserId = updatedByUserId,
+        createdByUserId = "local_user",
+        updatedByUserId = "local_user",
     )
 }

@@ -21,7 +21,7 @@ import com.example.barcode.data.local.entities.ShoppingListItemEntity
         ItemNoteEntity::class,
         ShoppingListItemEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 abstract class AppDb : RoomDatabase() {
@@ -198,6 +198,9 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
+        /**
+         * v11 -> v12 : première table locale de liste de courses
+         */
         private val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -220,6 +223,9 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
+        /**
+         * v12 -> v13 : ajoute le contexte home/user + audit simple
+         */
         private val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -291,6 +297,109 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
+        /**
+         * v13 -> v14 : passe la table shopping au vrai schéma syncable
+         */
+        private val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS shopping_list_items_new (
+                        id TEXT NOT NULL PRIMARY KEY,
+
+                        pendingOperation TEXT NOT NULL DEFAULT 'NONE',
+                        syncState TEXT NOT NULL DEFAULT 'OK',
+                        lastSyncError TEXT,
+                        failedAt INTEGER,
+                        updatedAt INTEGER NOT NULL DEFAULT 0,
+                        serverUpdatedAt INTEGER,
+
+                        homeId TEXT NOT NULL,
+                        scope TEXT NOT NULL,
+                        ownerUserId TEXT,
+
+                        name TEXT NOT NULL,
+                        quantity TEXT,
+                        note TEXT,
+                        isImportant INTEGER NOT NULL DEFAULT 0,
+                        isFavorite INTEGER NOT NULL DEFAULT 0,
+                        isChecked INTEGER NOT NULL DEFAULT 0,
+                        category TEXT NOT NULL,
+
+                        createdAt INTEGER NOT NULL DEFAULT 0,
+                        deletedAt INTEGER,
+
+                        createdByUserId TEXT NOT NULL,
+                        updatedByUserId TEXT NOT NULL
+                    )
+                    """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                    INSERT INTO shopping_list_items_new (
+                        id,
+                        pendingOperation,
+                        syncState,
+                        lastSyncError,
+                        failedAt,
+                        updatedAt,
+                        serverUpdatedAt,
+                        homeId,
+                        scope,
+                        ownerUserId,
+                        name,
+                        quantity,
+                        note,
+                        isImportant,
+                        isFavorite,
+                        isChecked,
+                        category,
+                        createdAt,
+                        deletedAt,
+                        createdByUserId,
+                        updatedByUserId
+                    )
+                    SELECT
+                        id,
+                        'NONE',
+                        'OK',
+                        NULL,
+                        NULL,
+                        updatedAt,
+                        NULL,
+                        homeId,
+                        scope,
+                        ownerUserId,
+                        name,
+                        quantity,
+                        note,
+                        isImportant,
+                        isFavorite,
+                        isChecked,
+                        category,
+                        createdAt,
+                        NULL,
+                        createdByUserId,
+                        updatedByUserId
+                    FROM shopping_list_items
+                    """.trimIndent()
+                )
+
+                db.execSQL("DROP TABLE shopping_list_items")
+                db.execSQL("ALTER TABLE shopping_list_items_new RENAME TO shopping_list_items")
+
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_shopping_list_items_deletedAt ON shopping_list_items(deletedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_shopping_list_items_pendingOperation ON shopping_list_items(pendingOperation)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_shopping_list_items_syncState ON shopping_list_items(syncState)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_shopping_list_items_serverUpdatedAt ON shopping_list_items(serverUpdatedAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_shopping_list_items_homeId ON shopping_list_items(homeId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_shopping_list_items_scope ON shopping_list_items(scope)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_shopping_list_items_ownerUserId ON shopping_list_items(ownerUserId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_shopping_list_items_isChecked ON shopping_list_items(isChecked)")
+            }
+        }
+
         private fun columnExists(
             db: SupportSQLiteDatabase,
             table: String,
@@ -324,6 +433,7 @@ abstract class AppDb : RoomDatabase() {
                     .addMigrations(MIGRATION_10_11)
                     .addMigrations(MIGRATION_11_12)
                     .addMigrations(MIGRATION_12_13)
+                    .addMigrations(MIGRATION_13_14)
                     .build()
                     .also { INSTANCE = it }
             }

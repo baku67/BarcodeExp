@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.barcode.BarcodeApp
-import com.example.barcode.core.network.ApiClient
 import com.example.barcode.core.SessionManager
 import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
@@ -14,16 +13,15 @@ import com.example.barcode.data.local.entities.SyncState
 import com.example.barcode.features.addItems.data.remote.api.ItemNotesApi
 import com.example.barcode.features.addItems.data.remote.api.ItemsApi
 import com.example.barcode.features.addItems.data.remote.dto.CreateItemRequestDto
-import com.example.barcode.features.addItems.data.remote.dto.ScanPayload
-import com.example.barcode.features.addItems.data.remote.dto.ManualPayload
 import com.example.barcode.features.addItems.data.remote.dto.ItemNoteCreateDto
+import com.example.barcode.features.addItems.data.remote.dto.ManualPayload
+import com.example.barcode.features.addItems.data.remote.dto.ScanPayload
 import com.example.barcode.util.sanitizeNutriScore
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
-
 
 class SyncWorker(
     ctx: Context,
@@ -41,6 +39,7 @@ class SyncWorker(
         val db = AppDb.get(applicationContext)
         val itemDao = db.itemDao()
         val noteDao = db.itemNoteDao()
+        val shoppingDao = db.shoppingListDao()
 
         val app = applicationContext as BarcodeApp
         val itemsApi = app.apiClient.createApi(ItemsApi::class.java)
@@ -48,14 +47,12 @@ class SyncWorker(
 
         val prefs = SyncPreferences(applicationContext)
 
-        // ✅ watermark serveur stocké en local (epoch ms)
         val sinceMs = prefs.lastSuccessAt.first()
         val sinceIso = DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(sinceMs))
 
         var newWatermarkMs = sinceMs
 
-
-        // 0) PUSH ItemNtes DELETE
+        // 0) PUSH ItemNotes DELETE
         val pendingNoteDeletes = noteDao.getPending(PendingOperation.DELETE)
         pendingNoteDeletes.forEach { note ->
             try {
@@ -74,7 +71,7 @@ class SyncWorker(
             }
         }
 
-        // 0bis) PUSH itemNotes CREATE
+        // 0bis) PUSH ItemNotes CREATE
         val pendingNoteCreates = noteDao.getPending(PendingOperation.CREATE)
         pendingNoteCreates.forEach { note ->
             try {
@@ -97,8 +94,6 @@ class SyncWorker(
                 noteDao.markFailed(note.id, error = "note create exception=${e.message}")
             }
         }
-
-
 
         // 1) PUSH items DELETE
         val pendingDeletes = itemDao.getPending(PendingOperation.DELETE)
@@ -186,8 +181,6 @@ class SyncWorker(
 
                 if (res.isSuccessful) itemDao.clearPending(item.id)
                 else itemDao.markFailed(item.id, error = "create failed code=${res.code()} body=${res.errorBody()?.string()}")
-
-
             } catch (e: Exception) {
                 itemDao.markFailed(item.id, error = "create exception=${e.message}")
             }
@@ -204,7 +197,7 @@ class SyncWorker(
                 }
 
                 val expiry = item.expiryDate?.let { epochMsToYyyyMmDd(it) }
-                val addMode = item.addMode // "barcode_scan" | "manual"
+                val addMode = item.addMode
 
                 val dto = when (addMode) {
                     "manual" -> {
@@ -259,13 +252,12 @@ class SyncWorker(
 
                 if (res.isSuccessful) itemDao.clearPending(item.id)
                 else itemDao.markFailed(item.id, error = "update(upsert) failed code=${res.code()}")
-
             } catch (e: Exception) {
                 itemDao.markFailed(item.id, error = "update(upsert) exception=${e.message}")
             }
         }
 
-        // 4) PULL items UPSERTS (items actifs)
+        // 4) PULL items UPSERTS
         try {
             val pullUpserts = itemsApi.getItems(
                 authorization = "Bearer $token",
@@ -296,7 +288,6 @@ class SyncWorker(
                 val serverUpdatedAt = parseAtomToEpochMs(dto.updatedAt)
                 newWatermarkMs = max(newWatermarkMs, serverUpdatedAt)
 
-                // Ici on ne s'attend pas à des deleted, mais on garde ton parsing safe
                 val serverDeletedAt = dto.deletedAt?.let { parseAtomToEpochMs(it) }
                     ?: if (dto.isDeleted) serverUpdatedAt else null
                 if (serverDeletedAt != null) newWatermarkMs = max(newWatermarkMs, serverDeletedAt)
@@ -319,29 +310,20 @@ class SyncWorker(
 
                 val merged = (local ?: ItemEntity(id = clientId)).copy(
                     id = clientId,
-
-                    // champs communs
                     name = dto.name ?: local?.name,
                     addedAt = dto.addedAt?.let { parseAtomToEpochMs(it) } ?: local?.addedAt,
                     expiryDate = dto.expiryDate?.let { parseYyyyMmDdToEpochMs(it) } ?: local?.expiryDate,
                     addMode = inferredAddMode,
-
-                    // scan (nested)
                     barcode = remoteBarcode ?: local?.barcode,
                     brand = remoteBrand ?: local?.brand,
                     imageUrl = remoteImageUrl ?: local?.imageUrl,
                     imageIngredientsUrl = remoteImgIng ?: local?.imageIngredientsUrl,
                     imageNutritionUrl = remoteImgNut ?: local?.imageNutritionUrl,
                     nutriScore = remoteNutri ?: local?.nutriScore,
-
-                    // ✅ manual (ne plus perdre l’image taxonomy)
                     manualType = if (inferredAddMode == "manual") (manual?.type ?: local?.manualType) else null,
                     manualSubtype = if (inferredAddMode == "manual") (manual?.subtype ?: local?.manualSubtype) else null,
-                    manualMetaJson = if (inferredAddMode == "manual") (local?.manualMetaJson) else null, // optionnel
-
+                    manualMetaJson = if (inferredAddMode == "manual") local?.manualMetaJson else null,
                     photoId = dto.photoId ?: local?.photoId,
-
-                    // sync
                     pendingOperation = PendingOperation.NONE,
                     syncState = SyncState.OK,
                     lastSyncError = null,
@@ -353,13 +335,12 @@ class SyncWorker(
 
                 itemDao.upsert(merged)
             }
-
         } catch (e: Exception) {
             android.util.Log.e("SyncWorker", "pull upserts exception=${e.message}")
             return Result.success()
         }
 
-        // 5) PULL items DELETES (tombstones)
+        // 5) PULL items DELETES
         try {
             val pullDeletes = itemsApi.getDeletedItems(
                 authorization = "Bearer $token",
@@ -383,22 +364,19 @@ class SyncWorker(
                 val deletedAtMs = parseAtomToEpochMs(t.deletedAt)
                 newWatermarkMs = max(newWatermarkMs, deletedAtMs)
 
-                // ✅ ne pas écraser les items locaux qui ont un pending/FAILED
                 val local = itemDao.getById(clientId)
                 if (local != null && (local.pendingOperation != PendingOperation.NONE || local.syncState == SyncState.FAILED)) {
                     return@forEach
                 }
 
-                // ✅ choix simple: purge locale (comme après un delete push)
                 itemDao.hardDelete(clientId)
             }
-
         } catch (e: Exception) {
             android.util.Log.e("SyncWorker", "pull deletes exception=${e.message}")
             return Result.success()
         }
 
-        // 6) PULL ItemNotes DELTA (créées/supprimées)
+        // 6) PULL ItemNotes DELTA
         try {
             val pullNotes = notesApi.getNotesDelta(
                 authorization = "Bearer $token",
@@ -463,14 +441,18 @@ class SyncWorker(
             return Result.success()
         }
 
+        // 7) SHOPPING LIST : préparation uniquement pour l'instant
+        // On touche déjà le DAO pour garder le worker aligné avec AppDb,
+        // mais il n'y a pas encore de ShoppingListApi / DTO / endpoints backend.
+        // Donc aucune sync distante réelle n'est exécutée ici pour le moment.
+        shoppingDao.hashCode()
 
-        // ✅ Sync complète OK => on stocke un watermark serveur (pas now())
         prefs.markSyncSuccessAt(newWatermarkMs)
-
         return Result.success()
     }
 
     private val yyyyMMdd = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+
     private fun epochMsToYyyyMmDd(ms: Long): String =
         Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalDate().format(yyyyMMdd)
 
