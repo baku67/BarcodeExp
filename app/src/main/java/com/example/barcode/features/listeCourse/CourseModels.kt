@@ -38,6 +38,8 @@ enum class ShoppingFilter(val label: String) {
 
 data class ShoppingListItemUi(
     val id: String,
+    val homeId: String,
+    val ownerUserId: String?,
     val name: String,
     val quantity: String?,
     val category: ShoppingCategory,
@@ -46,4 +48,6 @@ data class ShoppingListItemUi(
     val isImportant: Boolean,
     val isFavorite: Boolean,
     val isChecked: Boolean,
+    val createdByUserId: String,
+    val updatedByUserId: String,
 )

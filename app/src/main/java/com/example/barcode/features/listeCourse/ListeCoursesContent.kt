@@ -137,6 +137,7 @@ fun ListeCoursesContent(
                     ShoppingHelpRow("👆", "Appui court sur un article pour le basculer entre À acheter et Terminé")
                     ShoppingHelpRow("✋", "Appui long sur un article pour ouvrir le menu d’options")
                     ShoppingHelpRow("⭐", "Ajoute ou retire un produit des favoris depuis le menu")
+                    ShoppingHelpRow("👥", "Partagée = visible pour le foyer ; Personnelle = visible seulement pour toi")
                     ShoppingHelpRow("🗑", "Supprime un article depuis l’appui long ou vide les articles cochés")
                     ShoppingHelpRow("👥", "Utilise le switch en haut pour passer entre la liste partagée et personnelle")
                     ShoppingHelpRow("⬇️", "Tire vers le bas pour actualiser visuellement la liste")

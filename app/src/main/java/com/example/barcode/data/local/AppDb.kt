@@ -19,9 +19,9 @@ import com.example.barcode.data.local.entities.ShoppingListItemEntity
     entities = [
         ItemEntity::class,
         ItemNoteEntity::class,
-        ShoppingListItemEntity::class
+        ShoppingListItemEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 abstract class AppDb : RoomDatabase() {
@@ -35,7 +35,6 @@ abstract class AppDb : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDb? = null
 
-        // Migration 1 -> 2
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE items ADD COLUMN imageIngredientsUrl TEXT")
@@ -58,7 +57,6 @@ abstract class AppDb : RoomDatabase() {
 
         private val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
-
                 if (!columnExists(db, "items", "deletedAt")) {
                     db.execSQL("ALTER TABLE items ADD COLUMN deletedAt INTEGER")
                 }
@@ -78,11 +76,8 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
-        // remplacement syncStatus par pendingOperation + syncState
-        // + ajout lastSyncError / failedAt
         private val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
-
                 db.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS items_new (
@@ -152,7 +147,6 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
-        // Ajout ItemNote
         private val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -181,7 +175,6 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
-        // Ajout pinned sur ItemNote
         private val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 if (!columnExists(db, "item_notes", "pinned")) {
@@ -191,7 +184,6 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
-        // Scan/manual différentiation
         private val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE items ADD COLUMN manualType TEXT")
@@ -206,26 +198,96 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
-        // Ajout de la table liste de courses
         private val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     """
-            CREATE TABLE IF NOT EXISTS shopping_list_items (
-                id TEXT NOT NULL PRIMARY KEY,
-                name TEXT NOT NULL,
-                quantity TEXT,
-                note TEXT,
-                isImportant INTEGER NOT NULL,
-                isFavorite INTEGER NOT NULL,
-                isChecked INTEGER NOT NULL,
-                scope TEXT NOT NULL,
-                category TEXT NOT NULL,
-                createdAt INTEGER NOT NULL,
-                updatedAt INTEGER NOT NULL
-            )
-            """.trimIndent()
+                    CREATE TABLE IF NOT EXISTS shopping_list_items (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        quantity TEXT,
+                        note TEXT,
+                        isImportant INTEGER NOT NULL,
+                        isFavorite INTEGER NOT NULL,
+                        isChecked INTEGER NOT NULL,
+                        scope TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
                 )
+            }
+        }
+
+        private val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS shopping_list_items_new (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        homeId TEXT NOT NULL,
+                        scope TEXT NOT NULL,
+                        ownerUserId TEXT,
+                        name TEXT NOT NULL,
+                        quantity TEXT,
+                        note TEXT,
+                        isImportant INTEGER NOT NULL,
+                        isFavorite INTEGER NOT NULL,
+                        isChecked INTEGER NOT NULL,
+                        category TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        createdByUserId TEXT NOT NULL,
+                        updatedByUserId TEXT NOT NULL
+                    )
+                    """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                    INSERT INTO shopping_list_items_new (
+                        id,
+                        homeId,
+                        scope,
+                        ownerUserId,
+                        name,
+                        quantity,
+                        note,
+                        isImportant,
+                        isFavorite,
+                        isChecked,
+                        category,
+                        createdAt,
+                        updatedAt,
+                        createdByUserId,
+                        updatedByUserId
+                    )
+                    SELECT
+                        id,
+                        '${ShoppingListItemEntity.LOCAL_HOME_ID}',
+                        scope,
+                        CASE
+                            WHEN scope = 'PERSONAL' THEN '${ShoppingListItemEntity.LOCAL_USER_ID}'
+                            ELSE NULL
+                        END,
+                        name,
+                        quantity,
+                        note,
+                        isImportant,
+                        isFavorite,
+                        isChecked,
+                        category,
+                        createdAt,
+                        updatedAt,
+                        '${ShoppingListItemEntity.LOCAL_USER_ID}',
+                        '${ShoppingListItemEntity.LOCAL_USER_ID}'
+                    FROM shopping_list_items
+                    """.trimIndent()
+                )
+
+                db.execSQL("DROP TABLE shopping_list_items")
+                db.execSQL("ALTER TABLE shopping_list_items_new RENAME TO shopping_list_items")
             }
         }
 
@@ -261,6 +323,7 @@ abstract class AppDb : RoomDatabase() {
                     .addMigrations(MIGRATION_9_10)
                     .addMigrations(MIGRATION_10_11)
                     .addMigrations(MIGRATION_11_12)
+                    .addMigrations(MIGRATION_12_13)
                     .build()
                     .also { INSTANCE = it }
             }

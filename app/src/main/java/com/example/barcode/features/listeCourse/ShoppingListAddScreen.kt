@@ -98,7 +98,11 @@ fun ShoppingListAddScreen(
                         )
 
                         Text(
-                            text = "La recherche d’articles viendra ensuite. Pour l’instant, valide juste un nom libre.",
+                            text = if (initialScope == ShoppingListScope.SHARED) {
+                                "Cet article ira dans la liste partagée du foyer. La recherche d’articles viendra ensuite ; pour l’instant, valide juste un nom libre."
+                            } else {
+                                "Cet article ira dans ta liste personnelle. La recherche d’articles viendra ensuite ; pour l’instant, valide juste un nom libre."
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

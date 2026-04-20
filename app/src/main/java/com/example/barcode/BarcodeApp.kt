@@ -36,18 +36,15 @@ class BarcodeApp : Application() {
         apiClient = ApiClient(
             baseUrl = BASE_URL,
             authStore = authStore,
-            enableHttpLogs = true // TODO PROD TEMPORAIRE (ApiClient:DebugHttpInterceptor pour voir les logs HTTP)
+            enableHttpLogs = true
         )
 
         authApi = apiClient.createApi(AuthApi::class.java)
         authRepository = AuthRepository(authApi)
-
         appDb = AppDb.get(applicationContext)
     }
 
     companion object {
-        // ✅ mets ici la bonne URL (cf. section 0)
-        // TODO private const val BASE_URL = "https://domaine.tld/" // doit finir par /
         private const val BASE_URL = "http://127.0.0.1:8080/"
     }
 }

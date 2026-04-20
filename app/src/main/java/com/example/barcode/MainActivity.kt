@@ -51,6 +51,7 @@ import com.example.barcode.features.fridge.components.bottomSheetDetails.GoodToK
 import com.example.barcode.features.listeCourse.ShoppingListAddScreen
 import com.example.barcode.features.listeCourse.ShoppingListScope
 import com.example.barcode.features.listeCourse.ShoppingListViewModel
+import com.example.barcode.features.listeCourse.ShoppingListViewModelFactory
 import com.example.barcode.sync.SyncScheduler
 
 
@@ -215,7 +216,10 @@ class MainActivity : ComponentActivity() {
                                     navController.getBackStackEntry("tabs")
                                 }
 
-                                val shoppingVm: ShoppingListViewModel = viewModel(tabsEntry)
+                                val shoppingVm: ShoppingListViewModel = viewModel(
+                                    viewModelStoreOwner = tabsEntry,
+                                    factory = ShoppingListViewModelFactory(app.shoppingListDao)
+                                )
 
                                 ShoppingListAddScreen(
                                     initialScope = initialScope,
