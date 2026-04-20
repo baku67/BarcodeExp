@@ -84,21 +84,7 @@ fun ShoppingListAddScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = if (step == 1) "Ajouter un article" else "Détails"
-                        )
-
-                        Text(
-                            text = initialScope.label,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
+                title = { Text(if (step == 1) "Ajouter un article" else "Détails") },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
                         Icon(Icons.Rounded.Close, contentDescription = "Fermer")

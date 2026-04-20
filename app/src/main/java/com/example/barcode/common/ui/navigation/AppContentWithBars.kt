@@ -87,11 +87,9 @@ fun AppContentWithBars(
 
     val topBarState = remember { HeaderBarState() }
     topBarState.icon = iconForRoute
-    topBarState.title = title
 
-    if (topBarState.subtitle == null) {
-        topBarState.subtitle = subtitle
-    }
+    topBarState.title = title
+    topBarState.subtitle = subtitle
 
     CompositionLocalProvider(LocalAppTopBarState provides topBarState) {
         Scaffold(
