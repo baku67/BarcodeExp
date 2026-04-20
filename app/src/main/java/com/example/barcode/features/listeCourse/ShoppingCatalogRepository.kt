@@ -34,7 +34,7 @@ object ShoppingCatalogRepository {
     private fun loadFromRaw(context: Context): List<ShoppingCatalogItem> {
         return try {
             val raw = context.resources
-                .openRawResource(R.raw.shopping_list)
+                .openRawResource(R.raw.shopping_list_actual)
                 .bufferedReader()
                 .use { it.readText() }
 
