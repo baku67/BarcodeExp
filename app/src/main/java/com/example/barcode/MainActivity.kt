@@ -224,13 +224,13 @@ class MainActivity : ComponentActivity() {
                                 ShoppingListAddScreen(
                                     initialScope = initialScope,
                                     onClose = { navController.popBackStack() },
-                                    onSubmit = { name, quantity, note, isImportant ->
+                                    onSubmit = { draft ->
                                         shoppingVm.addCustomItem(
                                             scope = initialScope,
-                                            name = name,
-                                            quantity = quantity,
-                                            note = note,
-                                            isImportant = isImportant
+                                            name = draft.name,
+                                            quantity = draft.quantity,
+                                            note = draft.note,
+                                            isImportant = draft.isImportant
                                         )
                                         SnackbarBus.show("Produit ajouté")
                                         navController.popBackStack()
