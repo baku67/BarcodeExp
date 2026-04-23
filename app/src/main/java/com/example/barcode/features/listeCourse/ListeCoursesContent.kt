@@ -91,6 +91,10 @@ import com.example.barcode.features.fridge.components.shared.SegIcon
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import com.example.barcode.sync.SyncScheduler
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -106,6 +110,12 @@ fun ListeCoursesContent(
 
     val mode = session.appMode.collectAsState(initial = AppMode.AUTH).value
     val token = session.token.collectAsState(initial = null).value
+
+    val workInfos by WorkManager.getInstance(appContext)
+        .getWorkInfosByTagLiveData(SyncScheduler.SYNC_TAG)
+        .observeAsState(emptyList())
+
+    val isSyncing = workInfos.any { it.state == WorkInfo.State.RUNNING }
 
     var refreshing by rememberSaveable { mutableStateOf(false) }
     var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
@@ -247,7 +257,12 @@ fun ListeCoursesContent(
     val (toBuy, inCart) = remember(filtered) { filtered.partition { !it.isChecked } }
 
     suspend fun refreshListeCourses() {
-        if (mode == AppMode.AUTH && !token.isNullOrBlank()) delay(350) else delay(250)
+        if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
+            SyncScheduler.enqueueSync(appContext)
+            delay(150)
+        } else {
+            delay(150)
+        }
     }
 
     fun toggleChecked(itemId: String) = vm.toggleChecked(itemId)
@@ -277,7 +292,7 @@ fun ListeCoursesContent(
 
     Box(Modifier.fillMaxSize()) {
         PullToRefreshBox(
-            isRefreshing = refreshing,
+            isRefreshing = refreshing || isSyncing,
             onRefresh = {
                 scope.launch {
                     refreshing = true
