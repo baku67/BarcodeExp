@@ -44,6 +44,7 @@ import com.example.barcode.features.settings.SettingsContent
 import com.example.barcode.sync.SyncPreferences
 import com.example.barcode.sync.SyncScheduler
 import com.example.barcode.sync.SyncUiState
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -118,6 +119,9 @@ fun MainTabsScreen(
             null
         }
 
+    val shoppingItems by (shoppingListVm?.items ?: flowOf(emptyList()))
+        .collectAsState(initial = emptyList())
+
     val barSyncState: SyncUiState = when {
         authRequired || (isOnline && !isAuthenticated) -> SyncUiState.AuthRequired
         !isOnline -> SyncUiState.Offline
@@ -151,7 +155,8 @@ fun MainTabsScreen(
                     onNavigateToRecipes = { goToTab("recipes") },
                     onNavigateToItems = { goToTab("items") },
                     innerPadding = PaddingValues(),
-                    items = items
+                    items = items,
+                    shoppingItems = shoppingItems
                 )
 
                 "listeCourses" -> {

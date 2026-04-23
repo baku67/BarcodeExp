@@ -24,11 +24,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.outlined.Eco
+import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.RestaurantMenu
 import androidx.compose.material.icons.outlined.TimerOff
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -66,8 +68,10 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.painter.Painter
 
 import com.example.barcode.data.local.entities.ItemEntity
+import com.example.barcode.features.listeCourse.ShoppingListItemUi
 import java.util.Calendar
 
 
@@ -94,6 +98,11 @@ private data class DashboardProductsUi(
     val soon: Int,
     val expired: Int,
     val nextExpiring: List<ExpiringLine>
+)
+
+private data class DashboardShoppingUi(
+    val totalToBuy: Int,
+    val preview: List<String>
 )
 
 private data class SeasonalItemUi(
@@ -214,11 +223,13 @@ private fun buildDashboardProductsUi(
 @Composable
 fun Dashboard(
     items: List<ItemEntity>,
+    shoppingItems: List<ShoppingListItemUi>,
     onNavigateToItems: () -> Unit,
     onNavigateToListeCourses: () -> Unit,
     onNavigateToRecipes: () -> Unit,
 ) {
     val productsUi = buildDashboardProductsUi(items)
+    val shoppingUi = buildDashboardShoppingUi(shoppingItems)
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -237,7 +248,9 @@ fun Dashboard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            DashboardCardShoppingListFake(
+            DashboardCardShoppingList(
+                total = shoppingUi.totalToBuy,
+                preview = shoppingUi.preview,
                 modifier = Modifier
                     .weight(1f)
                     .height(180.dp),
@@ -377,7 +390,6 @@ private fun TaxonomyDrawableThumb(
 }
 
 
-
 @Composable
 private fun DashboardCardProductsWide(
     total: Int,
@@ -438,14 +450,8 @@ private fun DashboardCardProductsWide(
                             Icon(
                                 painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
                                 contentDescription = "Produits",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                                modifier = Modifier
-                                    .size(60.dp)
-                                    .iconGlowRightAndFadeLeft(
-                                        glowColor = MaterialTheme.colorScheme.primary,
-                                        fadeWidthFraction = 0.45f,
-                                        glowStrength = 1.45f
-                                    )
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                modifier = Modifier.size(60.dp)
                             )
                         }
 
@@ -469,40 +475,6 @@ private fun DashboardCardProductsWide(
                         }
 
                     }
-
-                    // PILLS
-                    /*
-                    Spacer(Modifier.height(15.dp))
-
-                    // Mini-sections en ligne (ordre cohérent avec la barre : rouge → jaune → vert)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        StatIconPill(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.Eco,
-                            label = "Sains",
-                            value = fresh,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        StatIconPill(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.WarningAmber,
-                            label = "Bientôt",
-                            value = soon,
-                            color = Color(0xFFF9A825)
-                        )
-                        StatIconPill(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.TimerOff,
-                            label = "Périmés",
-                            value = expired,
-                            color = MaterialTheme.colorScheme.tertiary,
-                            iconAlpha = 0.80f
-                        )
-                    }*/
                 }
 
                 // 3) Droite : mini-liste "À consommer"
@@ -566,98 +538,14 @@ private fun DashboardCardProductsWide(
 }
 
 
-@Composable
-private fun StatIconPill(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    label: String,
-    value: Int,
-    color: Color,
-    iconAlpha: Float = 0.55f
-) {
-    val hasValue = value > 0
-
-    val borderColor = if (hasValue) {
-        color.copy(alpha = 0.22f)
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
-    }
-
-    val numberColor =
-        if (hasValue) color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-
-    val iconTint =
-        if (hasValue) color.copy(alpha = iconAlpha)
-        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-
-    // ✅ valeur affichée (tu peux garder — quand 0, ou afficher 0)
-    val safeValue = value.coerceIn(0, 99)
-
-    Column(
-        modifier = modifier
-            .height(56.dp) // ✅ hauteur fixe => pills identiques
-            .clip(RoundedCornerShape(12.dp))
-            .border(0.75.dp, borderColor, RoundedCornerShape(12.dp))
-            .padding(vertical = 6.dp, horizontal = 6.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = iconTint,
-            modifier = Modifier.size(18.dp)
-        )
-
-        Spacer(Modifier.height(4.dp))
-
-        if (hasValue) {
-            AnimatedCountText(
-                target = safeValue,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = numberColor,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Clip,
-                durationMillis = 450
-            )
-        } else {
-            Text(
-                text = "—",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = numberColor,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Clip
-            )
-        }
-
-        // Optionnel : si tu veux le label (ça peut devenir chargé)
-        /*
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis
-        )
-        */
-    }
-}
-
 
 @Composable
-private fun DashboardCardShoppingListFake(
+private fun DashboardCardShoppingList(
+    total: Int,
+    preview: List<String>,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    // Fake data
-    val total = 12
-    val preview = listOf("Lait", "Tomates", "Riz basmati")
-
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(18.dp),
@@ -671,33 +559,23 @@ private fun DashboardCardShoppingListFake(
                 .padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header (nombre + label) centré
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                // Gauche : icône alignée à droite
                 Row(
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.End
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ReceiptLong,
+                        imageVector = Icons.Outlined.ReceiptLong,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                        modifier = Modifier
-                            .size(60.dp)
-                            .iconGlowRightAndFadeLeft(
-                                glowColor = MaterialTheme.colorScheme.primary,
-                                fadeWidthFraction = 0.6f,
-                                glowStrength = 1.45f
-                            )
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                        modifier = Modifier.size(60.dp)
                     )
-
                 }
 
-                // Droite : nombre + label alignés à gauche
                 Column(
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.Start
@@ -717,20 +595,30 @@ private fun DashboardCardShoppingListFake(
                 }
             }
 
-            // Mini-liste
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                preview.take(3).forEach { item ->
+                if (preview.isEmpty()) {
                     Text(
-                        text = "• $item",
+                        text = "Rien à acheter",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                } else {
+                    preview.forEach { item ->
+                        Text(
+                            text = "• $item",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
+
                 Text(
                     text = "→",
                     style = MaterialTheme.typography.labelSmall,
@@ -779,16 +667,9 @@ private fun DashboardCardRecipesFake(
                     Icon(
                         imageVector = Icons.Outlined.RestaurantMenu,
                         contentDescription = "Recettes",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                        modifier = Modifier
-                            .size(60.dp)
-                            .iconGlowRightAndFadeLeft(
-                                glowColor = MaterialTheme.colorScheme.primary,
-                                fadeWidthFraction = 0.6f,
-                                glowStrength = 1.45f
-                            )
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                        modifier = Modifier.size(60.dp)
                     )
-
                 }
 
                 // Droite : nombre + label alignés à gauche
@@ -990,92 +871,28 @@ fun AnimatedCountText(
 }
 
 
+private fun buildDashboardShoppingUi(
+    items: List<ShoppingListItemUi>
+): DashboardShoppingUi {
+    val toBuy = items
+        .asSequence()
+        .filter { !it.isChecked }
+        .toList()
 
-private fun Modifier.textFadeToRight(
-    fadeWidthFraction: Float = 0.33f // 33% de la largeur à la fin du texte
-): Modifier = this
-    // ✅ indispensable pour que BlendMode.DstIn fonctionne proprement
-    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-    .drawWithContent {
-        drawContent()
-
-        val start = (1f - fadeWidthFraction).coerceIn(0f, 1f)
-
-        // ✅ Masque alpha : opaque -> transparent (uniquement sur le contenu dessiné = le texte)
-        drawRect(
-            brush = Brush.horizontalGradient(
-                colorStops = arrayOf(
-                    0f to Color.White,
-                    start to Color.White,
-                    1f to Color.Transparent
-                )
-            ),
-            blendMode = BlendMode.DstIn
-        )
-    }
-
-
-
-fun Modifier.iconGlowRightAndFadeLeft(
-    glowColor: Color,
-    fadeWidthFraction: Float = 0.35f, // 0.25f = léger, 0.50f = moitié gauche
-    glowStrength: Float = 1.25f
-) = this
-    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-    .drawWithCache {
-
-        // --- "SHINE" : vrai dégradé PRIMARY -> TRANSPARENT sur l’icône (diagonal, plus premium)
-        //     Objectif : garder l’icône neutre, mais lui donner un reflet coloré côté droit.
-        val shine = Brush.linearGradient(
-            colorStops = arrayOf(
-                0.00f to Color.Transparent,
-                0.55f to glowColor.copy(alpha = 0.12f * glowStrength),
-                1.00f to glowColor.copy(alpha = 0.65f * glowStrength)
-            ),
-            start = Offset(0f, size.height * 0.85f),
-            end = Offset(size.width, size.height * 0.15f)
-        )
-
-        // --- HALO (vient de la droite)
-        val haloCenter = Offset(size.width, size.height * 0.5f)
-
-        val softHalo = Brush.radialGradient(
-            colors = listOf(glowColor.copy(alpha = 0.28f * glowStrength), Color.Transparent),
-            center = haloCenter,
-            radius = size.minDimension * 1.25f
-        )
-
-        val coreHalo = Brush.radialGradient(
-            colors = listOf(glowColor.copy(alpha = 0.52f * glowStrength), Color.Transparent),
-            center = haloCenter,
-            radius = size.minDimension * 0.72f
-        )
-
-        // --- FADE (gauche -> transparent vers la gauche)
-        val fw = (size.width * fadeWidthFraction).coerceIn(1f, size.width)
-        val stop = fw / size.width
-
-        val fadeMask = Brush.horizontalGradient(
-            colorStops = arrayOf(
-                0f to Color.White.copy(alpha = 0.06f),          // légère présence à gauche (plus joli)
-                (stop * 0.6f) to Color.White.copy(alpha = 0.70f),
-                stop to Color.White,                            // redevient opaque
-                1f to Color.White                               // reste opaque jusqu’à droite
-            )
-        )
-
-        onDrawWithContent {
-            // 1) icône normale
-            drawContent()
-
-            // 2) reflet primaire (dégradé) sur les pixels de l’icône uniquement
-            drawRect(shine, blendMode = BlendMode.SrcAtop)
-
-            // 3) halo sur les pixels de l’icône uniquement
-            drawRect(softHalo, blendMode = BlendMode.SrcAtop)
-            drawRect(coreHalo, blendMode = BlendMode.SrcAtop)
-
-            // 4) mask alpha pour estomper la gauche
-            drawRect(fadeMask, blendMode = BlendMode.DstIn)
+    val preview = toBuy
+        .take(3)
+        .map { item ->
+            buildString {
+                append(item.name.trim().ifBlank { "Produit" })
+                item.quantity
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { qty -> append(" — $qty") }
+            }
         }
-    }
+
+    return DashboardShoppingUi(
+        totalToBuy = toBuy.size,
+        preview = preview
+    )
+}
