@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Comment
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.LocalGroceryStore
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Person
@@ -510,7 +511,7 @@ private fun ListeCoursesHeader(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Rounded.Tune,
+                imageVector = Icons.Rounded.FilterList,
                 contentDescription = "Filtres",
                 tint = cs.primary,
                 modifier = Modifier.size(13.dp)
