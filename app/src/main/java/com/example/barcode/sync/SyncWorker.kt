@@ -19,7 +19,7 @@ import com.example.barcode.features.addItems.data.remote.dto.ManualPayload
 import com.example.barcode.features.addItems.data.remote.dto.ScanPayload
 import com.example.barcode.features.listeCourse.ShoppingItemDto
 import com.example.barcode.features.listeCourse.ShoppingListApi
-import com.example.barcode.util.sanitizeNutriScore
+import com.example.barcode.common.utils.sanitizeNutriScore
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.ZoneId

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,10 +51,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.example.barcode.R
+import com.example.barcode.common.utils.SeasonRegion
+import com.example.barcode.common.utils.SeasonalityResolver
+import com.example.barcode.core.SessionManager
 import com.example.barcode.features.addItems.manual.ManualContent
 import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
-import java.util.Calendar
 import kotlin.math.abs
 
 private const val ITEM_TOKEN = "{ITEM}"
@@ -72,6 +75,15 @@ fun GoodToKnowScreen(
 ) {
     val context = LocalContext.current
     val taxonomy = rememberManualTaxonomy()
+    val sessionManager = remember(context) { SessionManager(context) }
+
+    val seasonRegion by sessionManager.seasonRegion.collectAsState(
+        initial = SeasonRegion.EU_TEMPERATE
+    )
+
+    val seasonContext = remember(seasonRegion) {
+        SeasonalityResolver.currentContext(seasonRegion)
+    }
 
     val code = remember(itemName) { itemName.trim() }
     val subtype = remember(code, taxonomy) { taxonomy?.subtypeMeta(code) }
@@ -161,14 +173,8 @@ fun GoodToKnowScreen(
         }
     }
 
-    // ✅ Saison EU_TEMPERATE (mois 1..12)
-    val temperateMonths = remember(subtype) {
-        subtype?.seasons
-            ?.get("EU_TEMPERATE")
-            .orEmpty()
-            .filter { it in 1..12 }
-            .distinct()
-            .sorted()
+    val seasonMonths = remember(subtype, seasonRegion) {
+        SeasonalityResolver.monthsFor(subtype, seasonRegion)
     }
 
     Scaffold(
@@ -212,11 +218,12 @@ fun GoodToKnowScreen(
                     }
                 } else {
 
-                    // ✅ Nouveau composant Saison (sous header, au-dessus des volets)
-                    if (temperateMonths.isNotEmpty()) {
+                    if (seasonMonths.isNotEmpty()) {
                         item {
                             SeasonalityGaugeCard(
-                                months = temperateMonths,
+                                months = seasonMonths,
+                                currentMonth = seasonContext.currentMonth,
+                                regionLabel = SeasonalityResolver.regionLabel(seasonRegion),
                                 accentColor = accentColor,
                             )
                             Spacer(Modifier.height(15.dp))
@@ -385,13 +392,11 @@ private fun GoodToKnowHeroHeader(
 @Composable
 private fun SeasonalityGaugeCard(
     months: List<Int>,
+    currentMonth: Int,
+    regionLabel: String,
     accentColor: Color,
 ) {
     val cs = MaterialTheme.colorScheme
-
-    val currentMonth = remember {
-        Calendar.getInstance().get(Calendar.MONTH) + 1 // 1..12
-    }
 
     val monthsSet = remember(months) { months.filter { it in 1..12 }.toSet() }
     val ranges = remember(monthsSet) { buildMonthRanges(monthsSet) }
@@ -432,14 +437,9 @@ private fun SeasonalityGaugeCard(
                     .padding(horizontal = innerPad)
             ) {
                 val cellW = maxWidth / 12f
-
-                // Fond de la surbrillance = teinte de l'item (mélangée à la surface pour rester douce)
                 val highlightBg = lerp(cs.surface, accentColor, 0.32f)
-
-                // Texte sur la surbrillance = noir/blanc auto selon luminance
                 val onHighlight = if (highlightBg.luminance() < 0.45f) Color.White else Color.Black
 
-                // ✅ Surbrillance en blocs (ranges contigus)
                 ranges.forEach { r ->
                     val startIndex = (r.first - 1).coerceIn(0, 11)
                     val endIndex = (r.last - 1).coerceIn(0, 11)
@@ -456,20 +456,17 @@ private fun SeasonalityGaugeCard(
                     )
                 }
 
-                // ✅ Labels au-dessus
                 Row(
                     modifier = Modifier.fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     MONTH_LABELS_FR.forEachIndexed { index, label ->
                         val month = index + 1
-
                         val inSeasonLabelColor = onHighlight.copy(alpha = 0.92f)
 
                         val isInSeason = month in monthsSet
                         val isCurrent = month == currentMonth
 
-                        // Pastille mois courant
                         val currentPillBg = when {
                             isCurrent && isInSeason -> cs.primary
                             isCurrent -> cs.surfaceVariant.copy(alpha = 0.95f)
@@ -485,7 +482,7 @@ private fun SeasonalityGaugeCard(
                         val labelColor = when {
                             isCurrent && isInSeason -> cs.onPrimary
                             isCurrent -> cs.onSurface
-                            isInSeason -> inSeasonLabelColor // (déjà calculée avec onHighlight)
+                            isInSeason -> inSeasonLabelColor
                             else -> cs.onSurfaceVariant
                         }
 
@@ -499,7 +496,7 @@ private fun SeasonalityGaugeCard(
                                 Box(
                                     modifier = Modifier
                                         .matchParentSize()
-                                        .padding(vertical = highlightVPad) // ✅ même hauteur que l'inner-gauge
+                                        .padding(vertical = highlightVPad)
                                         .background(currentPillBg, RoundedCornerShape(999.dp))
                                         .border(1.dp, currentPillBorder, RoundedCornerShape(999.dp))
                                 )
@@ -509,14 +506,10 @@ private fun SeasonalityGaugeCard(
                                 text = label,
                                 color = labelColor,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = when {
-                                    isCurrent -> FontWeight.ExtraBold
-                                    else -> FontWeight.Medium
-                                },
+                                fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.Medium,
                                 maxLines = 1
                             )
                         }
-
                     }
                 }
             }
@@ -525,7 +518,7 @@ private fun SeasonalityGaugeCard(
         Spacer(Modifier.height(6.dp))
 
         Text(
-            text = "Europe tempérée",
+            text = regionLabel,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.End,
             color = cs.onSurfaceVariant.copy(alpha = 0.65f),

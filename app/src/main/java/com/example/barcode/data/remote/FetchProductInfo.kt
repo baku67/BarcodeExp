@@ -2,7 +2,7 @@ package com.example.barcode.data.remote
 
 import android.util.Log
 import com.example.barcode.domain.models.ProductInfo
-import com.example.barcode.util.sanitizeNutriScore
+import com.example.barcode.common.utils.sanitizeNutriScore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject

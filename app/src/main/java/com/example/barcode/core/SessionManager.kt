@@ -2,6 +2,7 @@ package com.example.barcode.core
 
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.barcode.common.utils.SeasonRegion
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
@@ -31,7 +32,6 @@ class SessionManager(context: Context) {
     suspend fun saveToken(token: String) = auth.saveToken(token)
     suspend fun saveRefreshToken(token: String) = auth.saveRefreshToken(token)
 
-    /** ✅ login/refresh + rotation éventuelle du refresh_token */
     suspend fun saveTokens(token: String, refreshToken: String?) {
         auth.saveToken(token)
         refreshToken?.takeIf { it.isNotBlank() }?.let { auth.saveRefreshToken(it) }
@@ -47,11 +47,17 @@ class SessionManager(context: Context) {
 
     // --- Preferences ---
     val preferences = prefs.preferences
+    val seasonRegion = prefs.seasonRegion
+    val dashboardSeasonalExpanded = prefs.dashboardSeasonalExpanded
+
     suspend fun savePreferences(p: UserPreferences) = prefs.savePreferences(p)
     suspend fun clearPreferences() = prefs.clearPreferences()
     suspend fun setTheme(theme: ThemeMode) = prefs.setTheme(theme)
     suspend fun setLang(lang: String) = prefs.setLang(lang)
     suspend fun setFrigoLayout(layout: FrigoLayout) = prefs.setFrigoLayout(layout)
+    suspend fun setSeasonRegion(region: SeasonRegion) = prefs.setSeasonRegion(region)
+    suspend fun setDashboardSeasonalExpanded(expanded: Boolean) =
+        prefs.setDashboardSeasonalExpanded(expanded)
 
     suspend fun isAuthenticated(): Boolean {
         val modeOk = appMode.first() == AppMode.AUTH

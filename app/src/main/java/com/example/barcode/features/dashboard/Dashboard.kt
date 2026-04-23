@@ -1,5 +1,6 @@
 package com.example.barcode.features.dashboard
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.heightIn
@@ -43,7 +42,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,11 +64,17 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.R
 import kotlinx.coroutines.delay
 import kotlin.math.min
-
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.barcode.common.utils.EuropeSeason
+import com.example.barcode.common.utils.SeasonRegion
+import com.example.barcode.common.utils.SeasonalityResolver
+import com.example.barcode.core.SessionManager
+import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
+import kotlinx.coroutines.launch
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.features.listeCourse.ShoppingListItemUi
 import java.util.Calendar
-import java.util.TimeZone
 
 
 // ---- Produits (données réelles depuis Items) ----
@@ -224,6 +228,67 @@ fun Dashboard(
     val productsUi = buildDashboardProductsUi(items)
     val shoppingUi = buildDashboardShoppingUi(shoppingItems)
 
+    val context = LocalContext.current
+    val sessionManager = remember(context) { SessionManager(context) }
+    val coroutineScope = rememberCoroutineScope()
+    val taxonomy = rememberManualTaxonomy()
+
+    val seasonRegion by sessionManager.seasonRegion.collectAsState(
+        initial = SeasonRegion.EU_TEMPERATE
+    )
+
+    val seasonalCardExpanded by sessionManager.dashboardSeasonalExpanded.collectAsState(
+        initial = false
+    )
+
+    val seasonContext = remember(seasonRegion) {
+        SeasonalityResolver.currentContext(seasonRegion)
+    }
+
+    val seasonalFruits = remember(taxonomy, seasonContext) {
+        taxonomy
+            ?.subtypesOf("FRUITS")
+            .orEmpty()
+            .filter {
+                SeasonalityResolver.isInSeason(
+                    subtype = it,
+                    region = seasonContext.region,
+                    month = seasonContext.currentMonth
+                )
+            }
+            .sortedBy { it.title }
+            .take(5)
+            .map {
+                SeasonalItemUi(
+                    title = it.title,
+                    imageName = it.image.orEmpty()
+                )
+            }
+            .ifEmpty { fakeSeasonalFruits.take(5) }
+    }
+
+    val seasonalVegetables = remember(taxonomy, seasonContext) {
+        taxonomy
+            ?.subtypesOf("VEGETABLES")
+            .orEmpty()
+            .filter {
+                SeasonalityResolver.isInSeason(
+                    subtype = it,
+                    region = seasonContext.region,
+                    month = seasonContext.currentMonth
+                )
+            }
+            .sortedBy { it.title }
+            .take(5)
+            .map {
+                SeasonalItemUi(
+                    title = it.title,
+                    imageName = it.image.orEmpty()
+                )
+            }
+            .ifEmpty { fakeSeasonalVegetables.take(5) }
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -259,56 +324,46 @@ fun Dashboard(
         }
 
         DashboardCardSeasonalFake(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            region = seasonContext.region,
+            season = seasonContext.europeSeason,
+            fruits = seasonalFruits,
+            vegetables = seasonalVegetables,
+            expanded = seasonalCardExpanded,
+            onExpandedChange = { expanded ->
+                coroutineScope.launch {
+                    sessionManager.setDashboardSeasonalExpanded(expanded)
+                }
+            }
         )
     }
 }
 
 
 
-private enum class EuropeSeason {
-    SPRING, SUMMER, AUTUMN, WINTER
-}
-
 private data class SeasonalCardVisual(
-    val label: String,
     val illustrationRes: Int,
     val accent: Color
 )
 
-private fun currentEuropeSeason(
-    now: Calendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Paris"))
-): EuropeSeason {
-    return when (now.get(Calendar.MONTH)) {
-        Calendar.MARCH, Calendar.APRIL, Calendar.MAY -> EuropeSeason.SPRING
-        Calendar.JUNE, Calendar.JULY, Calendar.AUGUST -> EuropeSeason.SUMMER
-        Calendar.SEPTEMBER, Calendar.OCTOBER, Calendar.NOVEMBER -> EuropeSeason.AUTUMN
-        else -> EuropeSeason.WINTER
-    }
-}
-
 private fun seasonalCardVisualFor(season: EuropeSeason): SeasonalCardVisual {
     return when (season) {
         EuropeSeason.SPRING -> SeasonalCardVisual(
-            label = "Printemps",
             illustrationRes = R.drawable.dashboard_season_spring,
             accent = Color(0xFF4CAF50)
         )
 
         EuropeSeason.SUMMER -> SeasonalCardVisual(
-            label = "Été",
             illustrationRes = R.drawable.dashboard_season_summer,
             accent = Color(0xFFFF9800)
         )
 
         EuropeSeason.AUTUMN -> SeasonalCardVisual(
-            label = "Automne",
             illustrationRes = R.drawable.dashboard_season_automn,
             accent = Color(0xFFE67E22)
         )
 
         EuropeSeason.WINTER -> SeasonalCardVisual(
-            label = "Hiver",
             illustrationRes = R.drawable.dashboard_season_winter,
             accent = Color(0xFF64B5F6)
         )
@@ -316,15 +371,24 @@ private fun seasonalCardVisualFor(season: EuropeSeason): SeasonalCardVisual {
 }
 
 
+@SuppressLint("RememberReturnType")
 @Composable
 private fun DashboardCardSeasonalFake(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    region: SeasonRegion,
+    season: EuropeSeason,
+    fruits: List<SeasonalItemUi>,
+    vegetables: List<SeasonalItemUi>,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
 ) {
-    val seasonVisual = remember {
-        seasonalCardVisualFor(currentEuropeSeason())
+    val seasonVisual = remember(season) {
+        seasonalCardVisualFor(season)
     }
 
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    val subtitle = remember(region, season) {
+        "${SeasonalityResolver.seasonLabel(season)} • ${SeasonalityResolver.regionLabel(region)}"
+    }
 
     val arrowRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
@@ -344,7 +408,7 @@ private fun DashboardCardSeasonalFake(
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
         ),
-        onClick = { expanded = !expanded },
+        onClick = { onExpandedChange(!expanded) },
         interactionSource = remember { MutableInteractionSource() }
     ) {
         Box(
@@ -426,7 +490,7 @@ private fun DashboardCardSeasonalFake(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "${seasonVisual.label} • Europe",
+                            text = subtitle,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = headerSubtitleColor
@@ -434,13 +498,13 @@ private fun DashboardCardSeasonalFake(
 
                         CompactSeasonCategoryRow(
                             title = "Fruits",
-                            items = fakeSeasonalFruits,
+                            items = fruits,
                             accent = seasonVisual.accent
                         )
 
                         CompactSeasonCategoryRow(
                             title = "Légumes",
-                            items = fakeSeasonalVegetables,
+                            items = vegetables,
                             accent = seasonVisual.accent
                         )
                     }

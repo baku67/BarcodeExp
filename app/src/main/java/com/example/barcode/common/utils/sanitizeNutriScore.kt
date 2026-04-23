@@ -1,4 +1,4 @@
-package com.example.barcode.util
+package com.example.barcode.common.utils
 
 import java.util.Locale
 
