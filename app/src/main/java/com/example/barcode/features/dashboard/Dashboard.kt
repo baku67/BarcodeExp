@@ -557,7 +557,7 @@ private fun DashboardCardShoppingList(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -596,7 +596,9 @@ private fun DashboardCardShoppingList(
             }
 
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 if (preview.isEmpty()) {
@@ -618,6 +620,8 @@ private fun DashboardCardShoppingList(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
 
                 Text(
                     text = "→",
@@ -651,15 +655,13 @@ private fun DashboardCardRecipesFake(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header (centré)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                // Gauche : icône alignée à droite
                 Row(
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.End
@@ -672,7 +674,6 @@ private fun DashboardCardRecipesFake(
                     )
                 }
 
-                // Droite : nombre + label alignés à gauche
                 Column(
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.Start
@@ -693,9 +694,10 @@ private fun DashboardCardRecipesFake(
                 }
             }
 
-            // Mini-liste (full width pour align End)
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 preview.take(3).forEach { r ->
@@ -707,6 +709,9 @@ private fun DashboardCardRecipesFake(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
+
                 Text(
                     text = "→",
                     style = MaterialTheme.typography.labelSmall,
