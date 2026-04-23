@@ -5,7 +5,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,21 +18,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.RestaurantMenu
-import androidx.compose.material.icons.outlined.TimerOff
-import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -49,11 +45,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -64,20 +62,11 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.R
 import kotlinx.coroutines.delay
 import kotlin.math.min
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.painter.Painter
 
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.features.listeCourse.ShoppingListItemUi
 import java.util.Calendar
-
-
-
-
-
+import java.util.TimeZone
 
 
 // ---- Produits (données réelles depuis Items) ----
@@ -272,78 +261,163 @@ fun Dashboard(
 }
 
 
+
+private enum class EuropeSeason {
+    SPRING, SUMMER, AUTUMN, WINTER
+}
+
+private data class SeasonalCardVisual(
+    val label: String,
+    val illustrationRes: Int,
+    val accent: Color
+)
+
+private fun currentEuropeSeason(
+    now: Calendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Paris"))
+): EuropeSeason {
+    return when (now.get(Calendar.MONTH)) {
+        Calendar.MARCH, Calendar.APRIL, Calendar.MAY -> EuropeSeason.SPRING
+        Calendar.JUNE, Calendar.JULY, Calendar.AUGUST -> EuropeSeason.SUMMER
+        Calendar.SEPTEMBER, Calendar.OCTOBER, Calendar.NOVEMBER -> EuropeSeason.AUTUMN
+        else -> EuropeSeason.WINTER
+    }
+}
+
+private fun seasonalCardVisualFor(season: EuropeSeason): SeasonalCardVisual {
+    return when (season) {
+        EuropeSeason.SPRING -> SeasonalCardVisual(
+            label = "Printemps",
+            illustrationRes = R.drawable.dashboard_season_spring,
+            accent = Color(0xFF4CAF50)
+        )
+
+        EuropeSeason.SUMMER -> SeasonalCardVisual(
+            label = "Été",
+            illustrationRes = R.drawable.dashboard_season_summer,
+            accent = Color(0xFFFF9800)
+        )
+
+        EuropeSeason.AUTUMN -> SeasonalCardVisual(
+            label = "Automne",
+            illustrationRes = R.drawable.dashboard_season_automn,
+            accent = Color(0xFFE67E22)
+        )
+
+        EuropeSeason.WINTER -> SeasonalCardVisual(
+            label = "Hiver",
+            illustrationRes = R.drawable.dashboard_season_winter,
+            accent = Color(0xFF64B5F6)
+        )
+    }
+}
+
+
 @Composable
 private fun DashboardCardSeasonalFake(
     modifier: Modifier = Modifier
 ) {
+    val seasonVisual = remember {
+        seasonalCardVisualFor(currentEuropeSeason())
+    }
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = Color.Transparent
         )
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
+                    shape = RoundedCornerShape(18.dp)
+                )
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            SeasonalIllustrationBackground(
+                illustrationRes = seasonVisual.illustrationRes,
+                accent = seasonVisual.accent,
+                modifier = Modifier.matchParentSize()
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Eco,
-                    contentDescription = "De saison",
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-                    modifier = Modifier.size(22.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        val headerTitleColor = Color(0xFF111111)
+                        val headerSubtitleColor = Color(0xFF151515)
+
+                        Text(
+                            text = "De saison",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = headerTitleColor
+                        )
+
+                        Text(
+                            text = "${seasonVisual.label} • Europe",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = headerSubtitleColor
+                        )
+                    }
+                }
+
+                CompactSeasonCategoryRow(
+                    title = "Fruits",
+                    items = fakeSeasonalFruits,
+                    accent = seasonVisual.accent
                 )
 
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = "De saison",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Fake pour l'instant",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                    )
-                }
+                CompactSeasonCategoryRow(
+                    title = "Légumes",
+                    items = fakeSeasonalVegetables,
+                    accent = seasonVisual.accent
+                )
             }
-
-            CompactSeasonCategoryRow(
-                title = "Fruits",
-                items = fakeSeasonalFruits
-            )
-
-            CompactSeasonCategoryRow(
-                title = "Légumes",
-                items = fakeSeasonalVegetables
-            )
         }
     }
 }
+
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CompactSeasonCategoryRow(
     title: String,
-    items: List<SeasonalItemUi>
+    items: List<SeasonalItemUi>,
+    accent: Color
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(14.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface
+            color = accent.copy(alpha = 0.96f)
         )
 
         FlowRow(
@@ -360,6 +434,108 @@ private fun CompactSeasonCategoryRow(
         }
     }
 }
+
+@Composable
+private fun SeasonalIllustrationBackground(
+    illustrationRes: Int,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        // 1) Illustration visible surtout dans le header, puis fade vers le bas
+        Image(
+            painter = painterResource(id = illustrationRes),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
+                .drawWithCache {
+                    val imageMask = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.00f to Color.White,
+                            0.16f to Color.White,
+                            0.34f to Color.White.copy(alpha = 0.90f),
+                            0.52f to Color.White.copy(alpha = 0.45f),
+                            0.70f to Color.White.copy(alpha = 0.14f),
+                            0.86f to Color.White.copy(alpha = 0.03f),
+                            1.00f to Color.Transparent
+                        )
+                    )
+
+                    onDrawWithContent {
+                        drawContent()
+                        drawRect(
+                            brush = imageMask,
+                            blendMode = BlendMode.DstIn
+                        )
+                    }
+                }
+        )
+
+        // 2) Teinte flashy en haut
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.00f to accent.copy(alpha = 0.34f),
+                            0.12f to accent.copy(alpha = 0.24f),
+                            0.28f to accent.copy(alpha = 0.12f),
+                            0.50f to Color.Transparent,
+                            1.00f to Color.Transparent
+                        )
+                    )
+                )
+        )
+
+        // 3) Petit glow lumineux en haut à droite
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .drawWithCache {
+                    val glowCenter = Offset(size.width * 0.82f, size.height * 0.10f)
+                    val glowRadius = size.minDimension * 0.34f
+                    val glowBrush = Brush.radialGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.22f),
+                            Color.Transparent
+                        ),
+                        center = glowCenter,
+                        radius = glowRadius
+                    )
+
+                    onDrawBehind {
+                        drawRect(
+                            brush = glowBrush,
+                            blendMode = BlendMode.Screen
+                        )
+                    }
+                }
+        )
+
+        // 4) Léger scrim global pour rattacher à la surface de la Card
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.00f to MaterialTheme.colorScheme.surface.copy(alpha = 0.08f),
+                            0.22f to MaterialTheme.colorScheme.surface.copy(alpha = 0.10f),
+                            0.48f to MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
+                            0.72f to MaterialTheme.colorScheme.surface.copy(alpha = 0.34f),
+                            1.00f to MaterialTheme.colorScheme.surface.copy(alpha = 0.52f)
+                        )
+                    )
+                )
+        )
+    }
+}
+
 
 @Composable
 private fun TaxonomyDrawableThumb(
