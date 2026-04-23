@@ -80,6 +80,9 @@ class MainActivity : ComponentActivity() {
             val session = remember(appContext) { SessionManager(appContext) }
             val authVm = remember { AuthViewModel(repo, session) }
 
+            val currentUserId by session.userId.collectAsState(initial = null)
+            val currentHomeId by session.currentHomeId.collectAsState(initial = null)
+
             val navController = rememberNavController()
 
             Theme(session = session) {
@@ -216,9 +219,26 @@ class MainActivity : ComponentActivity() {
                                     navController.getBackStackEntry("tabs")
                                 }
 
+                                val homeId = currentHomeId
+                                val userId = currentUserId
+
+                                if (homeId.isNullOrBlank() || userId.isNullOrBlank()) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
+                                    return@composable
+                                }
+
                                 val shoppingVm: ShoppingListViewModel = viewModel(
                                     viewModelStoreOwner = tabsEntry,
-                                    factory = ShoppingListViewModelFactory(app.shoppingListDao)
+                                    factory = ShoppingListViewModelFactory(
+                                        dao = app.shoppingListDao,
+                                        currentHomeId = homeId,
+                                        currentUserId = userId
+                                    )
                                 )
 
                                 ShoppingListAddScreen(

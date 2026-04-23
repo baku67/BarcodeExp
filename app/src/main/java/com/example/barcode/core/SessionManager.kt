@@ -25,6 +25,7 @@ class SessionManager(context: Context) {
     val userId = auth.userId
     val userEmail = auth.userEmail
     val userIsVerified = auth.userIsVerified
+    val currentHomeId = auth.currentHomeId
 
     suspend fun setAppMode(mode: AppMode) = auth.setAppMode(mode)
     suspend fun saveToken(token: String) = auth.saveToken(token)

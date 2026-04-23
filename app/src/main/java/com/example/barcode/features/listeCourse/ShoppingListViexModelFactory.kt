@@ -5,13 +5,19 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.barcode.data.local.dao.ShoppingListDao
 
 class ShoppingListViewModelFactory(
-    private val dao: ShoppingListDao
+    private val dao: ShoppingListDao,
+    private val currentHomeId: String,
+    private val currentUserId: String,
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ShoppingListViewModel::class.java)) {
-            return ShoppingListViewModel(dao) as T
+            return ShoppingListViewModel(
+                dao = dao,
+                currentHomeId = currentHomeId,
+                currentUserId = currentUserId
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

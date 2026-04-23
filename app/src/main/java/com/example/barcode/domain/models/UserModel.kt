@@ -23,6 +23,7 @@ data class UserProfile(
     val email: String,
     val roles: List<String> = emptyList(),
     val isVerified: Boolean,
+    val currentHomeId: String?,
     val preferences: UserPreferencesDto? = null,
     val preferencesUpdatedAt: Long? = null
 )

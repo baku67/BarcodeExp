@@ -9,6 +9,7 @@ import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.entities.ItemNoteEntity
 import com.example.barcode.data.local.entities.PendingOperation
+import com.example.barcode.data.local.entities.ShoppingListItemEntity
 import com.example.barcode.data.local.entities.SyncState
 import com.example.barcode.features.addItems.data.remote.api.ItemNotesApi
 import com.example.barcode.features.addItems.data.remote.api.ItemsApi
@@ -16,6 +17,8 @@ import com.example.barcode.features.addItems.data.remote.dto.CreateItemRequestDt
 import com.example.barcode.features.addItems.data.remote.dto.ItemNoteCreateDto
 import com.example.barcode.features.addItems.data.remote.dto.ManualPayload
 import com.example.barcode.features.addItems.data.remote.dto.ScanPayload
+import com.example.barcode.features.listeCourse.ShoppingItemDto
+import com.example.barcode.features.listeCourse.ShoppingListApi
 import com.example.barcode.util.sanitizeNutriScore
 import kotlinx.coroutines.flow.first
 import java.time.Instant
@@ -44,6 +47,7 @@ class SyncWorker(
         val app = applicationContext as BarcodeApp
         val itemsApi = app.apiClient.createApi(ItemsApi::class.java)
         val notesApi = app.apiClient.createApi(ItemNotesApi::class.java)
+        val shoppingApi = app.apiClient.createApi(ShoppingListApi::class.java)
 
         val prefs = SyncPreferences(applicationContext)
 
@@ -441,11 +445,236 @@ class SyncWorker(
             return Result.success()
         }
 
-        // 7) SHOPPING LIST : préparation uniquement pour l'instant
-        // On touche déjà le DAO pour garder le worker aligné avec AppDb,
-        // mais il n'y a pas encore de ShoppingListApi / DTO / endpoints backend.
-        // Donc aucune sync distante réelle n'est exécutée ici pour le moment.
-        shoppingDao.hashCode()
+        // 7) PUSH shopping DELETE
+        val pendingShoppingDeletes = shoppingDao.getPending(PendingOperation.DELETE)
+        pendingShoppingDeletes.forEach { item ->
+            try {
+                val res = shoppingApi.deleteItemByClientId(
+                    authorization = "Bearer $token",
+                    clientId = item.id
+                )
+
+                if (res.isSuccessful || res.code() == 404) {
+                    shoppingDao.hardDelete(item.id)
+                } else {
+                    shoppingDao.markFailed(item.id, error = "shopping delete failed code=${res.code()}")
+                }
+            } catch (e: Exception) {
+                shoppingDao.markFailed(item.id, error = "shopping delete exception=${e.message}")
+            }
+        }
+
+        // 8) PUSH shopping CREATE
+        val pendingShoppingCreates = shoppingDao.getPending(PendingOperation.CREATE)
+        pendingShoppingCreates.forEach { item ->
+            try {
+                val name = item.name.trim()
+                if (name.isBlank()) {
+                    shoppingDao.markFailed(item.id, error = "shopping name is blank")
+                    return@forEach
+                }
+
+                val dto = ShoppingItemDto(
+                    clientId = item.id,
+                    homeId = item.homeId,
+                    scope = item.scope,
+                    ownerUserId = item.ownerUserId,
+                    name = name,
+                    quantity = item.quantity,
+                    note = item.note,
+                    category = item.category,
+                    isImportant = item.isImportant,
+                    isFavorite = item.isFavorite,
+                    isChecked = item.isChecked,
+                    createdAt = epochMsToPhpAtom(item.createdAt)
+                )
+
+                val res = shoppingApi.createOrUpdateItem(
+                    authorization = "Bearer $token",
+                    body = dto
+                )
+
+                if (res.isSuccessful) {
+                    shoppingDao.clearPending(item.id)
+                } else {
+                    shoppingDao.markFailed(item.id, error = "shopping create failed code=${res.code()} body=${res.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                shoppingDao.markFailed(item.id, error = "shopping create exception=${e.message}")
+            }
+        }
+
+        // 9) PUSH shopping UPDATE (upsert)
+        val pendingShoppingUpdates = shoppingDao.getPending(PendingOperation.UPDATE)
+        pendingShoppingUpdates.forEach { item ->
+            try {
+                val name = item.name.trim()
+                if (name.isBlank()) {
+                    shoppingDao.markFailed(item.id, error = "shopping update: name is blank")
+                    return@forEach
+                }
+
+                val dto = ShoppingItemDto(
+                    clientId = item.id,
+                    homeId = item.homeId,
+                    scope = item.scope,
+                    ownerUserId = item.ownerUserId,
+                    name = name,
+                    quantity = item.quantity,
+                    note = item.note,
+                    category = item.category,
+                    isImportant = item.isImportant,
+                    isFavorite = item.isFavorite,
+                    isChecked = item.isChecked,
+                    createdAt = epochMsToPhpAtom(item.createdAt)
+                )
+
+                val res = shoppingApi.createOrUpdateItem(
+                    authorization = "Bearer $token",
+                    body = dto
+                )
+
+                if (res.isSuccessful) {
+                    shoppingDao.clearPending(item.id)
+                } else {
+                    shoppingDao.markFailed(item.id, error = "shopping update failed code=${res.code()} body=${res.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                shoppingDao.markFailed(item.id, error = "shopping update exception=${e.message}")
+            }
+        }
+
+        // 10) PULL shopping UPSERTS
+        try {
+            val pullShopping = shoppingApi.getItems(
+                authorization = "Bearer $token",
+                updatedSince = sinceIso
+            )
+
+            if (pullShopping.code() == 401) {
+                prefs.markAuthRequired()
+                return Result.success()
+            }
+
+            if (!pullShopping.isSuccessful) {
+                val err = pullShopping.errorBody()?.string()
+                android.util.Log.e("SyncWorker", "pull shopping failed code=${pullShopping.code()} body=$err")
+                return Result.success()
+            }
+
+            val remoteItems = pullShopping.body().orEmpty()
+            remoteItems.forEach { dto ->
+                val clientId = dto.clientId
+
+                val local = shoppingDao.getById(clientId)
+                if (local != null && (local.pendingOperation != PendingOperation.NONE || local.syncState == SyncState.FAILED)) {
+                    return@forEach
+                }
+
+                val updatedAtRaw = dto.updatedAt ?: dto.createdAt
+                if (updatedAtRaw == null) {
+                    android.util.Log.w("SyncWorker", "shopping dto sans updatedAt/createdAt pour clientId=$clientId")
+                    return@forEach
+                }
+
+                val serverUpdatedAt = parseAtomToEpochMs(updatedAtRaw)
+                newWatermarkMs = max(newWatermarkMs, serverUpdatedAt)
+
+                val serverDeletedAt = dto.deletedAt?.let { parseAtomToEpochMs(it) }
+                if (serverDeletedAt != null) {
+                    newWatermarkMs = max(newWatermarkMs, serverDeletedAt)
+                }
+
+                val createdAt = dto.createdAt?.let { parseAtomToEpochMs(it) } ?: serverUpdatedAt
+
+                val merged = (local ?: ShoppingListItemEntity(
+                    id = clientId,
+                    homeId = dto.homeId ?: ShoppingListItemEntity.LOCAL_HOME_ID,
+                    scope = dto.scope,
+                    ownerUserId = dto.ownerUserId,
+                    name = dto.name,
+                    quantity = dto.quantity,
+                    note = dto.note,
+                    isImportant = dto.isImportant,
+                    isFavorite = dto.isFavorite,
+                    isChecked = dto.isChecked,
+                    category = dto.category,
+                    createdAt = createdAt,
+                    pendingOperation = PendingOperation.NONE,
+                    syncState = SyncState.OK,
+                    lastSyncError = null,
+                    failedAt = null,
+                    localUpdatedAt = System.currentTimeMillis(),
+                    serverUpdatedAt = serverUpdatedAt,
+                    deletedAt = serverDeletedAt,
+                    createdByUserId = dto.ownerUserId ?: ShoppingListItemEntity.LOCAL_USER_ID,
+                    updatedByUserId = dto.ownerUserId ?: ShoppingListItemEntity.LOCAL_USER_ID,
+                )).copy(
+                    id = clientId,
+                    homeId = dto.homeId ?: local?.homeId ?: ShoppingListItemEntity.LOCAL_HOME_ID,
+                    scope = dto.scope,
+                    ownerUserId = dto.ownerUserId,
+                    name = dto.name,
+                    quantity = dto.quantity,
+                    note = dto.note,
+                    isImportant = dto.isImportant,
+                    isFavorite = dto.isFavorite,
+                    isChecked = dto.isChecked,
+                    category = dto.category,
+                    createdAt = createdAt,
+                    pendingOperation = PendingOperation.NONE,
+                    syncState = SyncState.OK,
+                    lastSyncError = null,
+                    failedAt = null,
+                    localUpdatedAt = System.currentTimeMillis(),
+                    serverUpdatedAt = serverUpdatedAt,
+                    deletedAt = serverDeletedAt,
+                    createdByUserId = local?.createdByUserId ?: (dto.ownerUserId ?: ShoppingListItemEntity.LOCAL_USER_ID),
+                    updatedByUserId = local?.updatedByUserId ?: (dto.ownerUserId ?: ShoppingListItemEntity.LOCAL_USER_ID),
+                )
+
+                shoppingDao.upsert(merged)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SyncWorker", "pull shopping exception=${e.message}")
+            return Result.success()
+        }
+
+        // 11) PULL shopping DELETES
+        try {
+            val pullShoppingDeletes = shoppingApi.getDeletedItems(
+                authorization = "Bearer $token",
+                since = sinceIso
+            )
+
+            if (pullShoppingDeletes.code() == 401) {
+                prefs.markAuthRequired()
+                return Result.success()
+            }
+
+            if (!pullShoppingDeletes.isSuccessful) {
+                val err = pullShoppingDeletes.errorBody()?.string()
+                android.util.Log.e("SyncWorker", "pull shopping deletes failed code=${pullShoppingDeletes.code()} body=$err")
+                return Result.success()
+            }
+
+            val deleted = pullShoppingDeletes.body().orEmpty()
+            deleted.forEach { t ->
+                val clientId = t.clientId
+                val deletedAtMs = parseAtomToEpochMs(t.deletedAt)
+                newWatermarkMs = max(newWatermarkMs, deletedAtMs)
+
+                val local = shoppingDao.getById(clientId)
+                if (local != null && (local.pendingOperation != PendingOperation.NONE || local.syncState == SyncState.FAILED)) {
+                    return@forEach
+                }
+
+                shoppingDao.hardDelete(clientId)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SyncWorker", "pull shopping deletes exception=${e.message}")
+            return Result.success()
+        }
 
         prefs.markSyncSuccessAt(newWatermarkMs)
         return Result.success()
@@ -463,4 +692,16 @@ class SyncWorker(
         val d = java.time.LocalDate.parse(s)
         return d.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
     }
+
+    private val phpAtomFormatter: DateTimeFormatter =
+        java.time.format.DateTimeFormatterBuilder()
+            .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+            .appendOffset("+HH:MM", "+00:00")
+            .toFormatter()
+
+    private fun epochMsToPhpAtom(ms: Long): String =
+        Instant.ofEpochMilli(ms)
+            .atOffset(java.time.ZoneOffset.UTC)
+            .withNano(0)
+            .format(phpAtomFormatter)
 }

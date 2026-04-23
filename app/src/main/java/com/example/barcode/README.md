@@ -16,6 +16,7 @@ adb devices -l
 
 puis selon les names:
 adb -s RFCW712B7VR reverse tcp:8080 tcp:8080
+adb -s "adb-RFCW712B7VR-Ov2rDR._adb-tls-connect._tcp" reverse tcp:8080 tcp:8080
 adb -s "adb-775b0860-iwlBS2._adb-tls-connect._tcp" reverse tcp:8080 tcp:8080
 
 

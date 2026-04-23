@@ -9,7 +9,6 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-
 interface ShoppingListApi {
 
     @POST("api/shopping-items")
@@ -18,13 +17,13 @@ interface ShoppingListApi {
         @Body body: ShoppingItemDto
     ): Response<Unit>
 
-    @DELETE("api/shopping-items/{clientId}")
+    @DELETE("api/shopping-items/client/{clientId}")
     suspend fun deleteItemByClientId(
         @Header("Authorization") authorization: String,
         @Path("clientId") clientId: String
     ): Response<Unit>
 
-   @GET("api/shopping-items")
+    @GET("api/shopping-items")
     suspend fun getItems(
         @Header("Authorization") authorization: String,
         @Query("updatedSince") updatedSince: String

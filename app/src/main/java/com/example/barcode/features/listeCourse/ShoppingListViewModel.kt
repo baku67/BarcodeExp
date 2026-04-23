@@ -13,11 +13,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ShoppingListViewModel(
-    private val dao: ShoppingListDao
+    private val dao: ShoppingListDao,
+    private val currentHomeId: String,
+    private val currentUserId: String,
 ) : ViewModel() {
-
-    private val currentHomeId = "local_home"
-    private val currentUserId = "local_user"
 
     val items: StateFlow<List<ShoppingListItemUi>> =
         dao.observeVisible(currentHomeId, currentUserId)
@@ -96,7 +95,7 @@ private fun ShoppingListItemEntity.toUi(): ShoppingListItemUi {
         isImportant = isImportant,
         isFavorite = isFavorite,
         isChecked = isChecked,
-        createdByUserId = "local_user",
-        updatedByUserId = "local_user",
+        createdByUserId = createdByUserId,
+        updatedByUserId = updatedByUserId,
     )
 }

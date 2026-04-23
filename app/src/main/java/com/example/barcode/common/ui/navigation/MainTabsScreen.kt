@@ -6,11 +6,13 @@ import android.net.NetworkCapabilities
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -21,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -80,10 +83,6 @@ fun MainTabsScreen(
     val itemsVm: ItemsViewModel = viewModel()
     val items by itemsVm.items.collectAsState()
 
-    val shoppingListVm: ShoppingListViewModel = viewModel(
-        factory = ShoppingListViewModelFactory(app.shoppingListDao)
-    )
-
     val prefs = remember { SyncPreferences(context) }
     val lastSuccessAt by prefs.lastSuccessAt.collectAsState(initial = null)
     val authRequired by prefs.authRequired.collectAsState(initial = false)
@@ -96,12 +95,27 @@ fun MainTabsScreen(
 
     val isOnline = isOnline(context)
     val sessionManager = remember { SessionManager(context) }
+    val currentUserId by sessionManager.userId.collectAsState(initial = null)
+    val currentHomeId by sessionManager.currentHomeId.collectAsState(initial = null)
     val isAuthenticated by produceState(
         initialValue = false,
         key1 = sessionManager
     ) {
         value = sessionManager.isAuthenticated()
     }
+
+    val shoppingListVm: ShoppingListViewModel? =
+        if (!currentUserId.isNullOrBlank() && !currentHomeId.isNullOrBlank()) {
+            viewModel(
+                factory = ShoppingListViewModelFactory(
+                    dao = app.shoppingListDao,
+                    currentHomeId = currentHomeId!!,
+                    currentUserId = currentUserId!!
+                )
+            )
+        } else {
+            null
+        }
 
     val barSyncState: SyncUiState = when {
         authRequired || (isOnline && !isAuthenticated) -> SyncUiState.AuthRequired
@@ -139,16 +153,25 @@ fun MainTabsScreen(
                     items = items
                 )
 
-                "listeCourses" -> ListeCoursesContent(
-                    innerPadding = PaddingValues(),
-                    isActive = isActive,
-                    onAddItem = { scopeArg ->
-                        navController.navigate("shoppingList/add/${scopeArg.routeValue}") {
-                            launchSingleTop = true
-                        }
-                    },
-                    vm = shoppingListVm
-                )
+                "listeCourses" -> {
+                    shoppingListVm?.let { vm ->
+                        ListeCoursesContent(
+                            innerPadding = PaddingValues(),
+                            isActive = isActive,
+                            onAddItem = { scope ->
+                                navController.navigate("shoppingList/add/${scope.routeValue}") {
+                                    launchSingleTop = true
+                                }
+                            },
+                            vm = vm
+                        )
+                    } ?: Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
 
                 "items" -> FridgePage(
                     navController = navController,
