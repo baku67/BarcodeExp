@@ -2,6 +2,8 @@ package com.example.barcode.features.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -21,9 +23,13 @@ import com.example.barcode.common.bus.SnackbarBus
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import com.example.barcode.common.utils.SeasonalityResolver
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.domain.models.UserPreferences
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -359,19 +365,11 @@ fun SettingsContent(
                         ) {
                             Text("Saisonnalité", style = MaterialTheme.typography.titleLarge)
 
-                            Text(
-                                text = "Pays sélectionné : ${SeasonalityResolver.countryLabel(prefs.countryCode)}",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-
-                            Text(
-                                text = "Zone utilisée : ${
-                                    SeasonalityResolver.regionLabel(
-                                        SeasonalityResolver.regionFromCountryCode(prefs.countryCode)
-                                    )
-                                }",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            CountrySelectorRow(
+                                selectedCountryCode = prefs.countryCode,
+                                onCountrySelected = { code ->
+                                    authVm.onCountryCodeSelected(code)
+                                }
                             )
 
                             Text(
@@ -380,12 +378,27 @@ fun SettingsContent(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            CountrySelectorRow(
-                                selectedCountryCode = prefs.countryCode,
-                                onCountrySelected = { code ->
-                                    authVm.onCountryCodeSelected(code)
-                                }
+                            val regionLabel = SeasonalityResolver.regionLabel(
+                                SeasonalityResolver.regionFromCountryCode(prefs.countryCode)
                             )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Zone utilisée :",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                Text(
+                                    text = regionLabel,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
@@ -460,10 +473,15 @@ private fun CountrySelectorRow(
             onClick = { expanded = true },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = selectedLabel,
-                modifier = Modifier.weight(1f)
+            CountryOptionRow(
+                countryCode = selectedCountryCode,
+                label = selectedLabel,
+                modifier = Modifier.weight(1f),
+                textStyle = MaterialTheme.typography.bodyLarge
             )
+
+            Spacer(Modifier.width(8.dp))
+
             Text("Changer")
         }
 
@@ -471,15 +489,72 @@ private fun CountrySelectorRow(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            countries.forEach { country ->
-                DropdownMenuItem(
-                    text = { Text(country.label) },
-                    onClick = {
-                        expanded = false
-                        onCountrySelected(country.code)
-                    }
-                )
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                countries.forEach { country ->
+                    DropdownMenuItem(
+                        text = {
+                            CountryOptionRow(
+                                countryCode = country.code,
+                                label = country.label,
+                                textStyle = MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            onCountrySelected(country.code)
+                        }
+                    )
+                }
             }
         }
     }
+}
+
+
+@Composable
+private fun CountryOptionRow(
+    countryCode: String,
+    label: String,
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
+    textColor: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = countryCodeToFlagEmoji(countryCode),
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Text(
+            text = label,
+            style = textStyle,
+            color = textColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+private fun countryCodeToFlagEmoji(countryCode: String): String {
+    val normalized = countryCode
+        .trim()
+        .uppercase(Locale.ROOT)
+
+    if (normalized.length != 2 || normalized.any { !it.isLetter() }) {
+        return "🏳️"
+    }
+
+    val firstCodePoint = normalized[0].code - 'A'.code + 0x1F1E6
+    val secondCodePoint = normalized[1].code - 'A'.code + 0x1F1E6
+
+    return String(Character.toChars(firstCodePoint)) +
+            String(Character.toChars(secondCodePoint))
 }
