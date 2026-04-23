@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.barcode.features.fridge.ViewMode
 import com.example.barcode.common.bus.SnackbarBus
+import com.example.barcode.common.utils.SeasonalityResolver
 import com.example.barcode.core.AppMode
 import com.example.barcode.core.SessionManager
 import com.example.barcode.domain.models.FrigoLayout
@@ -76,6 +77,7 @@ class AuthViewModel(
             onSuccess = { profile ->
                 session.saveUser(profile)
                 session.savePreferences(profile.toUserPreferences())
+                syncDefaultCountryCodeIfMissing(profile)
                 Result.success(Unit)
             },
             onFailure = { Result.failure(it) }
@@ -124,6 +126,7 @@ class AuthViewModel(
                             .onSuccess { profile ->
                                 session.saveUser(profile)
                                 session.savePreferences(profile.toUserPreferences())
+                                syncDefaultCountryCodeIfMissing(profile)
                             }
                             .onFailure {
                                 SnackbarBus.show("Profil non chargé : ${it.message ?: it}")
@@ -164,6 +167,7 @@ class AuthViewModel(
                                     .onSuccess { profile ->
                                         session.saveUser(profile)
                                         session.savePreferences(profile.toUserPreferences())
+                                        syncDefaultCountryCodeIfMissing(profile)
                                     }
                                     .onFailure {
                                         session.saveUser(
@@ -227,13 +231,38 @@ class AuthViewModel(
         }
     }
 
+    fun onCountryCodeSelected(countryCode: String) {
+        viewModelScope.launch {
+            val normalized = SeasonalityResolver.normalizeCountryCodeOrDefault(countryCode)
+            val current = session.preferences.first().countryCode
+            if (current == normalized) return@launch
+
+            session.setCountryCode(normalized)
+            emitPrefsPatch(countryCode = normalized)
+        }
+    }
+
+    private suspend fun syncDefaultCountryCodeIfMissing(profile: UserProfile) {
+        val remoteCountryCode = profile.preferences?.countryCode
+            ?.trim()
+            ?.uppercase()
+
+        if (!remoteCountryCode.isNullOrBlank()) return
+
+        emitPrefsPatch(
+            countryCode = profile.toUserPreferences().countryCode
+        )
+    }
+
     private suspend fun emitPrefsPatch(
         theme: ThemeMode? = null,
-        frigoLayout: FrigoLayout? = null
+        frigoLayout: FrigoLayout? = null,
+        countryCode: String? = null
     ) {
         val body = buildMap<String, String> {
             theme?.let { put("theme", it.name.lowercase()) }
             frigoLayout?.let { put("frigo_layout", it.name.lowercase()) }
+            countryCode?.let { put("country_code", it) }
         }
 
         if (body.isEmpty()) return

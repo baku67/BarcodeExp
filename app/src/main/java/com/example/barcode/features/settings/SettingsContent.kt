@@ -20,6 +20,8 @@ import androidx.compose.ui.Alignment
 import com.example.barcode.common.bus.SnackbarBus
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.remember
+import com.example.barcode.common.utils.SeasonalityResolver
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.domain.models.UserPreferences
 
@@ -347,6 +349,47 @@ fun SettingsContent(
                     PermissionsCard()
                 }
 
+                item {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text("Saisonnalité", style = MaterialTheme.typography.titleLarge)
+
+                            Text(
+                                text = "Pays sélectionné : ${SeasonalityResolver.countryLabel(prefs.countryCode)}",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+
+                            Text(
+                                text = "Zone utilisée : ${
+                                    SeasonalityResolver.regionLabel(
+                                        SeasonalityResolver.regionFromCountryCode(prefs.countryCode)
+                                    )
+                                }",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Text(
+                                text = "Ce pays sert à déduire automatiquement la zone climatique utilisée pour les fruits et légumes de saison.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            CountrySelectorRow(
+                                selectedCountryCode = prefs.countryCode,
+                                onCountrySelected = { code ->
+                                    authVm.onCountryCodeSelected(code)
+                                }
+                            )
+                        }
+                    }
+                }
+
                 // Toggle Theme Light/Dark
                 item {
                     ElevatedCard {
@@ -396,10 +439,47 @@ fun SettingsContent(
                 }
             }
         }
+    }
+}
 
 
+@Composable
+private fun CountrySelectorRow(
+    selectedCountryCode: String,
+    onCountrySelected: (String) -> Unit
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    val countries = remember { SeasonalityResolver.europeanCountries() }
+    val selectedLabel = remember(selectedCountryCode, countries) {
+        SeasonalityResolver.countryLabel(selectedCountryCode)
     }
 
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = selectedLabel,
+                modifier = Modifier.weight(1f)
+            )
+            Text("Changer")
+        }
 
-
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            countries.forEach { country ->
+                DropdownMenuItem(
+                    text = { Text(country.label) },
+                    onClick = {
+                        expanded = false
+                        onCountrySelected(country.code)
+                    }
+                )
+            }
+        }
+    }
 }

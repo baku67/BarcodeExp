@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.barcode.common.utils.SeasonRegion
+import com.example.barcode.common.utils.SeasonalityResolver
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
@@ -15,7 +16,8 @@ import kotlinx.coroutines.flow.map
 private val PREF_THEME = stringPreferencesKey("pref_theme")
 private val PREF_LANG = stringPreferencesKey("pref_lang")
 private val PREF_FRIGO_LAYOUT = stringPreferencesKey("pref_frigo_layout")
-private val PREF_SEASON_REGION = stringPreferencesKey("pref_season_region")
+private val PREF_COUNTRY_CODE = stringPreferencesKey("pref_country_code")
+private val LEGACY_PREF_SEASON_REGION = stringPreferencesKey("pref_season_region")
 private val PREF_DASHBOARD_SEASONAL_EXPANDED =
     booleanPreferencesKey("pref_dashboard_seasonal_expanded")
 private val PREF_UPDATED_AT = longPreferencesKey("pref_updated_at")
@@ -41,12 +43,17 @@ class UserPreferencesStore(private val context: Context) {
             theme = theme,
             lang = p[PREF_LANG] ?: "fr",
             frigoLayout = layout,
+            countryCode = SeasonalityResolver.normalizeCountryCodeOrDefault(
+                p[PREF_COUNTRY_CODE]
+            ),
             updatedAtEpochSec = p[PREF_UPDATED_AT]
         )
     }
 
-    val seasonRegion: Flow<SeasonRegion> = ds.data.map { p ->
-        SeasonRegion.fromStorage(p[PREF_SEASON_REGION])
+    val countryCode: Flow<String> = preferences.map { it.countryCode }
+
+    val seasonRegion: Flow<SeasonRegion> = preferences.map { prefs ->
+        SeasonalityResolver.regionFromCountryCode(prefs.countryCode)
     }
 
     val dashboardSeasonalExpanded: Flow<Boolean> = ds.data.map { p ->
@@ -65,6 +72,8 @@ class UserPreferencesStore(private val context: Context) {
                 FrigoLayout.LIST -> "list"
                 FrigoLayout.DESIGN -> "design"
             }
+            p[PREF_COUNTRY_CODE] =
+                SeasonalityResolver.normalizeCountryCodeOrDefault(prefs.countryCode)
             p[PREF_UPDATED_AT] = prefs.updatedAtEpochSec ?: (System.currentTimeMillis() / 1000)
         }
     }
@@ -74,7 +83,8 @@ class UserPreferencesStore(private val context: Context) {
             it.remove(PREF_THEME)
             it.remove(PREF_LANG)
             it.remove(PREF_FRIGO_LAYOUT)
-            it.remove(PREF_SEASON_REGION)
+            it.remove(PREF_COUNTRY_CODE)
+            it.remove(LEGACY_PREF_SEASON_REGION)
             it.remove(PREF_DASHBOARD_SEASONAL_EXPANDED)
             it.remove(PREF_UPDATED_AT)
         }
@@ -108,9 +118,10 @@ class UserPreferencesStore(private val context: Context) {
         }
     }
 
-    suspend fun setSeasonRegion(region: SeasonRegion) {
+    suspend fun setCountryCode(countryCode: String) {
         ds.edit {
-            it[PREF_SEASON_REGION] = region.name
+            it[PREF_COUNTRY_CODE] =
+                SeasonalityResolver.normalizeCountryCodeOrDefault(countryCode)
             it[PREF_UPDATED_AT] = System.currentTimeMillis() / 1000
         }
     }
