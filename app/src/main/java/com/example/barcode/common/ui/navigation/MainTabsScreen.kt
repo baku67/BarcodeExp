@@ -108,6 +108,7 @@ fun MainTabsScreen(
         if (!currentUserId.isNullOrBlank() && !currentHomeId.isNullOrBlank()) {
             viewModel(
                 factory = ShoppingListViewModelFactory(
+                    app = app,
                     dao = app.shoppingListDao,
                     currentHomeId = currentHomeId!!,
                     currentUserId = currentUserId!!

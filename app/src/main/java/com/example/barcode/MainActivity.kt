@@ -235,6 +235,7 @@ class MainActivity : ComponentActivity() {
                                 val shoppingVm: ShoppingListViewModel = viewModel(
                                     viewModelStoreOwner = tabsEntry,
                                     factory = ShoppingListViewModelFactory(
+                                        app = app,
                                         dao = app.shoppingListDao,
                                         currentHomeId = homeId,
                                         currentUserId = userId
