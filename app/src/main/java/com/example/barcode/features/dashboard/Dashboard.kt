@@ -1,5 +1,6 @@
 package com.example.barcode.features.dashboard
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -24,9 +25,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.RestaurantMenu
@@ -40,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -320,12 +324,28 @@ private fun DashboardCardSeasonalFake(
         seasonalCardVisualFor(currentEuropeSeason())
     }
 
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(
+            durationMillis = 220,
+            easing = FastOutSlowInEasing
+        ),
+        label = "seasonCardArrowRotation"
+    )
+
+    val headerTitleColor = Color(0xFF111111)
+    val headerSubtitleColor = Color(0xFF151515)
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
-        )
+        ),
+        onClick = { expanded = !expanded },
+        interactionSource = remember { MutableInteractionSource() }
     ) {
         Box(
             modifier = Modifier
@@ -340,54 +360,91 @@ private fun DashboardCardSeasonalFake(
             SeasonalIllustrationBackground(
                 illustrationRes = seasonVisual.illustrationRes,
                 accent = seasonVisual.accent,
+                expanded = expanded,
                 modifier = Modifier.matchParentSize()
             )
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp),
+                    .animateContentSize(
+                        animationSpec = tween(
+                            durationMillis = 260,
+                            easing = FastOutSlowInEasing
+                        )
+                    )
+                    .padding(
+                        horizontal = 14.dp,
+                        vertical = if (expanded) 14.dp else 18.dp
+                    ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = if (expanded) 40.dp else 56.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Text(
+                        text = "De saison",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = headerTitleColor
+                    )
 
-                    Column(
-                        modifier = Modifier.weight(1f)
+                    Box(
+                        modifier = Modifier
+                            .size(if (expanded) 34.dp else 38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                MaterialTheme.colorScheme.surface.copy(
+                                    alpha = if (expanded) 0.46f else 0.36f
+                                )
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f),
+                                shape = RoundedCornerShape(10.dp)
+                            ),
+                        contentAlignment = Alignment.Center
                     ) {
-                        val headerTitleColor = Color(0xFF111111)
-                        val headerSubtitleColor = Color(0xFF151515)
-
-                        Text(
-                            text = "De saison",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = headerTitleColor
+                        Icon(
+                            imageVector = Icons.Filled.ExpandMore,
+                            contentDescription = if (expanded) "Réduire" else "Développer",
+                            tint = headerTitleColor,
+                            modifier = Modifier.graphicsLayer {
+                                rotationZ = arrowRotation
+                            }
                         )
+                    }
+                }
 
+                if (expanded) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         Text(
                             text = "${seasonVisual.label} • Europe",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = headerSubtitleColor
                         )
+
+                        CompactSeasonCategoryRow(
+                            title = "Fruits",
+                            items = fakeSeasonalFruits,
+                            accent = seasonVisual.accent
+                        )
+
+                        CompactSeasonCategoryRow(
+                            title = "Légumes",
+                            items = fakeSeasonalVegetables,
+                            accent = seasonVisual.accent
+                        )
                     }
                 }
-
-                CompactSeasonCategoryRow(
-                    title = "Fruits",
-                    items = fakeSeasonalFruits,
-                    accent = seasonVisual.accent
-                )
-
-                CompactSeasonCategoryRow(
-                    title = "Légumes",
-                    items = fakeSeasonalVegetables,
-                    accent = seasonVisual.accent
-                )
             }
         }
     }
@@ -439,100 +496,142 @@ private fun CompactSeasonCategoryRow(
 private fun SeasonalIllustrationBackground(
     illustrationRes: Int,
     accent: Color,
+    expanded: Boolean,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier) {
-        // 1) Illustration visible surtout dans le header, puis fade vers le bas
-        Image(
-            painter = painterResource(id = illustrationRes),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .matchParentSize()
-                .graphicsLayer {
-                    compositingStrategy = CompositingStrategy.Offscreen
-                }
-                .drawWithCache {
-                    val imageMask = Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0.00f to Color.White,
-                            0.16f to Color.White,
-                            0.34f to Color.White.copy(alpha = 0.90f),
-                            0.52f to Color.White.copy(alpha = 0.45f),
-                            0.70f to Color.White.copy(alpha = 0.14f),
-                            0.86f to Color.White.copy(alpha = 0.03f),
-                            1.00f to Color.Transparent
+        if (!expanded) {
+            // État collapsed :
+            // image visible sur toute la hauteur / largeur, sans fade transparent vers le bas
+            Image(
+                painter = painterResource(id = illustrationRes),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize()
+            )
+
+            // légère teinte flashy globale
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                accent.copy(alpha = 0.22f),
+                                accent.copy(alpha = 0.10f),
+                                Color.Transparent
+                            )
                         )
                     )
+            )
 
-                    onDrawWithContent {
-                        drawContent()
-                        drawRect(
-                            brush = imageMask,
-                            blendMode = BlendMode.DstIn
+            // scrim léger pour garder le texte lisible
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.10f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.18f)
+                            )
                         )
+                    )
+            )
+        } else {
+            // État expanded :
+            // illustration forte en haut, puis fade sous le contenu
+            Image(
+                painter = painterResource(id = illustrationRes),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.Offscreen
                     }
-                }
-        )
-
-        // 2) Teinte flashy en haut
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0.00f to accent.copy(alpha = 0.34f),
-                            0.12f to accent.copy(alpha = 0.24f),
-                            0.28f to accent.copy(alpha = 0.12f),
-                            0.50f to Color.Transparent,
-                            1.00f to Color.Transparent
+                    .drawWithCache {
+                        val imageMask = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.00f to Color.White,
+                                0.16f to Color.White,
+                                0.34f to Color.White.copy(alpha = 0.90f),
+                                0.52f to Color.White.copy(alpha = 0.45f),
+                                0.70f to Color.White.copy(alpha = 0.14f),
+                                0.86f to Color.White.copy(alpha = 0.03f),
+                                1.00f to Color.Transparent
+                            )
                         )
-                    )
-                )
-        )
 
-        // 3) Petit glow lumineux en haut à droite
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .drawWithCache {
-                    val glowCenter = Offset(size.width * 0.82f, size.height * 0.10f)
-                    val glowRadius = size.minDimension * 0.34f
-                    val glowBrush = Brush.radialGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.22f),
-                            Color.Transparent
-                        ),
-                        center = glowCenter,
-                        radius = glowRadius
-                    )
-
-                    onDrawBehind {
-                        drawRect(
-                            brush = glowBrush,
-                            blendMode = BlendMode.Screen
-                        )
+                        onDrawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = imageMask,
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
                     }
-                }
-        )
+            )
 
-        // 4) Léger scrim global pour rattacher à la surface de la Card
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0.00f to MaterialTheme.colorScheme.surface.copy(alpha = 0.08f),
-                            0.22f to MaterialTheme.colorScheme.surface.copy(alpha = 0.10f),
-                            0.48f to MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
-                            0.72f to MaterialTheme.colorScheme.surface.copy(alpha = 0.34f),
-                            1.00f to MaterialTheme.colorScheme.surface.copy(alpha = 0.52f)
+            // teinte flashy en haut
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.00f to accent.copy(alpha = 0.34f),
+                                0.12f to accent.copy(alpha = 0.24f),
+                                0.28f to accent.copy(alpha = 0.12f),
+                                0.50f to Color.Transparent,
+                                1.00f to Color.Transparent
+                            )
                         )
                     )
-                )
-        )
+            )
+
+            // glow
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .drawWithCache {
+                        val glowCenter = Offset(size.width * 0.82f, size.height * 0.10f)
+                        val glowRadius = size.minDimension * 0.34f
+                        val glowBrush = Brush.radialGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.22f),
+                                Color.Transparent
+                            ),
+                            center = glowCenter,
+                            radius = glowRadius
+                        )
+
+                        onDrawBehind {
+                            drawRect(
+                                brush = glowBrush,
+                                blendMode = BlendMode.Screen
+                            )
+                        }
+                    }
+            )
+
+            // scrim global
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.00f to MaterialTheme.colorScheme.surface.copy(alpha = 0.08f),
+                                0.22f to MaterialTheme.colorScheme.surface.copy(alpha = 0.10f),
+                                0.48f to MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
+                                0.72f to MaterialTheme.colorScheme.surface.copy(alpha = 0.34f),
+                                1.00f to MaterialTheme.colorScheme.surface.copy(alpha = 0.52f)
+                            )
+                        )
+                    )
+            )
+        }
     }
 }
 
