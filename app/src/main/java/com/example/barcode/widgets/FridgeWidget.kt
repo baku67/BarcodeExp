@@ -32,6 +32,7 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -96,7 +97,7 @@ class FridgeWidget : GlanceAppWidget() {
                 .collectAsState(initial = false)
 
             val fridgeItems by itemDao
-                .observeFirstExpiringForWidget(limit = 5)
+                .observeFirstExpiringForWidget(limit = 10)
                 .collectAsState(initial = emptyList())
 
             val lastSyncText = lastSyncFinishedAt.toLastSyncTimeLabel()
@@ -132,7 +133,7 @@ class FridgeWidget : GlanceAppWidget() {
                     homeId = effectiveHomeId,
                     userId = effectiveUserId,
                     scope = WidgetShoppingScope.SHARED.daoValue,
-                    limit = 5
+                    limit = 10
                 )
             }.collectAsState(initial = emptyList())
 
@@ -141,7 +142,7 @@ class FridgeWidget : GlanceAppWidget() {
                     homeId = effectiveHomeId,
                     userId = effectiveUserId,
                     scope = WidgetShoppingScope.PERSONAL.daoValue,
-                    limit = 5
+                    limit = 10
                 )
             }.collectAsState(initial = emptyList())
 
@@ -234,6 +235,7 @@ class FridgeWidget : GlanceAppWidget() {
                             Column(
                                 modifier = GlanceModifier
                                     .fillMaxWidth()
+                                    .defaultWeight()
                                     .clickable(
                                         actionStartActivity(
                                             openAppIntent(
@@ -262,6 +264,7 @@ class FridgeWidget : GlanceAppWidget() {
                             Column(
                                 modifier = GlanceModifier
                                     .fillMaxWidth()
+                                    .defaultWeight()
                                     .clickable(
                                         actionStartActivity(
                                             openAppIntent(
@@ -375,31 +378,74 @@ private fun WidgetShoppingListContent(
             shoppingScope = shoppingScope,
             colors = colors
         )
-    } else {
-        items.take(5).forEach { item ->
-            WidgetShoppingCompactRow(
-                item = item,
-                colors = colors
-            )
+        return
+    }
+
+    val visibleItems = items.take(6)
+    val splitIndex = (visibleItems.size + 1) / 2
+    val leftItems = visibleItems.take(splitIndex)
+    val rightItems = visibleItems.drop(splitIndex)
+
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .padding(top = 2.dp),
+        verticalAlignment = Alignment.Vertical.Top,
+        horizontalAlignment = Alignment.Horizontal.Start
+    ) {
+        Column(
+            modifier = GlanceModifier.defaultWeight(),
+            verticalAlignment = Alignment.Vertical.Top,
+            horizontalAlignment = Alignment.Horizontal.Start
+        ) {
+            leftItems.forEach { item ->
+                WidgetShoppingBulletRow(
+                    item = item,
+                    colors = colors
+                )
+            }
+        }
+
+        Spacer(modifier = GlanceModifier.width(14.dp))
+
+        Spacer(
+            modifier = GlanceModifier
+                .width(1.dp)
+                .fillMaxHeight()
+                .background(colors.text.copy(alpha = 0.14f))
+        )
+
+        Spacer(modifier = GlanceModifier.width(14.dp))
+
+        Column(
+            modifier = GlanceModifier.defaultWeight(),
+            verticalAlignment = Alignment.Vertical.Top,
+            horizontalAlignment = Alignment.Horizontal.Start
+        ) {
+            rightItems.forEach { item ->
+                WidgetShoppingBulletRow(
+                    item = item,
+                    colors = colors
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun WidgetShoppingCompactRow(
+private fun WidgetShoppingBulletRow(
     item: ShoppingListItemEntity,
     colors: WidgetPalette
 ) {
     val name = item.name
         .trim()
         .takeIf { it.isNotBlank() }
-        ?: "Article sans nom"
+        ?: "Article"
 
     val quantity = item.quantity
         ?.trim()
         ?.takeIf { it.isNotBlank() }
-
-    val trailingText = quantity ?: if (item.isImportant) "!" else null
 
     Row(
         modifier = GlanceModifier
@@ -408,6 +454,21 @@ private fun WidgetShoppingCompactRow(
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.Start
     ) {
+        Text(
+            text = "•",
+            style = TextStyle(
+                color = if (item.isImportant) {
+                    colors.primary.toColorProvider()
+                } else {
+                    colors.text.toColorProvider()
+                },
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        )
+
+        Spacer(modifier = GlanceModifier.width(4.dp))
+
         Text(
             text = name,
             modifier = GlanceModifier.defaultWeight(),
@@ -427,16 +488,26 @@ private fun WidgetShoppingCompactRow(
             )
         )
 
-        if (trailingText != null) {
+        if (quantity != null) {
+            Spacer(modifier = GlanceModifier.width(4.dp))
+
             Text(
-                text = trailingText,
+                text = quantity,
                 maxLines = 1,
                 style = TextStyle(
-                    color = if (item.isImportant) {
-                        colors.primary.toColorProvider()
-                    } else {
-                        colors.muted.toColorProvider()
-                    },
+                    color = colors.muted.toColorProvider(),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            )
+        } else if (item.isImportant) {
+            Spacer(modifier = GlanceModifier.width(4.dp))
+
+            Text(
+                text = "!",
+                maxLines = 1,
+                style = TextStyle(
+                    color = colors.primary.toColorProvider(),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -450,13 +521,13 @@ private fun WidgetShoppingEmptyState(
     shoppingScope: WidgetShoppingScope,
     colors: WidgetPalette
 ) {
-    val label = when (shoppingScope) {
+    val title = when (shoppingScope) {
         WidgetShoppingScope.SHARED -> "Liste partagée vide"
         WidgetShoppingScope.PERSONAL -> "Liste perso vide"
     }
 
     Text(
-        text = label,
+        text = title,
         style = TextStyle(
             color = colors.text.toColorProvider(),
             fontSize = 13.sp,
@@ -467,14 +538,13 @@ private fun WidgetShoppingEmptyState(
     Spacer(modifier = GlanceModifier.height(4.dp))
 
     Text(
-        text = "Aucun article à acheter",
+        text = "Ajoute des articles dans l’app",
         style = TextStyle(
             color = colors.muted.toColorProvider(),
             fontSize = 12.sp
         )
     )
 }
-
 
 private data class WidgetPalette(
     val background: Color,
