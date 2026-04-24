@@ -8,6 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.barcode.widgets.FridgeWidgetRefreshWorker
 import java.util.concurrent.TimeUnit
 
@@ -36,6 +37,7 @@ object SyncScheduler {
      */
     const val SYNC_TAG = "SYNC_ITEMS"
 
+    const val INPUT_TRIGGERED_BY_WIDGET = "triggered_by_widget"
     const val WIDGET_REFRESH_UNIQUE_NAME = "fridge_widget_refresh_once"
     const val PERIODIC_WIDGET_REFRESH_UNIQUE_NAME = "fridge_widget_refresh_periodic"
 
@@ -57,12 +59,20 @@ object SyncScheduler {
     }
 
     // Sync forcée depuis le widget (?)
-    fun enqueueForceSync(context: Context) {
+    fun enqueueForceSync(
+        context: Context,
+        triggeredByWidget: Boolean = false
+    ) {
         val appContext = context.applicationContext
 
         val req = OneTimeWorkRequestBuilder<SyncWorker>()
             .addTag(SYNC_TAG)
             .setConstraints(syncConstraints())
+            .setInputData(
+                workDataOf(
+                    INPUT_TRIGGERED_BY_WIDGET to triggeredByWidget
+                )
+            )
             .build()
 
         WorkManager.getInstance(appContext)

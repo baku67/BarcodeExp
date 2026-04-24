@@ -3,6 +3,7 @@ package com.example.barcode.widgets
 import android.content.Context
 import android.content.res.Configuration
 import android.text.format.DateUtils
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,7 @@ import java.util.Locale
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxWidth
@@ -57,8 +59,14 @@ class FridgeWidget : GlanceAppWidget() {
     ) {
         val colors = WidgetPalette.fromContext(context)
 
-        val lastSyncFinishedAt = SyncPreferences(context)
+        val syncPrefs = SyncPreferences(context)
+
+        val lastSyncFinishedAt = syncPrefs
             .lastSyncFinishedAt
+            .first()
+
+        val isWidgetForceSyncRunning = syncPrefs
+            .isWidgetForceSyncRunning
             .first()
 
         val lastSyncText = lastSyncFinishedAt.toLastSyncTimeLabel()
@@ -96,15 +104,26 @@ class FridgeWidget : GlanceAppWidget() {
                             )
                         )
 
-                        Image(
-                            provider = ImageProvider(R.drawable.ic_widget_refresh),
-                            contentDescription = "Forcer la synchronisation",
-                            modifier = GlanceModifier
-                                .size(22.dp)
-                                .clickable(
-                                    actionRunCallback<ForceWidgetSyncActionCallback>()
+                        if (isWidgetForceSyncRunning) {
+                            Text(
+                                text = "Sync en cours",
+                                style = TextStyle(
+                                    color = colors.primary.toColorProvider(),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium
                                 )
-                        )
+                            )
+                        } else {
+                            Image(
+                                provider = ImageProvider(R.drawable.ic_widget_refresh),
+                                contentDescription = "Forcer la synchronisation",
+                                modifier = GlanceModifier
+                                    .size(22.dp)
+                                    .clickable(
+                                        actionRunCallback<ForceWidgetSyncActionCallback>()
+                                    )
+                            )
+                        }
                     }
 
                     Spacer(modifier = GlanceModifier.height(4.dp))
@@ -217,5 +236,17 @@ private fun Long.toLastSyncTimeLabel(): String {
             .format(Date(this))
 
         "Dernière sync : $date à $time"
+    }
+}
+
+suspend fun updateFridgeWidgets(context: Context) {
+    val appContext = context.applicationContext
+    val manager = GlanceAppWidgetManager(appContext)
+    val glanceIds = manager.getGlanceIds(FridgeWidget::class.java)
+
+    Log.d("FridgeWidget", "updateFridgeWidgets count=${glanceIds.size}")
+
+    glanceIds.forEach { glanceId ->
+        FridgeWidget().update(appContext, glanceId)
     }
 }

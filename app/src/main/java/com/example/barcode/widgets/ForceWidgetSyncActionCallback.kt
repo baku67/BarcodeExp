@@ -1,9 +1,11 @@
 package com.example.barcode.widgets
 
 import android.content.Context
+import android.util.Log
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
+import com.example.barcode.sync.SyncPreferences
 import com.example.barcode.sync.SyncScheduler
 
 class ForceWidgetSyncActionCallback : ActionCallback {
@@ -13,10 +15,17 @@ class ForceWidgetSyncActionCallback : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters
     ) {
-        SyncScheduler.enqueueForceSync(context)
+        val appContext = context.applicationContext
 
-        // Optionnel, mais utile pour forcer un refresh visuel immédiat.
-        // La vraie heure de dernière sync sera surtout mise à jour après la fin du SyncWorker.
-        SyncScheduler.enqueueWidgetRefresh(context)
+        Log.d("FridgeWidget", "Force sync clicked from widget")
+
+        SyncPreferences(appContext).markWidgetForceSyncStarted()
+
+        updateFridgeWidgets(appContext)
+
+        SyncScheduler.enqueueForceSync(
+            context = appContext,
+            triggeredByWidget = true
+        )
     }
 }

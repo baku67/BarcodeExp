@@ -22,6 +22,7 @@ import com.example.barcode.features.listeCourse.ShoppingItemDto
 import com.example.barcode.features.listeCourse.ShoppingListApi
 import com.example.barcode.common.utils.sanitizeNutriScore
 import com.example.barcode.widgets.FridgeWidget
+import com.example.barcode.widgets.updateFridgeWidgets
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.ZoneId
@@ -34,6 +35,34 @@ class SyncWorker(
 ) : CoroutineWorker(ctx, params) {
 
     override suspend fun doWork(): Result {
+        val triggeredByWidget = inputData.getBoolean(
+            SyncScheduler.INPUT_TRIGGERED_BY_WIDGET,
+            false
+        )
+
+        val prefs = SyncPreferences(applicationContext)
+
+        if (triggeredByWidget) {
+            prefs.markWidgetForceSyncStarted()
+            updateFridgeWidgets(applicationContext)
+        }
+
+        return try {
+            doSync()
+        } finally {
+            if (triggeredByWidget) {
+                prefs.markWidgetForceSyncFinished()
+
+                // Feedback visuel demandé :
+                // même si doSync() sort plus tôt, le widget affiche une heure de fin.
+                prefs.markLastSyncFinishedNow()
+
+                updateFridgeWidgets(applicationContext)
+            }
+        }
+    }
+
+    private suspend fun doSync(): Result {
         val session = SessionManager(applicationContext)
 
         if (!session.isAuthenticated()) return Result.success()
@@ -680,7 +709,7 @@ class SyncWorker(
 
         prefs.markSyncSuccessAt(newWatermarkMs)
 
-        SyncScheduler.enqueueWidgetRefresh(applicationContext)
+        updateFridgeWidgets(applicationContext)
 
         return Result.success()
     }
