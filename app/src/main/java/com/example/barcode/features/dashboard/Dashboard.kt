@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.ReceiptLong
@@ -76,6 +77,11 @@ import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.features.listeCourse.ShoppingListItemUi
 import java.util.Calendar
 import androidx.compose.material.icons.outlined.Widgets
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.barcode.widgets.WidgetInstallState
 import com.example.barcode.widgets.WidgetPinning
 
 
@@ -212,6 +218,28 @@ fun Dashboard(
     val coroutineScope = rememberCoroutineScope()
     val taxonomy = rememberManualTaxonomy()
 
+    val appContext = remember(context) { context.applicationContext }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var isFridgeWidgetInstalled by remember {
+        mutableStateOf(WidgetInstallState.isFridgeWidgetInstalled(appContext))
+    }
+
+    DisposableEffect(lifecycleOwner, appContext) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isFridgeWidgetInstalled =
+                    WidgetInstallState.isFridgeWidgetInstalled(appContext)
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     val seasonRegion by sessionManager.seasonRegion.collectAsState(
         initial = SeasonRegion.EU_TEMPERATE
     )
@@ -314,12 +342,18 @@ fun Dashboard(
             }
         )
 
-        DashboardInstallWidgetCard(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
-                WidgetPinning.requestPinFridgeWidget(context)
-            }
-        )
+        if (isFridgeWidgetInstalled) {
+            DashboardWidgetInstalledCard(
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            DashboardInstallWidgetCard(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    WidgetPinning.requestPinFridgeWidget(context)
+                }
+            )
+        }
     }
 }
 
@@ -578,6 +612,81 @@ private fun DashboardInstallWidgetCard(
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun DashboardWidgetInstalledCard(
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                    shape = RoundedCornerShape(18.dp)
+                )
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Widget installé",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Text(
+                        text = "Votre widget Frigo est prêt sur l’écran d’accueil.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
