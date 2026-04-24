@@ -10,6 +10,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.Preferences
+import androidx.glance.ColorFilter
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.GlanceId
@@ -22,6 +24,7 @@ import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
+import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -31,6 +34,7 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
+import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -54,13 +58,14 @@ import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.sync.SyncPreferences
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
 class FridgeWidget : GlanceAppWidget() {
 
     override val sizeMode: SizeMode = SizeMode.Single
+
+    override val stateDefinition = androidx.glance.state.PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(
         context: Context,
@@ -87,6 +92,12 @@ class FridgeWidget : GlanceAppWidget() {
 
             val lastSyncText = lastSyncFinishedAt.toLastSyncTimeLabel()
 
+            val widgetState = currentState<Preferences>()
+
+            val displayMode = WidgetDisplayMode.fromStoredValue(
+                widgetState[WidgetDisplayModeKey]
+            )
+
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
@@ -109,15 +120,12 @@ class FridgeWidget : GlanceAppWidget() {
                         verticalAlignment = Alignment.Vertical.CenterVertically,
                         horizontalAlignment = Alignment.Horizontal.Start
                     ) {
-                        Text(
-                            text = "FrigoZen",
-                            modifier = GlanceModifier.defaultWeight(),
-                            style = TextStyle(
-                                color = colors.primary.toColorProvider(),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                        WidgetModeChip(
+                            displayMode = displayMode,
+                            colors = colors
                         )
+
+                        Spacer(modifier = GlanceModifier.defaultWeight())
 
                         if (isWidgetForceSyncRunning) {
                             Text(
@@ -153,14 +161,22 @@ class FridgeWidget : GlanceAppWidget() {
 
                     Spacer(modifier = GlanceModifier.height(6.dp))
 
-                    if (fridgeItems.isEmpty()) {
-                        WidgetEmptyState(colors = colors)
-                    } else {
-                        fridgeItems.take(5).forEach { item ->
-                            WidgetFridgeCompactRow(
-                                item = item,
-                                colors = colors
-                            )
+                    when (displayMode) {
+                        WidgetDisplayMode.FRIDGE -> {
+                            if (fridgeItems.isEmpty()) {
+                                WidgetEmptyState(colors = colors)
+                            } else {
+                                fridgeItems.take(5).forEach { item ->
+                                    WidgetFridgeCompactRow(
+                                        item = item,
+                                        colors = colors
+                                    )
+                                }
+                            }
+                        }
+
+                        WidgetDisplayMode.SHOPPING -> {
+                            WidgetShoppingPreviewPlaceholder(colors = colors)
                         }
                     }
                 }
@@ -168,6 +184,69 @@ class FridgeWidget : GlanceAppWidget() {
         }
     }
 }
+
+
+@Composable
+private fun WidgetModeChip(
+    displayMode: WidgetDisplayMode,
+    colors: WidgetPalette
+) {
+    Row(
+        modifier = GlanceModifier
+            .background(colors.background)
+            .cornerRadius(14.dp)
+            .padding(horizontal = 9.dp, vertical = 5.dp)
+            .clickable(
+                actionRunCallback<ToggleWidgetDisplayModeActionCallback>()
+            ),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+        horizontalAlignment = Alignment.Horizontal.Start
+    ) {
+        Text(
+            text = displayMode.label,
+            maxLines = 1,
+            style = TextStyle(
+                color = colors.primary.toColorProvider(),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        )
+
+        Spacer(modifier = GlanceModifier.width(4.dp))
+
+        Image(
+            provider = ImageProvider(R.drawable.ic_widget_expand_all),
+            contentDescription = "Changer de vue",
+            modifier = GlanceModifier.size(16.dp),
+            colorFilter = ColorFilter.tint(colors.primary.toColorProvider())
+        )
+    }
+}
+
+@Composable
+private fun WidgetShoppingPreviewPlaceholder(
+    colors: WidgetPalette
+) {
+    Text(
+        text = "Liste de courses",
+        style = TextStyle(
+            color = colors.text.toColorProvider(),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold
+        )
+    )
+
+    Spacer(modifier = GlanceModifier.height(4.dp))
+
+    Text(
+        text = "Aperçu à brancher",
+        style = TextStyle(
+            color = colors.muted.toColorProvider(),
+            fontSize = 12.sp
+        )
+    )
+}
+
 
 private data class WidgetPalette(
     val background: Color,
