@@ -63,6 +63,7 @@ import com.example.barcode.common.ui.theme.AppMutedLight
 import com.example.barcode.common.ui.theme.AppOnSurfaceDark
 import com.example.barcode.common.ui.theme.AppOnSurfaceLight
 import com.example.barcode.common.ui.theme.AppPrimary
+import com.example.barcode.common.ui.theme.AppRed
 import com.example.barcode.common.ui.theme.AppWidgetBackgroundDark
 import com.example.barcode.common.ui.theme.AppWidgetBackgroundLight
 import com.example.barcode.common.ui.theme.AppWidgetSurfaceDark
@@ -79,7 +80,7 @@ import java.util.Locale
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-private const val WidgetFridgeTextListMaxItems = 5
+private const val WidgetFridgeTextListMaxItems = 6
 
 private const val WidgetFridgeGridColumns = 6
 private const val WidgetFridgeGridRows = 2
@@ -686,7 +687,7 @@ private data class WidgetPalette(
                     primary = AppPrimary,
                     text = AppOnSurfaceDark,
                     muted = AppMutedDark,
-                    expired = WidgetExpiredDark
+                    expired = AppRed
                 )
             } else {
                 WidgetPalette(
@@ -695,15 +696,13 @@ private data class WidgetPalette(
                     primary = AppPrimary,
                     text = AppOnSurfaceLight,
                     muted = AppMutedLight,
-                    expired = WidgetExpiredLight
+                    expired = AppRed
                 )
             }
         }
     }
 }
 
-private val WidgetExpiredLight = Color(0xFF7D5260)
-private val WidgetExpiredDark = Color(0xFFEFB8C8)
 
 @Composable
 private fun WidgetFridgeCompactRow(
@@ -721,7 +720,7 @@ private fun WidgetFridgeCompactRow(
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .height(18.dp),
+            .height(21.dp),
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.Start
     ) {
@@ -731,17 +730,19 @@ private fun WidgetFridgeCompactRow(
             maxLines = 1,
             style = TextStyle(
                 color = colors.text.toColorProvider(),
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             )
         )
+
+        Spacer(modifier = GlanceModifier.width(6.dp))
 
         Text(
             text = expiryLabel,
             maxLines = 1,
             style = TextStyle(
                 color = expiryColor.toColorProvider(),
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
         )
@@ -828,6 +829,16 @@ private fun WidgetFridgeImageTile(
     colors: WidgetPalette,
     modifier: GlanceModifier = GlanceModifier
 ) {
+    val alertColor = item.expiryDate.toWidgetExpiryAlertColor(colors)
+
+    val outerBackground = alertColor
+        ?.copy(alpha = 0.70f)
+        ?: colors.background
+
+    val imageBackground = alertColor
+        ?.copy(alpha = 0.16f)
+        ?: colors.background
+
     Column(
         modifier = modifier
             .height(54.dp)
@@ -835,22 +846,32 @@ private fun WidgetFridgeImageTile(
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally
     ) {
-        if (bitmap != null) {
-            Image(
-                provider = ImageProvider(bitmap),
-                contentDescription = item.name ?: "Produit",
-                modifier = GlanceModifier
-                    .size(50.dp)
-                    .background(colors.background)
-                    .cornerRadius(13.dp)
-                    .padding(3.dp),
-                contentScale = ContentScale.Fit
-            )
-        } else {
-            WidgetFridgeImageFallback(
-                item = item,
-                colors = colors
-            )
+        Box(
+            modifier = GlanceModifier
+                .size(50.dp)
+                .background(outerBackground)
+                .cornerRadius(13.dp)
+                .padding(1.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (bitmap != null) {
+                Image(
+                    provider = ImageProvider(bitmap),
+                    contentDescription = item.name ?: "Produit",
+                    modifier = GlanceModifier
+                        .fillMaxSize()
+                        .background(imageBackground)
+                        .cornerRadius(12.dp)
+                        .padding(3.dp),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                WidgetFridgeImageFallback(
+                    item = item,
+                    colors = colors,
+                    background = imageBackground
+                )
+            }
         }
     }
 }
@@ -858,7 +879,8 @@ private fun WidgetFridgeImageTile(
 @Composable
 private fun WidgetFridgeImageFallback(
     item: ItemEntity,
-    colors: WidgetPalette
+    colors: WidgetPalette,
+    background: Color = colors.background
 ) {
     val initial = item.name
         ?.trim()
@@ -869,9 +891,9 @@ private fun WidgetFridgeImageFallback(
 
     Box(
         modifier = GlanceModifier
-            .size(50.dp)
-            .background(colors.background)
-            .cornerRadius(13.dp),
+            .fillMaxSize()
+            .background(background)
+            .cornerRadius(12.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -1025,5 +1047,19 @@ suspend fun updateFridgeWidgets(context: Context) {
 
     glanceIds.forEach { glanceId ->
         FridgeWidget().update(appContext, glanceId)
+    }
+}
+
+private fun Long?.toWidgetExpiryAlertColor(
+    colors: WidgetPalette,
+    policy: ExpiryPolicy = ExpiryPolicy()
+): Color? {
+    val value = this?.takeIf { it > 0L }
+
+    return when (expiryLevel(value, policy)) {
+        ExpiryLevel.EXPIRED -> colors.expired
+        ExpiryLevel.SOON -> ExpiryWarning
+        ExpiryLevel.OK,
+        ExpiryLevel.NONE -> null
     }
 }
