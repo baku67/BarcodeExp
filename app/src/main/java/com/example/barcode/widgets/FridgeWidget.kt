@@ -36,6 +36,11 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.barcode.R
+import com.example.barcode.common.expiry.ExpiryLevel
+import com.example.barcode.common.expiry.ExpiryPolicy
+import com.example.barcode.common.expiry.daysUntilExpiry
+import com.example.barcode.common.expiry.expiryLevel
+import com.example.barcode.common.ui.expiry.ExpiryWarning
 import com.example.barcode.common.ui.theme.AppMutedDark
 import com.example.barcode.common.ui.theme.AppMutedLight
 import com.example.barcode.common.ui.theme.AppOnSurfaceDark
@@ -169,7 +174,8 @@ private data class WidgetPalette(
     val surface: Color,
     val primary: Color,
     val text: Color,
-    val muted: Color
+    val muted: Color,
+    val expired: Color
 ) {
     companion object {
         fun fromContext(context: Context): WidgetPalette {
@@ -182,7 +188,8 @@ private data class WidgetPalette(
                     surface = AppWidgetSurfaceDark,
                     primary = AppPrimary,
                     text = AppOnSurfaceDark,
-                    muted = AppMutedDark
+                    muted = AppMutedDark,
+                    expired = WidgetExpiredDark
                 )
             } else {
                 WidgetPalette(
@@ -190,12 +197,16 @@ private data class WidgetPalette(
                     surface = AppWidgetSurfaceLight,
                     primary = AppPrimary,
                     text = AppOnSurfaceLight,
-                    muted = AppMutedLight
+                    muted = AppMutedLight,
+                    expired = WidgetExpiredLight
                 )
             }
         }
     }
 }
+
+private val WidgetExpiredLight = Color(0xFF7D5260)
+private val WidgetExpiredDark = Color(0xFFEFB8C8)
 
 @Composable
 private fun WidgetFridgeCompactRow(
@@ -207,7 +218,8 @@ private fun WidgetFridgeCompactRow(
         ?.takeIf { it.isNotBlank() }
         ?: "Sans nom"
 
-    val expiryLabel = item.expiryDate.toWidgetExpiryLabel()
+    val expiryLabel = item.expiryDate.toWidgetExpiryDelayLabel()
+    val expiryColor = item.expiryDate.toWidgetExpiryColor(colors)
 
     Row(
         modifier = GlanceModifier
@@ -231,8 +243,9 @@ private fun WidgetFridgeCompactRow(
             text = expiryLabel,
             maxLines = 1,
             style = TextStyle(
-                color = colors.muted.toColorProvider(),
-                fontSize = 11.sp
+                color = expiryColor.toColorProvider(),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
             )
         )
     }
@@ -284,65 +297,32 @@ private fun Long.toLastSyncTimeLabel(): String {
     }
 }
 
-private fun Long?.toWidgetExpiryLabel(): String {
-    val value = this ?: return "sans date"
+private fun Long?.toWidgetExpiryDelayLabel(
+    policy: ExpiryPolicy = ExpiryPolicy()
+): String {
+    val value = this?.takeIf { it > 0L } ?: return "—"
 
-    if (value <= 0L) {
-        return "sans date"
-    }
-
-    val diffDays = daysBetweenStartOfDay(
-        fromMillis = System.currentTimeMillis(),
-        toMillis = value
-    )
+    val days = daysUntilExpiry(value, policy)
 
     return when {
-        diffDays < -1 -> "expiré ${-diffDays} j"
-        diffDays == -1 -> "expiré hier"
-        diffDays == 0 -> "aujourd’hui"
-        diffDays == 1 -> "demain"
-        diffDays in 2..6 -> "dans $diffDays j"
-        else -> SimpleDateFormat("dd/MM", Locale.getDefault())
-            .format(Date(value))
+        days < 0 -> "- ${-days} j"
+        days > 0 -> "+ $days j"
+        else -> "0 j"
     }
 }
 
-private fun Long?.isUrgentExpiry(): Boolean {
-    val value = this ?: return false
+private fun Long?.toWidgetExpiryColor(
+    colors: WidgetPalette,
+    policy: ExpiryPolicy = ExpiryPolicy()
+): Color {
+    val value = this?.takeIf { it > 0L }
 
-    if (value <= 0L) {
-        return false
+    return when (expiryLevel(value, policy)) {
+        ExpiryLevel.NONE -> colors.muted
+        ExpiryLevel.EXPIRED -> colors.expired
+        ExpiryLevel.SOON -> ExpiryWarning
+        ExpiryLevel.OK -> colors.primary
     }
-
-    val diffDays = daysBetweenStartOfDay(
-        fromMillis = System.currentTimeMillis(),
-        toMillis = value
-    )
-
-    return diffDays <= 1
-}
-
-private fun daysBetweenStartOfDay(
-    fromMillis: Long,
-    toMillis: Long
-): Int {
-    val from = Calendar.getInstance().apply {
-        timeInMillis = fromMillis
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }
-
-    val to = Calendar.getInstance().apply {
-        timeInMillis = toMillis
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }
-
-    return ((to.timeInMillis - from.timeInMillis) / DateUtils.DAY_IN_MILLIS).toInt()
 }
 
 suspend fun updateFridgeWidgets(context: Context) {
