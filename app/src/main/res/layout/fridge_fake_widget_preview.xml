@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/fake_widget_preview_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_fake_widget_preview"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/fake_widget_preview_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="FrigoZen"
+        android:textColor="#2E7D32"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/fake_widget_preview_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Widget factice"
+        android:textColor="#6D6A63"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/fake_widget_preview_item_1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="🥕 Carottes — demain"
+        android:textColor="#2B2B2B"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/fake_widget_preview_item_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="🥛 Lait — dans 2 jours"
+        android:textColor="#2B2B2B"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/fake_widget_preview_item_3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="🍓 Fraises — aujourd’hui"
+        android:textColor="#2B2B2B"
+        android:textSize="14sp" />
+
+</LinearLayout>

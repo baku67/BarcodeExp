@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Bar code</string>
-    <string name="fridge_widget_description">Résumé factice du frigo</string>
+    <string name="app_name">FrigoZen</string>
+    <string name="fridge_widget_description">FrigoZen Widget</string>
 </resources>

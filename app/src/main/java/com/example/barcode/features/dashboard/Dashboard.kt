@@ -75,6 +75,8 @@ import kotlinx.coroutines.launch
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.features.listeCourse.ShoppingListItemUi
 import java.util.Calendar
+import androidx.compose.material.icons.outlined.Widgets
+import com.example.barcode.widgets.WidgetPinning
 
 
 // ---- Produits (données réelles depuis Items) ----
@@ -106,29 +108,6 @@ private data class SeasonalItemUi(
     val title: String,
     val imageName: String
 )
-
-private val fakeSeasonalVegetables = listOf(
-    SeasonalItemUi("Asperges", "manual_subtype_veg_asparagus"),
-    SeasonalItemUi("Carottes", "manual_subtype_veg_carrot"),
-    SeasonalItemUi("Radis", "manual_subtype_veg_radish"),
-    SeasonalItemUi("Salade iceberg", "manual_subtype_veg_salad"),
-    SeasonalItemUi("Concombre", "manual_subtype_veg_cucumber"),
-    SeasonalItemUi("Tomates", "manual_subtype_veg_tomato"),
-    SeasonalItemUi("Poireau", "manual_subtype_veg_leek"),
-    SeasonalItemUi("Artichaut", "manual_subtype_veg_artichoke"),
-)
-
-private val fakeSeasonalFruits = listOf(
-    SeasonalItemUi("Fraises", "manual_subtype_fruits_strawberries"),
-    SeasonalItemUi("Cerises", "manual_subtype_fruits_cherry"),
-    SeasonalItemUi("Abricot", "manual_subtype_fruits_apricot"),
-    SeasonalItemUi("Kiwi", "manual_subtype_fruits_kiwi"),
-    SeasonalItemUi("Citron jaune", "manual_subtype_fruits_lemon"),
-    SeasonalItemUi("Pomme", "manual_subtype_fruits_apple"),
-    SeasonalItemUi("Poire", "manual_subtype_fruits_pear"),
-    SeasonalItemUi("Myrtilles", "manual_subtype_fruits_blueberries"),
-)
-
 
 private const val DAY_MS: Long = 86_400_000L
 
@@ -264,7 +243,6 @@ fun Dashboard(
                     imageName = it.image.orEmpty()
                 )
             }
-            .ifEmpty { fakeSeasonalFruits.take(5) }
     }
 
     val seasonalVegetables = remember(taxonomy, seasonContext) {
@@ -286,7 +264,6 @@ fun Dashboard(
                     imageName = it.image.orEmpty()
                 )
             }
-            .ifEmpty { fakeSeasonalVegetables.take(5) }
     }
 
     Column(
@@ -323,7 +300,7 @@ fun Dashboard(
             )
         }
 
-        DashboardCardSeasonalFake(
+        DashboardCardSeasonal(
             modifier = Modifier.fillMaxWidth(),
             region = seasonContext.region,
             season = seasonContext.europeSeason,
@@ -334,6 +311,13 @@ fun Dashboard(
                 coroutineScope.launch {
                     sessionManager.setDashboardSeasonalExpanded(expanded)
                 }
+            }
+        )
+
+        DashboardInstallWidgetCard(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                WidgetPinning.requestPinFridgeWidget(context)
             }
         )
     }
@@ -373,7 +357,7 @@ private fun seasonalCardVisualFor(season: EuropeSeason): SeasonalCardVisual {
 
 @SuppressLint("RememberReturnType")
 @Composable
-private fun DashboardCardSeasonalFake(
+private fun DashboardCardSeasonal(
     modifier: Modifier = Modifier,
     region: SeasonRegion,
     season: EuropeSeason,
@@ -508,6 +492,93 @@ private fun DashboardCardSeasonalFake(
                             accent = seasonVisual.accent
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun DashboardInstallWidgetCard(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        onClick = onClick,
+        interactionSource = remember { MutableInteractionSource() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                    shape = RoundedCornerShape(18.dp)
+                )
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Widgets,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Widget d’accueil",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Text(
+                        text = "Gardez un œil sur vos produits à consommer bientôt sans ouvrir l’app.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Ajouter le widget →",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
