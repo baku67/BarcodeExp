@@ -39,7 +39,7 @@ object SyncScheduler {
 
     const val INPUT_TRIGGERED_BY_WIDGET = "triggered_by_widget"
     const val WIDGET_REFRESH_UNIQUE_NAME = "fridge_widget_refresh_once"
-    const val PERIODIC_WIDGET_REFRESH_UNIQUE_NAME = "fridge_widget_refresh_periodic"
+    const val INPUT_WIDGET_SYNC_REQUEST_ID = "widget_sync_request_id"
 
     // Sync utilisé lors des pull-to-refresh, ou modifs entités etc... (?)
     fun enqueueSync(context: Context) {
@@ -61,19 +61,28 @@ object SyncScheduler {
     // Sync forcée depuis le widget (?)
     fun enqueueForceSync(
         context: Context,
-        triggeredByWidget: Boolean = false
+        triggeredByWidget: Boolean = false,
+        widgetSyncRequestId: Long = 0L
     ) {
         val appContext = context.applicationContext
 
-        val req = OneTimeWorkRequestBuilder<SyncWorker>()
+        val builder = OneTimeWorkRequestBuilder<SyncWorker>()
             .addTag(SYNC_TAG)
-            .setConstraints(syncConstraints())
             .setInputData(
                 workDataOf(
-                    INPUT_TRIGGERED_BY_WIDGET to triggeredByWidget
+                    INPUT_TRIGGERED_BY_WIDGET to triggeredByWidget,
+                    INPUT_WIDGET_SYNC_REQUEST_ID to widgetSyncRequestId
                 )
             )
-            .build()
+
+        // Important :
+        // Pour une sync forcée depuis le widget, je ne mets pas de contrainte réseau.
+        // Sinon l'état UI peut passer à "Sync en cours" alors que le worker ne démarre pas.
+        if (!triggeredByWidget) {
+            builder.setConstraints(syncConstraints())
+        }
+
+        val req = builder.build()
 
         WorkManager.getInstance(appContext)
             .enqueueUniqueWork(

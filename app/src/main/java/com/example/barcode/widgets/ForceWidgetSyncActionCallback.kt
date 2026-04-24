@@ -16,16 +16,20 @@ class ForceWidgetSyncActionCallback : ActionCallback {
         parameters: ActionParameters
     ) {
         val appContext = context.applicationContext
+        val prefs = SyncPreferences(appContext)
 
         Log.d("FridgeWidget", "Force sync clicked from widget")
 
-        SyncPreferences(appContext).markWidgetForceSyncStarted()
+        val token = prefs.markWidgetForceSyncStarted()
 
+        // Feedback immédiat côté widget.
+        // On garde updateFridgeWidgets() pour synchroniser toutes les instances du widget.
         updateFridgeWidgets(appContext)
 
         SyncScheduler.enqueueForceSync(
             context = appContext,
-            triggeredByWidget = true
+            triggeredByWidget = true,
+            widgetSyncRequestId = token.requestId
         )
     }
 }

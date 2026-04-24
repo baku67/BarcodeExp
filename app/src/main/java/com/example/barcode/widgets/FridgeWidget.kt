@@ -5,6 +5,8 @@ import android.content.res.Configuration
 import android.text.format.DateUtils
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,17 +63,17 @@ class FridgeWidget : GlanceAppWidget() {
 
         val syncPrefs = SyncPreferences(context)
 
-        val lastSyncFinishedAt = syncPrefs
-            .lastSyncFinishedAt
-            .first()
-
-        val isWidgetForceSyncRunning = syncPrefs
-            .isWidgetForceSyncRunning
-            .first()
-
-        val lastSyncText = lastSyncFinishedAt.toLastSyncTimeLabel()
-
         provideContent {
+            val lastSyncFinishedAt by syncPrefs
+                .lastSyncFinishedAt
+                .collectAsState(initial = 0L)
+
+            val isWidgetForceSyncRunning by syncPrefs
+                .isWidgetForceSyncRunning
+                .collectAsState(initial = false)
+
+            val lastSyncText = lastSyncFinishedAt.toLastSyncTimeLabel()
+
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()

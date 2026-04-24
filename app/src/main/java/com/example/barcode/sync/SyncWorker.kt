@@ -23,7 +23,10 @@ import com.example.barcode.features.listeCourse.ShoppingListApi
 import com.example.barcode.common.utils.sanitizeNutriScore
 import com.example.barcode.widgets.FridgeWidget
 import com.example.barcode.widgets.updateFridgeWidgets
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -34,30 +37,65 @@ class SyncWorker(
     params: WorkerParameters
 ) : CoroutineWorker(ctx, params) {
 
+    companion object {
+        private const val MIN_WIDGET_SYNC_VISIBLE_MS = 800L
+    }
+
     override suspend fun doWork(): Result {
         val triggeredByWidget = inputData.getBoolean(
             SyncScheduler.INPUT_TRIGGERED_BY_WIDGET,
             false
         )
 
+        var widgetSyncRequestId = inputData.getLong(
+            SyncScheduler.INPUT_WIDGET_SYNC_REQUEST_ID,
+            0L
+        )
+
         val prefs = SyncPreferences(applicationContext)
 
-        if (triggeredByWidget) {
-            prefs.markWidgetForceSyncStarted()
+        // Sécurité si un appel widget est fait sans passer par ForceWidgetSyncActionCallback.
+        // Dans le flux normal, l'état est déjà démarré dans le callback pour avoir un feedback immédiat.
+        if (triggeredByWidget && widgetSyncRequestId <= 0L) {
+            val token = prefs.markWidgetForceSyncStarted()
+            widgetSyncRequestId = token.requestId
             updateFridgeWidgets(applicationContext)
         }
 
         return try {
             doSync()
         } finally {
-            if (triggeredByWidget) {
-                prefs.markWidgetForceSyncFinished()
+            if (triggeredByWidget && widgetSyncRequestId > 0L) {
+                withContext(NonCancellable) {
+                    val currentRequestId = prefs.widgetForceSyncRequestId.first()
 
-                // Feedback visuel demandé :
-                // même si doSync() sort plus tôt, le widget affiche une heure de fin.
-                prefs.markLastSyncFinishedNow()
+                    // Si un clic plus récent existe déjà, ce worker n'a plus le droit
+                    // de modifier l'état UI du widget.
+                    if (currentRequestId == widgetSyncRequestId) {
+                        val startedAt = prefs.widgetForceSyncStartedAt.first()
 
-                updateFridgeWidgets(applicationContext)
+                        val elapsed = if (startedAt > 0L) {
+                            System.currentTimeMillis() - startedAt
+                        } else {
+                            MIN_WIDGET_SYNC_VISIBLE_MS
+                        }
+
+                        val remainingVisibleMs = MIN_WIDGET_SYNC_VISIBLE_MS - elapsed
+
+                        // Évite le cas où la sync est tellement rapide que le launcher
+                        // ne rend jamais visuellement "Sync en cours".
+                        if (remainingVisibleMs > 0L) {
+                            delay(remainingVisibleMs)
+                        }
+
+                        val didClear = prefs.markWidgetForceSyncFinished(widgetSyncRequestId)
+
+                        if (didClear) {
+                            prefs.markLastSyncFinishedNow()
+                            updateFridgeWidgets(applicationContext)
+                        }
+                    }
+                }
             }
         }
     }
