@@ -7,6 +7,7 @@ import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.dao.ShoppingListDao
 import com.example.barcode.features.auth.AuthApi
 import com.example.barcode.features.auth.AuthRepository
+import com.example.barcode.sync.SyncScheduler
 
 class BarcodeApp : Application() {
 
@@ -30,6 +31,8 @@ class BarcodeApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        SyncScheduler.enqueuePeriodicSync(this)
 
         authStore = AuthStore(applicationContext)
 
