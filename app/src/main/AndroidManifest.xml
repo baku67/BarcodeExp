@@ -27,6 +27,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.BarCode"
         tools:targetApi="31">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -51,6 +52,19 @@
                     android:host="email-verified" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".widgets.FridgeWidgetReceiver"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/fridge_widget_info" />
+        </receiver>
     </application>
 
 </manifest>
