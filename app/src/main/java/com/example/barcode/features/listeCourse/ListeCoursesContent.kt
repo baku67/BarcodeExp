@@ -1,85 +1,299 @@
 package com.example.barcode.features.listeCourse
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Comment
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.LocalGroceryStore
+import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.ShoppingCartCheckout
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import com.example.barcode.core.SessionManager
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
-import com.example.barcode.core.AppMode
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import com.example.barcode.common.bus.SnackbarBus
+import com.example.barcode.common.ui.components.LocalAppTopBarState
+import com.example.barcode.core.AppMode
+import com.example.barcode.core.SessionManager
+import com.example.barcode.domain.models.AppIcon
+import com.example.barcode.features.fridge.components.shared.SegIcon
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import com.example.barcode.sync.SyncScheduler
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun ListeCoursesContent(innerPadding: PaddingValues, isActive: Boolean) {
-
-    val appContext = LocalContext.current.applicationContext
+fun ListeCoursesContent(
+    innerPadding: PaddingValues,
+    isActive: Boolean,
+    onAddItem: (ShoppingListScope) -> Unit,
+    vm: ShoppingListViewModel,
+) {
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val session = remember { SessionManager(appContext) }
     val scope = rememberCoroutineScope()
 
     val mode = session.appMode.collectAsState(initial = AppMode.AUTH).value
     val token = session.token.collectAsState(initial = null).value
 
-    var refreshing by rememberSaveable { mutableStateOf(false) }
+    val workInfos by WorkManager.getInstance(appContext)
+        .getWorkInfosByTagLiveData(SyncScheduler.SYNC_TAG)
+        .observeAsState(emptyList())
 
-    // vérifie si données déja fetch pour ce JWT, "1er chargement" todo:remplacer par 1ers chargements dans GloabLoaderScreen Splash
-    var initialLoading by rememberSaveable { mutableStateOf(false) }   // ✅ loader initial dédié au premier chargement
+    val isSyncing = workInfos.any { it.state == WorkInfo.State.RUNNING }
+
+    var refreshing by rememberSaveable { mutableStateOf(false) }
     var loadedForToken by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // TODO: remplacer le delay par vrai refresh VM/API
-    suspend fun refreshListeCourses() {
-        if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
-            delay(3_000) // todo
+    val items by vm.items.collectAsState()
+    var filter by rememberSaveable { mutableStateOf(ShoppingFilter.ALL) }
+    var tab by rememberSaveable { mutableStateOf(ShoppingListScope.SHARED) }
+
+    val topBarState = LocalAppTopBarState.current
+    val owner = "shopping_list"
+    var showHelp by rememberSaveable { mutableStateOf(false) }
+
+    if (showHelp) {
+        Dialog(onDismissRequest = { showHelp = false }) {
+            ElevatedCard(
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        text = "Comment utiliser la liste de courses",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    ShoppingHelpRow("👆", "Appui court sur un article pour le basculer entre À acheter et Terminé")
+                    ShoppingHelpRow("✋", "Appui long sur un article pour ouvrir le menu d’options")
+                    ShoppingHelpRow("⭐", "Ajoute ou retire un produit des favoris depuis le menu")
+                    ShoppingHelpRow("👥", "Partagée = visible pour le foyer ; Personnelle = visible seulement pour toi")
+                    ShoppingHelpRow("🗑", "Supprime un article depuis l’appui long ou vide les articles cochés")
+                    ShoppingHelpRow("👥", "Utilise le switch en haut pour passer entre la liste partagée et personnelle")
+                    ShoppingHelpRow("⬇️", "Tire vers le bas pour actualiser visuellement la liste")
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Button(
+                        onClick = { showHelp = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("J’ai compris")
+                    }
+                }
+            }
         }
     }
+
+    DisposableEffect(topBarState, isActive, tab) {
+        if (isActive) {
+            topBarState.subtitle = tab.label
+            topBarState.clearTitleTrailing("items")
+            topBarState.setTitleTrailing(owner) {
+                IconButton(
+                    onClick = { showHelp = true },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.HelpOutline,
+                        contentDescription = "Aide",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    )
+                }
+            }
+            topBarState.setActions(owner) {
+                CoursesScopeIconToggle(
+                    selected = tab,
+                    onSelect = { tab = it }
+                )
+            }
+        } else {
+            topBarState.clearActions(owner)
+            topBarState.clearTitleTrailing(owner)
+        }
+
+        onDispose {
+            topBarState.clearActions(owner)
+            topBarState.clearTitleTrailing(owner)
+        }
+    }
+
+    val availableFilters by remember(items, tab) {
+        derivedStateOf {
+            val present = items
+                .asSequence()
+                .filter { it.scope == tab }
+                .map { it.category }
+                .toSet()
+
+            buildList {
+                add(ShoppingFilter.ALL)
+                addAll(
+                    ShoppingFilter.entries.filter { currentFilter ->
+                        currentFilter != ShoppingFilter.ALL &&
+                                present.any { it.name == currentFilter.name }
+                    }
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(availableFilters) {
+        if (filter != ShoppingFilter.ALL && filter !in availableFilters) {
+            filter = ShoppingFilter.ALL
+        }
+    }
+
+    val listState = rememberLazyListState()
+    val density = LocalDensity.current
+    val collapseThresholdPx = with(density) { 28.dp.roundToPx() }
+    val expandThresholdPx = with(density) { 2.dp.roundToPx() }
+    var showExpandedFilters by rememberSaveable { mutableStateOf(true) }
+
+    LaunchedEffect(listState, collapseThresholdPx, expandThresholdPx) {
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { (index, offset) ->
+            showExpandedFilters = when {
+                index > 0 -> false
+                showExpandedFilters && offset > collapseThresholdPx -> false
+                !showExpandedFilters && offset <= expandThresholdPx -> true
+                else -> showExpandedFilters
+            }
+        }
+    }
+
+    val filtered by remember(items, filter, tab) {
+        derivedStateOf {
+            items
+                .asSequence()
+                .filter { it.scope == tab }
+                .filter { filter.matches(it.category) }
+                .toList()
+        }
+    }
+
+    val (toBuy, inCart) = remember(filtered) { filtered.partition { !it.isChecked } }
+
+    suspend fun refreshListeCourses() {
+        if (mode == AppMode.AUTH && !token.isNullOrBlank()) {
+            SyncScheduler.enqueueSync(appContext)
+            delay(150)
+        } else {
+            delay(150)
+        }
+    }
+
+    fun toggleChecked(itemId: String) = vm.toggleChecked(itemId)
+
+    fun toggleFavoriteWithFeedback(itemId: String) {
+        vm.toggleFavorite(itemId)
+        SnackbarBus.show("Favori mis à jour")
+    }
+
+    fun removeItem(itemId: String) = vm.delete(itemId)
+
+    fun clearCheckedItems() = vm.clearChecked(tab)
 
     LaunchedEffect(isActive, mode, token) {
         val canLoad = isActive && mode == AppMode.AUTH && !token.isNullOrBlank()
         if (!canLoad) return@LaunchedEffect
-
-        // auto-load 1 seule fois (par token)
         if (loadedForToken == token) return@LaunchedEffect
 
-        initialLoading = true
         try {
             refreshListeCourses()
         } finally {
-            initialLoading = false
-            loadedForToken = token // ✅ même si échec => évite spam navigation (refresh manuel pour retenter)
+            loadedForToken = token
         }
     }
 
+    val bottomInset = innerPadding.calculateBottomPadding()
+
     Box(Modifier.fillMaxSize()) {
-
-        // Barre de chargement top
-        if (initialLoading) {
-            LinearProgressIndicator(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .align(Alignment.TopCenter),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-            )
-        }
-
         PullToRefreshBox(
-            isRefreshing = refreshing,
+            isRefreshing = refreshing || isSyncing,
             onRefresh = {
                 scope.launch {
                     refreshing = true
@@ -92,20 +306,607 @@ fun ListeCoursesContent(innerPadding: PaddingValues, isActive: Boolean) {
                 .fillMaxSize()
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 96.dp + bottomInset)
             ) {
-
-                // Contenu todo
-                item {
-                    // Empty state temporaire
-                    // (remplace ensuite par tes vraies cartes/recettes)
-                    androidx.compose.material3.Text("Aucune recette pour le moment.")
+                stickyHeader {
+                    AnimatedContent(
+                        targetState = showExpandedFilters,
+                        label = "filtersHeaderState",
+                        transitionSpec = {
+                            (fadeIn() + expandVertically(expandFrom = Alignment.Top)) togetherWith
+                                    (fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top))
+                        }
+                    ) { expanded ->
+                        if (expanded) {
+                            StickyListeCoursesHeader(
+                                filter = filter,
+                                availableFilters = availableFilters,
+                                onFilterChange = { filter = it },
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.TopEnd
+                            ) {
+                                ActiveFilterCapsule(
+                                    label = filter.label,
+                                    onClick = {
+                                        scope.launch {
+                                            listState.animateScrollToItem(0)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
 
+                item {
+                    SectionTitle(
+                        icon = Icons.Rounded.LocalGroceryStore,
+                        title = "À acheter",
+                        count = toBuy.size
+                    )
+                }
+
+                if (toBuy.isEmpty()) {
+                    item {
+                        EmptyHint(text = "Rien à acheter — tu es à jour 👌")
+                    }
+                } else {
+                    items(toBuy, key = { it.id }) { item ->
+                        CourseRow(
+                            item = item,
+                            onToggleChecked = { toggleChecked(item.id) },
+                            onToggleFav = { toggleFavoriteWithFeedback(item.id) },
+                            onRemove = { removeItem(item.id) }
+                        )
+                    }
+                }
+
+                item {
+                    Spacer(Modifier.height(2.dp))
+                    SectionTitle(
+                        icon = Icons.Rounded.ShoppingCartCheckout,
+                        title = "Terminé",
+                        count = inCart.size,
+                        trailing = {
+                            if (inCart.isNotEmpty()) {
+                                IconButton(onClick = { clearCheckedItems() }) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Delete,
+                                        contentDescription = "Vider les éléments terminés",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
+                    )
+                }
+
+                if (inCart.isEmpty()) {
+                    item {
+                        EmptyHint(text = "Aucun item validé pour l’instant.")
+                    }
+                } else {
+                    items(inCart, key = { it.id }) { item ->
+                        CourseRow(
+                            item = item,
+                            onToggleChecked = { toggleChecked(item.id) },
+                            onToggleFav = { toggleFavoriteWithFeedback(item.id) },
+                            onRemove = { removeItem(item.id) }
+                        )
+                    }
+                }
+
+                item {
+                    Spacer(Modifier.height(6.dp))
+                    Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    Text(
+                        text = "Appui simple = valider. Appui long = options.",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                    )
+                }
             }
         }
+
+        BottomAddBar(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 12.dp + bottomInset),
+            onClick = { onAddItem(tab) }
+        )
+    }
+}
+
+@Composable
+private fun StickyListeCoursesHeader(
+    filter: ShoppingFilter,
+    availableFilters: List<ShoppingFilter>,
+    onFilterChange: (ShoppingFilter) -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(cs.surface.copy(alpha = 0.98f))
+            .border(
+                width = 1.dp,
+                color = cs.outlineVariant.copy(alpha = 0.45f),
+                shape = RoundedCornerShape(16.dp)
+            )
+    ) {
+        ListeCoursesHeader(
+            filter = filter,
+            availableFilters = availableFilters,
+            onFilterChange = onFilterChange,
+        )
+    }
+}
+
+@Composable
+private fun ActiveFilterCapsule(
+    label: String,
+    onClick: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(cs.surface.copy(alpha = 0.98f))
+            .border(
+                width = 1.dp,
+                color = cs.primary.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(999.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = cs.primary,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.SemiBold
+            ),
+            maxLines = 1
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ListeCoursesHeader(
+    filter: ShoppingFilter,
+    availableFilters: List<ShoppingFilter>,
+    onFilterChange: (ShoppingFilter) -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(cs.primary.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.FilterList,
+                contentDescription = "Filtres",
+                tint = cs.primary,
+                modifier = Modifier.size(13.dp)
+            )
+        }
+
+        availableFilters.forEach { currentFilter ->
+            FilterChipCompact(
+                selected = filter == currentFilter,
+                label = currentFilter.label,
+                onClick = { onFilterChange(currentFilter) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CoursesScopeIconToggle(
+    selected: ShoppingListScope,
+    onSelect: (ShoppingListScope) -> Unit,
+) {
+    val shape = RoundedCornerShape(14.dp)
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
+
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .border(1.dp, borderColor, shape)
+            .padding(2.dp)
+    ) {
+        SegIcon(
+            active = selected == ShoppingListScope.SHARED,
+            icon = AppIcon.Vector(Icons.Rounded.People),
+            onClick = { onSelect(ShoppingListScope.SHARED) },
+            shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+        )
+
+        SegIcon(
+            active = selected == ShoppingListScope.PERSONAL,
+            icon = AppIcon.Vector(Icons.Rounded.Person),
+            onClick = { onSelect(ShoppingListScope.PERSONAL) },
+            shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
+        )
+    }
+}
+
+@Composable
+private fun FilterChipCompact(
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val bg by animateColorAsState(
+        targetValue = if (selected) {
+            cs.primary.copy(alpha = 0.14f)
+        } else {
+            cs.onSurface.copy(alpha = 0.04f)
+        },
+        label = "chipBg"
+    )
+    val fg by animateColorAsState(
+        targetValue = if (selected) cs.primary else cs.onSurfaceVariant,
+        label = "chipFg"
+    )
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 9.dp, vertical = 5.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = fg,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
+            ),
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun BottomAddBar(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        Button(
+            onClick = onClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = cs.primary,
+                contentColor = cs.onPrimary
+            ),
+            contentPadding = PaddingValues(horizontal = 16.dp)
+        ) {
+            Icon(Icons.Rounded.Add, contentDescription = null)
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "Ajouter",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    count: Int,
+    trailing: @Composable (() -> Unit)? = null,
+) {
+    val cs = MaterialTheme.colorScheme
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = cs.onSurfaceVariant.copy(alpha = 0.8f)
+        )
+
+        Spacer(Modifier.width(8.dp))
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = cs.onSurface
+        )
+
+        Spacer(Modifier.width(8.dp))
+
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(cs.onSurface.copy(alpha = 0.07f))
+                .padding(horizontal = 8.dp, vertical = 3.dp)
+        ) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = cs.onSurfaceVariant
+            )
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        trailing?.invoke()
+    }
+}
+
+@Composable
+private fun EmptyHint(text: String) {
+    val cs = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(cs.onSurface.copy(alpha = 0.04f))
+            .padding(14.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = cs.onSurfaceVariant.copy(alpha = 0.85f)
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CourseRow(
+    item: ShoppingListItemUi,
+    onToggleChecked: () -> Unit,
+    onToggleFav: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val haptics = LocalHapticFeedback.current
+
+    var menuExpanded by rememberSaveable(item.id) { mutableStateOf(false) }
+
+    val alpha by animateFloatAsState(
+        targetValue = if (item.isChecked) 0.60f else 1f,
+        label = "rowAlpha"
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (item.isChecked) 0.992f else 1f,
+        label = "rowScale"
+    )
+
+    val warmBg by animateColorAsState(
+        targetValue = if (item.isChecked) {
+            cs.tertiary.copy(alpha = 0.07f)
+        } else {
+            cs.tertiary.copy(alpha = 0.10f)
+        },
+        label = "rowBg"
+    )
+
+    val emoji = when (item.category) {
+        ShoppingCategory.FRUITS_LEGUMES -> "🥕"
+        ShoppingCategory.FRAIS -> "🧀"
+        ShoppingCategory.EPICERIE -> "🍚"
+        ShoppingCategory.VIANDE -> "🥩"
+        ShoppingCategory.POISSON -> "🐟"
+        ShoppingCategory.MAISON -> "🧼"
+        ShoppingCategory.OTHER -> "🛒"
+    }
+
+    val titleDecoration = if (item.isChecked) TextDecoration.LineThrough else TextDecoration.None
+
+    Box {
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .alpha(alpha)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
+                .combinedClickable(
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onToggleChecked()
+                    },
+                    onLongClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        menuExpanded = true
+                    }
+                ),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = cs.surface.copy(alpha = 0.92f)
+            ),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(warmBg)
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(cs.onSurface.copy(alpha = 0.06f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = emoji,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = item.name,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                textDecoration = titleDecoration
+                            ),
+                            color = cs.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (item.isImportant) {
+                                Text(
+                                    text = "Important",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+
+                            if (item.isFavorite) {
+                                Spacer(Modifier.width(8.dp))
+                                Icon(
+                                    imageVector = Icons.Rounded.Favorite,
+                                    contentDescription = "Favori",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .padding(top = 2.dp)
+                                        .size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (!item.quantity.isNullOrBlank()) {
+                        Text(
+                            text = item.quantity,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = cs.onSurfaceVariant
+                        )
+                    }
+
+                    if (!item.note.isNullOrBlank()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Rounded.Comment,
+                                contentDescription = null,
+                                tint = cs.onSurfaceVariant.copy(alpha = 0.75f),
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                text = item.note,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = cs.onSurfaceVariant.copy(alpha = 0.88f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false }
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (item.isFavorite) "Retirer des favoris" else "Ajouter aux favoris"
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = if (item.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.Star,
+                        contentDescription = null
+                    )
+                },
+                onClick = {
+                    menuExpanded = false
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onToggleFav()
+                }
+            )
+
+            DropdownMenuItem(
+                text = { Text("Supprimer") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = null,
+                        tint = cs.error
+                    )
+                },
+                onClick = {
+                    menuExpanded = false
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onRemove()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ShoppingHelpRow(icon: String, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(text = icon)
+        Spacer(Modifier.width(10.dp))
+        Text(text = text)
     }
 }

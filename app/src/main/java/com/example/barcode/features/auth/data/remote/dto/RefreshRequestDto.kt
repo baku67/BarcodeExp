@@ -1,5 +1,7 @@
 package com.example.barcode.features.auth.data.remote.dto
 
+import com.google.gson.annotations.SerializedName
+
 data class RefreshRequestDto(
-    val refresh_token: String
+    @SerializedName("refresh_token") val refreshToken: String
 )

@@ -1,11 +1,16 @@
 package com.example.barcode.features.fridge
 
+import android.net.Uri
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -27,11 +32,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.example.barcode.common.bus.SnackbarBus
@@ -42,6 +49,7 @@ import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.UserPreferences
 import com.example.barcode.features.addItems.ItemsViewModel
+import com.example.barcode.features.addItems.manual.MANUAL_TYPES_DRAWER
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.features.fridge.components.bottomSheetDetails.ImageViewerDialog
 import com.example.barcode.features.fridge.components.bottomSheetDetails.ItemDetailsBottomSheet
@@ -52,6 +60,7 @@ import com.example.barcode.features.fridge.components.fridgeDisplay.ShelfRow
 import com.example.barcode.features.fridge.components.fridgeDisplay.VegetableDrawerCube3D
 import com.example.barcode.features.fridge.components.listDisplay.ItemListCard
 import com.example.barcode.features.fridge.components.shared.FridgeDisplayIconToggle
+import com.example.barcode.features.fridge.components.shared.FridgeItemThumbnail
 import com.example.barcode.sync.SyncScheduler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,6 +74,7 @@ enum class ViewMode { List, Fridge }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FridgePage(
+    navController: NavHostController,
     innerPadding: PaddingValues,
     authVm: AuthViewModel,
     onAddItem: () -> Unit,
@@ -96,16 +106,19 @@ fun FridgePage(
         }
     }
 
+    var showVegDrawerAll by remember { mutableStateOf(false) }
+    val vegDrawerAllSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     // ✅ Pull-to-refresh state (pour avoir l'icône qui descend pendant le geste)
     val pullState = rememberPullToRefreshState()
 
-// ✅ "On a déclenché un refresh" (masque l'icône dès que l'utilisateur relâche)
+    // ✅ "On a déclenché un refresh" (masque l'icône dès que l'utilisateur relâche)
     var pullRefreshRequested by remember { mutableStateOf(false) }
 
-// ✅ L’état de refresh réellement utilisé par le pull-to-refresh UI
+    // ✅ L’état de refresh réellement utilisé par le pull-to-refresh UI
     val isRefreshing = pullRefreshRequested || isSyncing
 
-// ✅ Barre fine : anti-flicker (n'apparaît que si ça dure un peu)
+    // ✅ Barre fine : anti-flicker (n'apparaît que si ça dure un peu)
     var showTopProgress by remember { mutableStateOf(false) }
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
@@ -116,7 +129,7 @@ fun FridgePage(
         }
     }
 
-// ✅ Quand la sync se termine, on reset le flag pull
+    // ✅ Quand la sync se termine, on reset le flag pull
     LaunchedEffect(isSyncing) {
         if (!isSyncing) pullRefreshRequested = false
     }
@@ -152,12 +165,6 @@ fun FridgePage(
     // ✅ Étape intermédiaire : étagère juste après la dernière occupée
     val nextAfterLastOccupiedOpacity = 0.45f
 
-
-
-    // TODO plus tard : calculer via une vraie source (enum zone, tags, etc.)
-    val vegDrawerEmpty = true
-    val vegDrawerOpacity = if (vegDrawerEmpty) ghostOpacity else 1f
-
     // Ecran d'édition Item:
     var editItemEntity by remember { mutableStateOf<ItemEntity?>(null) }
 
@@ -188,12 +195,42 @@ fun FridgePage(
         )
     }
 
+
+    // ✅ Bac à légumes : on place ici les ajouts manuels dont le type a une image de sous-type
+    // (pour l'instant : on n'affiche que ce qui rentre dans la zone visuelle)
+    val vegDrawerItems = remember(sorted) {
+        sorted.filter { item ->
+            // ⚠️ adapte les noms de champs si besoin selon ton ItemEntity
+            item.addMode == "manual" &&
+                    item.manualType != null &&
+                    MANUAL_TYPES_DRAWER.contains(item.manualType)
+        }
+    }
+    val vegDrawerIds = remember(vegDrawerItems) { vegDrawerItems.map { it.id }.toSet() }
+
+    // ✅ En mode Fridge : on retire ces items des étagères pour éviter le doublon
+    val shelfSourceItems = remember(sorted, selectedViewMode, vegDrawerIds) {
+        if (selectedViewMode == ViewMode.Fridge) {
+            sorted.filterNot { it.id in vegDrawerIds }
+        } else {
+            sorted
+        }
+    }
+
+    val vegDrawerEmpty = vegDrawerItems.isEmpty()
+
     // ✅ Message d'état centré quand la liste est vide (LIST et FRIDGE)
+    // En mode Fridge : on considère aussi le bac à légumes.
+    val hasAnyItemForCurrentView = when (selectedViewMode) {
+        ViewMode.List -> sorted.isNotEmpty()
+        ViewMode.Fridge -> shelfSourceItems.isNotEmpty() || vegDrawerItems.isNotEmpty()
+    }
     val emptyCenterLabel: String? = when {
-        sorted.isNotEmpty() -> null
+        hasAnyItemForCurrentView -> null
         isSyncing -> "Synchronisation…"
         else -> "Aucun produit"
     }
+
 
     // --- Sélection multiple (IDs = String)
     var selectionMode by rememberSaveable { mutableStateOf(false) }
@@ -219,16 +256,12 @@ fun FridgePage(
     // ✅ Etageres grid: TOUJOURS au moins 5 rangées en mode Fridge
     val itemsPerShelf = 5
     val minShelvesCount = 5
-    val shelves = remember(sorted, selectedViewMode) {
-        val base = sorted.chunked(itemsPerShelf).toMutableList()
-
+    val shelves = remember(shelfSourceItems, selectedViewMode) {
+        val base = shelfSourceItems.chunked(itemsPerShelf).toMutableList()
         val isFridge = selectedViewMode == ViewMode.Fridge
         if (isFridge) {
-            while (base.size < minShelvesCount) {
-                base.add(emptyList())
-            }
+            while (base.size < minShelvesCount) base.add(emptyList())
         }
-
         base
     }
 
@@ -236,17 +269,17 @@ fun FridgePage(
 
     // ✅ Re-clique sur l’onglet actif => scroll-to-top (animation visible)
     LaunchedEffect(scrollToTopToken, selectedViewMode, emptyCenterLabel) {
-            if (scrollToTopToken == 0) return@LaunchedEffect
+        if (scrollToTopToken == 0) return@LaunchedEffect
 
-            val canScrollToTop = when (selectedViewMode) {
-                    ViewMode.Fridge -> true // shelves >= 5 donc item 0 existe toujours
-                    ViewMode.List -> emptyCenterLabel == null // LazyColumn présent uniquement si non vide
-                }
-
-            if (canScrollToTop) {
-                    runCatching { listState.animateScrollToItem(0) }
-                }
+        val canScrollToTop = when (selectedViewMode) {
+            ViewMode.Fridge -> true // shelves >= 5 donc item 0 existe toujours
+            ViewMode.List -> emptyCenterLabel == null // LazyColumn présent uniquement si non vide
         }
+
+        if (canScrollToTop) {
+            runCatching { listState.animateScrollToItem(0) }
+        }
+    }
 
     // --- Fridge "turn on" effect (dimming uniquement sur les rangées)
     var fridgeOn by remember { mutableStateOf(false) }
@@ -356,6 +389,13 @@ fun FridgePage(
                     viewerImages = images
                     viewerStartIndex = startIndex
                 },
+                onOpenGoodToKnow = { name ->
+                    scope.launch {
+                        sheetState.hide()
+                        sheetItemEntity = null
+                        navController.navigate("good_to_know/${Uri.encode(name)}")
+                    }
+                },
                 onEdit = { item ->
                     scope.launch {
                         sheetState.hide()
@@ -376,6 +416,61 @@ fun FridgePage(
             )
         }
     }
+
+
+    if (showVegDrawerAll) {
+        ModalBottomSheet(
+            onDismissRequest = { showVegDrawerAll = false },
+            sheetState = vegDrawerAllSheetState,
+        ) {
+            Text(
+                text = "Bac à légumes (${vegDrawerItems.size})",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 72.dp),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(vegDrawerItems, key = { it.id }) { item ->
+                    FridgeItemThumbnail(
+                        item = item,
+                        size = 72.dp,
+                        compact = true,
+                        selectionMode = selectionMode,
+                        selected = item.id in selectedIds,
+                        dimAlpha = dimAlpha,
+                        onClick = {
+                            if (selectionMode) {
+                                // ✅ multi-select : on toggle et on garde le modal ouvert
+                                toggleSelect(item.id)
+                            } else {
+                                // ✅ mode normal : on ferme et on ouvre les détails
+                                showVegDrawerAll = false
+                                sheetItemEntity = item
+                            }
+                        },
+                        onLongPress = {
+                            if (!selectionMode) {
+                                // ✅ on entre en multi-select ET on garde le modal ouvert
+                                enterSelectionWith(item.id)
+                            } else {
+                                toggleSelect(item.id)
+                            }
+                        }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+
 
 
     // --- Auto-load 1 seule fois quand l’onglet est réellement actif
@@ -443,7 +538,7 @@ fun FridgePage(
     }
 
     val owner = "items"
-    LaunchedEffect(isActive, selectedViewMode) {
+    DisposableEffect(topBarState, isActive, selectedViewMode) {
         if (isActive) {
             topBarState.setTitleTrailing(owner) {
                 IconButton(
@@ -466,7 +561,11 @@ fun FridgePage(
                 )
             }
         } else {
-            // ✅ important : page inactive => elle ne possède plus le header
+            topBarState.clearActions(owner)
+            topBarState.clearTitleTrailing(owner)
+        }
+
+        onDispose {
             topBarState.clearActions(owner)
             topBarState.clearTitleTrailing(owner)
         }
@@ -586,11 +685,10 @@ fun FridgePage(
                                         )
 
                                         Box(modifier = Modifier.alpha(rowAlpha)) {
+                                            val pkg = appContext.packageName
+
                                             ItemListCard(
-                                                name = it.name ?: "(sans nom)",
-                                                brand = it.brand,
-                                                expiry = it.expiryDate,
-                                                imageUrl = it.imageUrl,
+                                                item = it,
                                                 notesCount = noteCount,
                                                 selected = isSelected,
                                                 selectionMode = selectionMode,
@@ -651,29 +749,44 @@ fun FridgePage(
                                 }
 
                                 // ✅ IMPORTANT : ne retire pas l’item du LazyColumn quand on active le multi-select
-                                if (canScroll) {
-                                    item(key = "vegDrawer") {
-                                        if (!selectionMode) {
-                                            VegetableDrawerCube3D(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 6.dp),
-                                                height = vegDrawerHeight,
-                                                depth = 16.dp,
-                                                dimAlpha = dimAlpha,
-                                                isGhost = vegDrawerEmpty
-                                            ) {
-                                                if (vegDrawerEmpty) {
-                                                    Text(
-                                                        text = "Bac à légumes vide",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-                                                    )
-                                                }
+                                // ✅ IMPORTANT : ne retire pas l’item du LazyColumn quand on active le multi-select
+                                item(key = "vegDrawer") {
+                                    // ✅ Si on le “pin” dans le dock (liste courte + pas selection), on ne le duplique pas dans la liste
+                                    if (!showPinnedVegDrawer) {
+                                        VegetableDrawerCube3D(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 6.dp),
+                                            height = vegDrawerHeight,
+                                            depth = 16.dp,
+                                            dimAlpha = dimAlpha,
+                                            isGhost = vegDrawerEmpty
+                                        ) {
+                                            if (vegDrawerEmpty) {
+                                                Text(
+                                                    text = "Bac à légumes vide",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                                )
+                                            } else {
+                                                VegDrawerPreviewRow(
+                                                    items = vegDrawerItems,
+                                                    selectionMode = selectionMode,
+                                                    selectedIds = selectedIds,
+                                                    dimAlpha = dimAlpha,
+                                                    onClickItem = { item ->
+                                                        if (selectionMode) toggleSelect(item.id) else sheetItemEntity = item
+                                                    },
+                                                    onLongPressItem = { item ->
+                                                        if (!selectionMode) enterSelectionWith(item.id) else toggleSelect(item.id)
+                                                    },
+                                                    onOpenAll = { showVegDrawerAll = true }
+                                                )
                                             }
-                                        } else {
-                                            Spacer(Modifier.height(vegDrawerHeight))
                                         }
+                                    } else {
+                                        // ✅ garde le key stable sans réserver de place (sinon doublon visuel)
+                                        Spacer(Modifier.height(0.dp))
                                     }
                                 }
                             }
@@ -780,6 +893,15 @@ fun FridgePage(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                                         )
+                                    } else {
+                                        VegDrawerManualItemsGrid(
+                                            items = vegDrawerItems,
+                                            selectionMode = selectionMode,
+                                            selectedIds = selectedIds,
+                                            dimAlpha = dimAlpha,
+                                            onClickItem = { item -> sheetItemEntity = item },
+                                            onLongPressItem = { item -> enterSelectionWith(item.id) }
+                                        )
                                     }
                                 }
                                 Spacer(Modifier.height(10.dp))
@@ -793,7 +915,7 @@ fun FridgePage(
                             ) {
                                 Icon(Icons.Filled.Add, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Ajouter un produit")
+                                Text("Ajouter un aliment")
                             }
                         }
                     }
@@ -803,6 +925,163 @@ fun FridgePage(
         }
     }
 }
+
+
+
+@Composable
+private fun VegDrawerManualItemsGrid(
+    items: List<ItemEntity>,
+    selectionMode: Boolean,
+    selectedIds: Set<String>,
+    dimAlpha: Float,
+    onClickItem: (ItemEntity) -> Unit,
+    onLongPressItem: (ItemEntity) -> Unit,
+    thumbSize: Dp = 28.dp,
+    gap: Dp = 6.dp,
+) {
+    if (items.isEmpty()) return
+
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val cols = ((maxWidth.value + gap.value) / (thumbSize.value + gap.value))
+            .toInt()
+            .coerceAtLeast(1)
+        val rows = ((maxHeight.value + gap.value) / (thumbSize.value + gap.value))
+            .toInt()
+            .coerceAtLeast(1)
+
+        val capacity = (cols * rows).coerceAtLeast(1)
+        val visible = remember(items, capacity) { items.take(capacity) }
+        val visibleRows = remember(visible, cols, rows) { visible.chunked(cols).take(rows) }
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(gap, Alignment.Bottom)
+        ) {
+            visibleRows.forEach { rowItems ->
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    rowItems.forEach { item ->
+                        FridgeItemThumbnail(
+                            item = item,
+                            size = 50.dp,
+                            selected = item.id in selectedIds,
+                            selectionMode = selectionMode,
+                            dimAlpha = dimAlpha,
+                            onClick = { onClickItem(item) },
+                            onLongPress = { onLongPressItem(item) },
+                            compact = true
+                        )
+
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+@Composable
+private fun VegDrawerPreviewRow(
+    items: List<ItemEntity>,
+    selectionMode: Boolean,
+    selectedIds: Set<String>,
+    dimAlpha: Float,
+    onClickItem: (ItemEntity) -> Unit,
+    onLongPressItem: (ItemEntity) -> Unit,
+    onOpenAll: () -> Unit,
+    gap: Dp = 6.dp,
+) {
+    if (items.isEmpty()) return
+
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+
+        // ✅ bouton "voir tout" uniquement si on dépasse 5
+        val showMore = items.size > 5
+
+        // ✅ 5 items, OU 4 items si on affiche le bouton
+        val visibleItemCount = when {
+            showMore -> 4
+            else -> minOf(5, items.size)
+        }
+
+        // ✅ slots réels pour calculer la taille (items + bouton éventuel)
+        val slotsForSizing = (visibleItemCount + if (showMore) 1 else 0).coerceAtLeast(1)
+
+        // ✅ ton calcul, mais basé sur les slots réels
+        val size = ((maxWidth - gap * (slotsForSizing - 1)) / slotsForSizing)
+            .coerceIn(30.dp, 48.dp)
+
+        val visible = remember(items, visibleItemCount) { items.take(visibleItemCount) }
+        val remaining = (items.size - visible.size).coerceAtLeast(0)
+
+        // ✅ centrage du groupe
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(gap),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                visible.forEach { item ->
+                    FridgeItemThumbnail(
+                        item = item,
+                        size = size,
+                        compact = true,
+                        selectionMode = selectionMode,
+                        selected = item.id in selectedIds,
+                        dimAlpha = dimAlpha,
+                        onClick = { onClickItem(item) },
+                        onLongPress = { onLongPressItem(item) }
+                    )
+                }
+
+                if (showMore && remaining > 0) {
+                    VegDrawerMoreTile(
+                        size = size,
+                        remaining = remaining,
+                        dimAlpha = dimAlpha,
+                        onClick = onOpenAll
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun VegDrawerMoreTile(
+    size: Dp,
+    remaining: Int,
+    dimAlpha: Float,
+    onClick: () -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val contentAlpha = (1f - (dimAlpha * 0.9f)).coerceIn(0.35f, 1f)
+
+    Surface(
+        modifier = Modifier
+            .size(size)
+            .alpha(contentAlpha)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(10.dp),
+        color = cs.surfaceVariant.copy(alpha = 0.45f),
+        border = BorderStroke(1.dp, cs.outlineVariant.copy(alpha = 0.55f)),
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = "+$remaining",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = cs.onSurfaceVariant.copy(alpha = 0.9f)
+            )
+        }
+    }
+}
+
+
+
 
 /* ——— Utils ——— */
 

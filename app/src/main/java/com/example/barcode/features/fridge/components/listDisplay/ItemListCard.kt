@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,17 +42,17 @@ import com.example.barcode.common.expiry.ExpiryPolicy
 import com.example.barcode.common.expiry.expiryLevel
 import com.example.barcode.common.expiry.formatRelativeDaysCompact
 import com.example.barcode.common.ui.expiry.expiryAccentColor
-import com.example.barcode.common.ui.expiry.expiryStrokeColor
 import com.example.barcode.common.ui.theme.ItemNote
+import com.example.barcode.data.local.entities.ItemEntity
+import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
+import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
 import com.example.barcode.features.fridge.components.shared.ItemThumbnail
+import com.example.barcode.features.fridge.components.shared.rememberEffectiveItemImageUrl
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ItemListCard(
-    name: String,
-    brand: String?,
-    expiry: Long?,
-    imageUrl: String?,
+    item: ItemEntity,
     notesCount: Int = 0,
     hasNotes: Boolean = false, // legacy (si tu n'as pas encore le count)
     selected: Boolean,
@@ -63,6 +64,12 @@ fun ItemListCard(
     val cs = MaterialTheme.colorScheme
     val surface = cs.surface
     val onSurface = cs.onSurface
+
+    val name = item.name ?: "(sans nom)"
+    val brand = item.brand
+    val expiry = item.expiryDate
+
+    val effectiveImageUrl = rememberEffectiveItemImageUrl(item)
 
     // TODO: branche soonDays sur tes Settings
     val expiryPolicy = remember { ExpiryPolicy(soonDays = 2) }
@@ -79,15 +86,6 @@ fun ItemListCard(
         notesCount > 0 -> notesCount
         hasNotes -> 1
         else -> 0
-    }
-
-    val warning = androidx.compose.ui.graphics.Color(0xFFFFC107)
-
-    val expiryColor = when (level) {
-        ExpiryLevel.NONE -> cs.outlineVariant.copy(alpha = 0.90f)
-        ExpiryLevel.EXPIRED -> cs.error
-        ExpiryLevel.SOON -> warning
-        ExpiryLevel.OK -> cs.primary
     }
 
     val cardBorder = when {
@@ -117,7 +115,7 @@ fun ItemListCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Thumbnail
-                ItemThumbnail(imageUrl)
+                ItemThumbnail(effectiveImageUrl)
 
                 Spacer(Modifier.width(12.dp))
 

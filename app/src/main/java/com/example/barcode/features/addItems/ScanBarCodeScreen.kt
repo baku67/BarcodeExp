@@ -103,7 +103,6 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import android.util.Size
@@ -577,7 +576,7 @@ private fun CameraScanOverlay(
         }
 
         // ✅ Lottie centrée dans la fenêtre (discrète)
-        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.barcode_scanner))
+        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.lottie_barcode_scanner_light))
         val progress by animateLottieCompositionAsState(
             composition = composition,
             iterations = LottieConstants.IterateForever
@@ -707,7 +706,7 @@ private fun ResultCard(
                     }
 
                     if (state is AsyncImagePainter.State.Error) {
-                        Text("🧴", fontSize = 20.sp)
+                        Text("\uD83C\uDF71", fontSize = 20.sp)
                     }
                 }
 

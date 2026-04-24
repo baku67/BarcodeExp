@@ -1,18 +1,18 @@
 package com.example.barcode.features.dashboard
 
+import android.annotation.SuppressLint
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,12 +20,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Eco
+import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.RestaurantMenu
-import androidx.compose.material.icons.outlined.TimerOff
-import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -41,11 +47,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -56,80 +64,241 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.R
 import kotlinx.coroutines.delay
 import kotlin.math.min
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.barcode.common.utils.EuropeSeason
+import com.example.barcode.common.utils.SeasonRegion
+import com.example.barcode.common.utils.SeasonalityResolver
+import com.example.barcode.core.SessionManager
+import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
+import kotlinx.coroutines.launch
+import com.example.barcode.data.local.entities.ItemEntity
+import com.example.barcode.features.listeCourse.ShoppingListItemUi
+import java.util.Calendar
 
 
+// ---- Produits (données réelles depuis Items) ----
 
-// TODO: vraies données route dashboard (counts et 5 nextExpiring)
+private const val SOON_THRESHOLD_DAYS = 2
+
 private enum class ExpiryKind { EXPIRED, SOON, FRESH }
+
 private data class ExpiringLine(
     val name: String,
-    val note: String,   // ex: "hier", "1j", "5j", ya une fonction pour ça dans ItemsContent
+    val note: String,   // ex: "hier", "aujourd'hui", "1j", "6j"...
     val kind: ExpiryKind
 )
-private data class FakeDashboardProducts(
+
+private data class DashboardProductsUi(
+    val total: Int,
     val fresh: Int,
     val soon: Int,
     val expired: Int,
     val nextExpiring: List<ExpiringLine>
-) {
-    val total: Int get() = fresh + soon + expired
+)
+
+private data class DashboardShoppingUi(
+    val totalToBuy: Int,
+    val preview: List<String>
+)
+
+private data class SeasonalItemUi(
+    val title: String,
+    val imageName: String
+)
+
+private val fakeSeasonalVegetables = listOf(
+    SeasonalItemUi("Asperges", "manual_subtype_veg_asparagus"),
+    SeasonalItemUi("Carottes", "manual_subtype_veg_carrot"),
+    SeasonalItemUi("Radis", "manual_subtype_veg_radish"),
+    SeasonalItemUi("Salade iceberg", "manual_subtype_veg_salad"),
+    SeasonalItemUi("Concombre", "manual_subtype_veg_cucumber"),
+    SeasonalItemUi("Tomates", "manual_subtype_veg_tomato"),
+    SeasonalItemUi("Poireau", "manual_subtype_veg_leek"),
+    SeasonalItemUi("Artichaut", "manual_subtype_veg_artichoke"),
+)
+
+private val fakeSeasonalFruits = listOf(
+    SeasonalItemUi("Fraises", "manual_subtype_fruits_strawberries"),
+    SeasonalItemUi("Cerises", "manual_subtype_fruits_cherry"),
+    SeasonalItemUi("Abricot", "manual_subtype_fruits_apricot"),
+    SeasonalItemUi("Kiwi", "manual_subtype_fruits_kiwi"),
+    SeasonalItemUi("Citron jaune", "manual_subtype_fruits_lemon"),
+    SeasonalItemUi("Pomme", "manual_subtype_fruits_apple"),
+    SeasonalItemUi("Poire", "manual_subtype_fruits_pear"),
+    SeasonalItemUi("Myrtilles", "manual_subtype_fruits_blueberries"),
+)
+
+
+private const val DAY_MS: Long = 86_400_000L
+
+private fun startOfDay(ms: Long): Long {
+    val cal = Calendar.getInstance()
+    cal.timeInMillis = ms
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    return cal.timeInMillis
 }
-@Composable
-private fun rememberFakeDashboardProducts(): FakeDashboardProducts {
-    // Stable entre recompositions (pas de flicker)
-    return remember {
-        val fresh = 18
-        val soon = 3
-        val expired = 1
 
-        // ✅ cohérent avec les counts (1 EXPIRED, 2 SOON, 2 FRESH = 5 lignes)
-        val nextExpiring = listOf(
-            ExpiringLine("Jambon", "hier", ExpiryKind.EXPIRED),
-            ExpiringLine("Yaourt nature", "1j", ExpiryKind.SOON),
-            ExpiringLine("Salade", "2j", ExpiryKind.SOON),
-            ExpiringLine("Poulet", "3j", ExpiryKind.FRESH),
-            ExpiringLine("Fromage râpé", "6j", ExpiryKind.FRESH),
-        )
+private fun diffDays(expiryMs: Long, nowMs: Long): Int {
+    val e = startOfDay(expiryMs)
+    val n = startOfDay(nowMs)
+    return ((e - n) / DAY_MS).toInt()
+}
 
-        FakeDashboardProducts(
-            fresh = fresh,
-            soon = soon,
-            expired = expired,
-            nextExpiring = nextExpiring
-        )
+private fun expiryNote(diffDays: Int): String = when {
+    diffDays <= -2 -> "il y a ${-diffDays}j"
+    diffDays == -1 -> "hier"
+    diffDays == 0 -> "aujourd'hui"
+    diffDays == 1 -> "1j"
+    else -> "${diffDays}j"
+}
+
+private fun expiryKind(diffDays: Int): ExpiryKind = when {
+    diffDays < 0 -> ExpiryKind.EXPIRED
+    diffDays <= SOON_THRESHOLD_DAYS -> ExpiryKind.SOON
+    else -> ExpiryKind.FRESH
+}
+
+private fun buildDashboardProductsUi(
+    items: List<ItemEntity>,
+    nowMs: Long = System.currentTimeMillis(),
+): DashboardProductsUi {
+    var fresh = 0
+    var soon = 0
+    var expired = 0
+
+    items.forEach { item ->
+        val expiryMs = item.expiryDate?.takeIf { it > 0L }
+        if (expiryMs == null) {
+            // Pas de date => on le compte dans "frais" pour l'instant (sinon ajoute une 4e catégorie "Sans date")
+            fresh++
+        } else {
+            val d = diffDays(expiryMs, nowMs)
+            when (expiryKind(d)) {
+                ExpiryKind.EXPIRED -> expired++
+                ExpiryKind.SOON -> soon++
+                ExpiryKind.FRESH -> fresh++
+            }
+        }
     }
+
+    val nextExpiring = items
+        .asSequence()
+        .mapNotNull { item ->
+            item.expiryDate
+                ?.takeIf { it > 0L }
+                ?.let { expiry -> item to expiry }
+        }
+        .sortedBy { (_, expiry) -> expiry }
+        .take(5)
+        .map { (item, expiryMs) ->
+            val d = diffDays(expiryMs, nowMs)
+            ExpiringLine(
+                name = item.name?.trim()?.takeIf { it.isNotBlank() } ?: "Produit",
+                note = expiryNote(d),
+                kind = expiryKind(d)
+            )
+        }
+        .toList()
+
+    return DashboardProductsUi(
+        total = items.size,
+        fresh = fresh,
+        soon = soon,
+        expired = expired,
+        nextExpiring = nextExpiring
+    )
 }
-// Fin TODO
 
-
-
-
-
-
+/**
+ * ✅ Version recommandée : tu passes directement la liste des items.
+ * Le comptage + la mini-liste "à consommer" sont calculés ici.
+ */
 @Composable
 fun Dashboard(
-    totalProducts: Int,
-    freshCount: Int,
-    expiringSoonCount: Int,
-    expiredCount: Int,
+    items: List<ItemEntity>,
+    shoppingItems: List<ShoppingListItemUi>,
     onNavigateToItems: () -> Unit,
     onNavigateToListeCourses: () -> Unit,
     onNavigateToRecipes: () -> Unit,
 ) {
+    val productsUi = buildDashboardProductsUi(items)
+    val shoppingUi = buildDashboardShoppingUi(shoppingItems)
+
+    val context = LocalContext.current
+    val sessionManager = remember(context) { SessionManager(context) }
+    val coroutineScope = rememberCoroutineScope()
+    val taxonomy = rememberManualTaxonomy()
+
+    val seasonRegion by sessionManager.seasonRegion.collectAsState(
+        initial = SeasonRegion.EU_TEMPERATE
+    )
+
+    val seasonalCardExpanded by sessionManager.dashboardSeasonalExpanded.collectAsState(
+        initial = false
+    )
+
+    val seasonContext = remember(seasonRegion) {
+        SeasonalityResolver.currentContext(seasonRegion)
+    }
+
+    val seasonalFruits = remember(taxonomy, seasonContext) {
+        taxonomy
+            ?.subtypesOf("FRUITS")
+            .orEmpty()
+            .filter {
+                SeasonalityResolver.isInSeason(
+                    subtype = it,
+                    region = seasonContext.region,
+                    month = seasonContext.currentMonth
+                )
+            }
+            .sortedBy { it.title }
+            .take(5)
+            .map {
+                SeasonalItemUi(
+                    title = it.title,
+                    imageName = it.image.orEmpty()
+                )
+            }
+            .ifEmpty { fakeSeasonalFruits.take(5) }
+    }
+
+    val seasonalVegetables = remember(taxonomy, seasonContext) {
+        taxonomy
+            ?.subtypesOf("VEGETABLES")
+            .orEmpty()
+            .filter {
+                SeasonalityResolver.isInSeason(
+                    subtype = it,
+                    region = seasonContext.region,
+                    month = seasonContext.currentMonth
+                )
+            }
+            .sortedBy { it.title }
+            .take(5)
+            .map {
+                SeasonalItemUi(
+                    title = it.title,
+                    imageName = it.image.orEmpty()
+                )
+            }
+            .ifEmpty { fakeSeasonalVegetables.take(5) }
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-
         DashboardCardProductsWide(
-            total = totalProducts,
-            fresh = freshCount,
-            soon = expiringSoonCount,
-            expired = expiredCount,
+            total = productsUi.total,
+            fresh = productsUi.fresh,
+            soon = productsUi.soon,
+            expired = productsUi.expired,
+            nextExpiring = productsUi.nextExpiring,
             onClick = onNavigateToItems
         )
 
@@ -137,7 +306,9 @@ fun Dashboard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            DashboardCardShoppingListFake(
+            DashboardCardShoppingList(
+                total = shoppingUi.totalToBuy,
+                preview = shoppingUi.preview,
                 modifier = Modifier
                     .weight(1f)
                     .height(180.dp),
@@ -151,11 +322,411 @@ fun Dashboard(
                 onClick = onNavigateToRecipes
             )
         }
+
+        DashboardCardSeasonalFake(
+            modifier = Modifier.fillMaxWidth(),
+            region = seasonContext.region,
+            season = seasonContext.europeSeason,
+            fruits = seasonalFruits,
+            vegetables = seasonalVegetables,
+            expanded = seasonalCardExpanded,
+            onExpandedChange = { expanded ->
+                coroutineScope.launch {
+                    sessionManager.setDashboardSeasonalExpanded(expanded)
+                }
+            }
+        )
     }
 }
 
 
 
+private data class SeasonalCardVisual(
+    val illustrationRes: Int,
+    val accent: Color
+)
+
+private fun seasonalCardVisualFor(season: EuropeSeason): SeasonalCardVisual {
+    return when (season) {
+        EuropeSeason.SPRING -> SeasonalCardVisual(
+            illustrationRes = R.drawable.dashboard_season_spring,
+            accent = Color(0xFF4CAF50)
+        )
+
+        EuropeSeason.SUMMER -> SeasonalCardVisual(
+            illustrationRes = R.drawable.dashboard_season_summer,
+            accent = Color(0xFFFF9800)
+        )
+
+        EuropeSeason.AUTUMN -> SeasonalCardVisual(
+            illustrationRes = R.drawable.dashboard_season_automn,
+            accent = Color(0xFFE67E22)
+        )
+
+        EuropeSeason.WINTER -> SeasonalCardVisual(
+            illustrationRes = R.drawable.dashboard_season_winter,
+            accent = Color(0xFF64B5F6)
+        )
+    }
+}
+
+
+@SuppressLint("RememberReturnType")
+@Composable
+private fun DashboardCardSeasonalFake(
+    modifier: Modifier = Modifier,
+    region: SeasonRegion,
+    season: EuropeSeason,
+    fruits: List<SeasonalItemUi>,
+    vegetables: List<SeasonalItemUi>,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
+) {
+    val seasonVisual = remember(season) {
+        seasonalCardVisualFor(season)
+    }
+
+    val subtitle = remember(region, season) {
+        "${SeasonalityResolver.seasonLabel(season)} • ${SeasonalityResolver.regionLabel(region)}"
+    }
+
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(
+            durationMillis = 220,
+            easing = FastOutSlowInEasing
+        ),
+        label = "seasonCardArrowRotation"
+    )
+
+    val headerTitleColor = Color(0xFF111111)
+    val headerSubtitleColor = Color(0xFF151515)
+
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.Transparent
+        ),
+        onClick = { onExpandedChange(!expanded) },
+        interactionSource = remember { MutableInteractionSource() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
+                    shape = RoundedCornerShape(18.dp)
+                )
+        ) {
+            SeasonalIllustrationBackground(
+                illustrationRes = seasonVisual.illustrationRes,
+                accent = seasonVisual.accent,
+                expanded = expanded,
+                modifier = Modifier.matchParentSize()
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(
+                        animationSpec = tween(
+                            durationMillis = 260,
+                            easing = FastOutSlowInEasing
+                        )
+                    )
+                    .padding(
+                        horizontal = 14.dp,
+                        vertical = if (expanded) 14.dp else 18.dp
+                    ),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = if (expanded) 40.dp else 56.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "De saison",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = headerTitleColor
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(if (expanded) 34.dp else 38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                MaterialTheme.colorScheme.surface.copy(
+                                    alpha = if (expanded) 0.46f else 0.36f
+                                )
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f),
+                                shape = RoundedCornerShape(10.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ExpandMore,
+                            contentDescription = if (expanded) "Réduire" else "Développer",
+                            tint = headerTitleColor,
+                            modifier = Modifier.graphicsLayer {
+                                rotationZ = arrowRotation
+                            }
+                        )
+                    }
+                }
+
+                if (expanded) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = headerSubtitleColor
+                        )
+
+                        CompactSeasonCategoryRow(
+                            title = "Fruits",
+                            items = fruits,
+                            accent = seasonVisual.accent
+                        )
+
+                        CompactSeasonCategoryRow(
+                            title = "Légumes",
+                            items = vegetables,
+                            accent = seasonVisual.accent
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CompactSeasonCategoryRow(
+    title: String,
+    items: List<SeasonalItemUi>,
+    accent: Color
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(14.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = accent.copy(alpha = 0.96f)
+        )
+
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items.take(5).forEach { item ->
+                TaxonomyDrawableThumb(
+                    imageName = item.imageName,
+                    contentDescription = item.title,
+                    modifier = Modifier.size(42.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeasonalIllustrationBackground(
+    illustrationRes: Int,
+    accent: Color,
+    expanded: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        if (!expanded) {
+            // État collapsed :
+            // image visible sur toute la hauteur / largeur, sans fade transparent vers le bas
+            Image(
+                painter = painterResource(id = illustrationRes),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize()
+            )
+
+            // légère teinte flashy globale
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                accent.copy(alpha = 0.22f),
+                                accent.copy(alpha = 0.10f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
+            // scrim léger pour garder le texte lisible
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.10f),
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.18f)
+                            )
+                        )
+                    )
+            )
+        } else {
+            // État expanded :
+            // illustration forte en haut, puis fade sous le contenu
+            Image(
+                painter = painterResource(id = illustrationRes),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+                    .drawWithCache {
+                        val imageMask = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.00f to Color.White,
+                                0.16f to Color.White,
+                                0.34f to Color.White.copy(alpha = 0.90f),
+                                0.52f to Color.White.copy(alpha = 0.45f),
+                                0.70f to Color.White.copy(alpha = 0.14f),
+                                0.86f to Color.White.copy(alpha = 0.03f),
+                                1.00f to Color.Transparent
+                            )
+                        )
+
+                        onDrawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = imageMask,
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                    }
+            )
+
+            // teinte flashy en haut
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.00f to accent.copy(alpha = 0.34f),
+                                0.12f to accent.copy(alpha = 0.24f),
+                                0.28f to accent.copy(alpha = 0.12f),
+                                0.50f to Color.Transparent,
+                                1.00f to Color.Transparent
+                            )
+                        )
+                    )
+            )
+
+            // glow
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .drawWithCache {
+                        val glowCenter = Offset(size.width * 0.82f, size.height * 0.10f)
+                        val glowRadius = size.minDimension * 0.34f
+                        val glowBrush = Brush.radialGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.22f),
+                                Color.Transparent
+                            ),
+                            center = glowCenter,
+                            radius = glowRadius
+                        )
+
+                        onDrawBehind {
+                            drawRect(
+                                brush = glowBrush,
+                                blendMode = BlendMode.Screen
+                            )
+                        }
+                    }
+            )
+
+            // scrim global
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.00f to MaterialTheme.colorScheme.surface.copy(alpha = 0.08f),
+                                0.22f to MaterialTheme.colorScheme.surface.copy(alpha = 0.10f),
+                                0.48f to MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
+                                0.72f to MaterialTheme.colorScheme.surface.copy(alpha = 0.34f),
+                                1.00f to MaterialTheme.colorScheme.surface.copy(alpha = 0.52f)
+                            )
+                        )
+                    )
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun TaxonomyDrawableThumb(
+    imageName: String,
+    contentDescription: String?,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val resId = remember(imageName) {
+        context.resources.getIdentifier(imageName, "drawable", context.packageName)
+    }
+
+    if (resId != 0) {
+        Image(
+            painter = painterResource(id = resId),
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = ContentScale.Fit
+        )
+    } else {
+        Icon(
+            imageVector = Icons.Outlined.Eco,
+            contentDescription = contentDescription,
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f),
+            modifier = modifier
+        )
+    }
+}
 
 
 @Composable
@@ -164,17 +735,9 @@ private fun DashboardCardProductsWide(
     fresh: Int,
     soon: Int,
     expired: Int,
+    nextExpiring: List<ExpiringLine>,
     onClick: () -> Unit,
 ) {
-    // TODO Fake “x prochains” (à remplacer plus tard par tes vrais items triés par expiryDate)
-    // TODO: n'afficher que les items qui ont -3/-4 jours de conserv (parmis les 4-5 max)
-    val fake = rememberFakeDashboardProducts()
-
-    val total = fake.total
-    val fresh = fake.fresh
-    val soon = fake.soon
-    val expired = fake.expired
-    val nextExpiring = fake.nextExpiring
 
     Card(
         modifier = Modifier
@@ -226,14 +789,8 @@ private fun DashboardCardProductsWide(
                             Icon(
                                 painter = painterResource(R.drawable.ic_nav_fridge_icon_thicc),
                                 contentDescription = "Produits",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                                modifier = Modifier
-                                    .size(60.dp)
-                                    .iconGlowRightAndFadeLeft(
-                                        glowColor = MaterialTheme.colorScheme.primary,
-                                        fadeWidthFraction = 0.45f,
-                                        glowStrength = 1.45f
-                                    )
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                modifier = Modifier.size(60.dp)
                             )
                         }
 
@@ -257,40 +814,6 @@ private fun DashboardCardProductsWide(
                         }
 
                     }
-
-                    // PILLS
-                    /*
-                    Spacer(Modifier.height(15.dp))
-
-                    // Mini-sections en ligne (ordre cohérent avec la barre : rouge → jaune → vert)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        StatIconPill(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.Eco,
-                            label = "Sains",
-                            value = fresh,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        StatIconPill(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.WarningAmber,
-                            label = "Bientôt",
-                            value = soon,
-                            color = Color(0xFFF9A825)
-                        )
-                        StatIconPill(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Outlined.TimerOff,
-                            label = "Périmés",
-                            value = expired,
-                            color = MaterialTheme.colorScheme.tertiary,
-                            iconAlpha = 0.80f
-                        )
-                    }*/
                 }
 
                 // 3) Droite : mini-liste "À consommer"
@@ -354,98 +877,14 @@ private fun DashboardCardProductsWide(
 }
 
 
-@Composable
-private fun StatIconPill(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    label: String,
-    value: Int,
-    color: Color,
-    iconAlpha: Float = 0.55f
-) {
-    val hasValue = value > 0
-
-    val borderColor = if (hasValue) {
-        color.copy(alpha = 0.22f)
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
-    }
-
-    val numberColor =
-        if (hasValue) color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-
-    val iconTint =
-        if (hasValue) color.copy(alpha = iconAlpha)
-        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-
-    // ✅ valeur affichée (tu peux garder — quand 0, ou afficher 0)
-    val safeValue = value.coerceIn(0, 99)
-
-    Column(
-        modifier = modifier
-            .height(56.dp) // ✅ hauteur fixe => pills identiques
-            .clip(RoundedCornerShape(12.dp))
-            .border(0.75.dp, borderColor, RoundedCornerShape(12.dp))
-            .padding(vertical = 6.dp, horizontal = 6.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = iconTint,
-            modifier = Modifier.size(18.dp)
-        )
-
-        Spacer(Modifier.height(4.dp))
-
-        if (hasValue) {
-            AnimatedCountText(
-                target = safeValue,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = numberColor,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Clip,
-                durationMillis = 450
-            )
-        } else {
-            Text(
-                text = "—",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = numberColor,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Clip
-            )
-        }
-
-        // Optionnel : si tu veux le label (ça peut devenir chargé)
-        /*
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis
-        )
-        */
-    }
-}
-
 
 @Composable
-private fun DashboardCardShoppingListFake(
+private fun DashboardCardShoppingList(
+    total: Int,
+    preview: List<String>,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    // Fake data
-    val total = 12
-    val preview = listOf("Lait", "Tomates", "Riz basmati")
-
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(18.dp),
@@ -457,35 +896,25 @@ private fun DashboardCardShoppingListFake(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header (nombre + label) centré
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                // Gauche : icône alignée à droite
                 Row(
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.End
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ReceiptLong,
+                        imageVector = Icons.Outlined.ReceiptLong,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                        modifier = Modifier
-                            .size(60.dp)
-                            .iconGlowRightAndFadeLeft(
-                                glowColor = MaterialTheme.colorScheme.primary,
-                                fadeWidthFraction = 0.6f,
-                                glowStrength = 1.45f
-                            )
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                        modifier = Modifier.size(60.dp)
                     )
-
                 }
 
-                // Droite : nombre + label alignés à gauche
                 Column(
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.Start
@@ -505,20 +934,34 @@ private fun DashboardCardShoppingListFake(
                 }
             }
 
-            // Mini-liste
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                preview.take(3).forEach { item ->
+                if (preview.isEmpty()) {
                     Text(
-                        text = "• $item",
+                        text = "Rien à acheter",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                } else {
+                    preview.forEach { item ->
+                        Text(
+                            text = "• $item",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
+
                 Text(
                     text = "→",
                     style = MaterialTheme.typography.labelSmall,
@@ -551,15 +994,13 @@ private fun DashboardCardRecipesFake(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header (centré)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                // Gauche : icône alignée à droite
                 Row(
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.End
@@ -567,19 +1008,11 @@ private fun DashboardCardRecipesFake(
                     Icon(
                         imageVector = Icons.Outlined.RestaurantMenu,
                         contentDescription = "Recettes",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                        modifier = Modifier
-                            .size(60.dp)
-                            .iconGlowRightAndFadeLeft(
-                                glowColor = MaterialTheme.colorScheme.primary,
-                                fadeWidthFraction = 0.6f,
-                                glowStrength = 1.45f
-                            )
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                        modifier = Modifier.size(60.dp)
                     )
-
                 }
 
-                // Droite : nombre + label alignés à gauche
                 Column(
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.Start
@@ -600,9 +1033,10 @@ private fun DashboardCardRecipesFake(
                 }
             }
 
-            // Mini-liste (full width pour align End)
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 preview.take(3).forEach { r ->
@@ -614,6 +1048,9 @@ private fun DashboardCardRecipesFake(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
+
                 Text(
                     text = "→",
                     style = MaterialTheme.typography.labelSmall,
@@ -778,76 +1215,28 @@ fun AnimatedCountText(
 }
 
 
+private fun buildDashboardShoppingUi(
+    items: List<ShoppingListItemUi>
+): DashboardShoppingUi {
+    val toBuy = items
+        .asSequence()
+        .filter { !it.isChecked }
+        .toList()
 
-private fun Modifier.textFadeToRight(
-    fadeWidthFraction: Float = 0.33f // 33% de la largeur à la fin du texte
-): Modifier = this
-    // ✅ indispensable pour que BlendMode.DstIn fonctionne proprement
-    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-    .drawWithContent {
-        drawContent()
-
-        val start = (1f - fadeWidthFraction).coerceIn(0f, 1f)
-
-        // ✅ Masque alpha : opaque -> transparent (uniquement sur le contenu dessiné = le texte)
-        drawRect(
-            brush = Brush.horizontalGradient(
-                colorStops = arrayOf(
-                    0f to Color.White,
-                    start to Color.White,
-                    1f to Color.Transparent
-                )
-            ),
-            blendMode = BlendMode.DstIn
-        )
-    }
-
-
-
-fun Modifier.iconGlowRightAndFadeLeft(
-    glowColor: Color,
-    fadeWidthFraction: Float = 0.35f, // 0.25f = léger, 0.50f = moitié gauche
-    glowStrength: Float = 1.25f
-) = this
-    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-    .drawWithCache {
-
-        // --- HALO (vient de la droite)
-        val haloCenter = Offset(size.width, size.height * 0.5f)
-
-        val softHalo = Brush.radialGradient(
-            colors = listOf(glowColor.copy(alpha = 0.5f * glowStrength), Color.Transparent),
-            center = haloCenter,
-            radius = size.minDimension * 1.20f
-        )
-
-        val coreHalo = Brush.radialGradient(
-            colors = listOf(glowColor.copy(alpha = 0.9f * glowStrength), Color.Transparent),
-            center = haloCenter,
-            radius = size.minDimension * 0.7f
-        )
-
-        // --- FADE (gauche -> transparent vers la gauche)
-        val fw = (size.width * fadeWidthFraction).coerceIn(1f, size.width)
-        val stop = fw / size.width
-
-        val fadeMask = Brush.horizontalGradient(
-            colorStops = arrayOf(
-                0f to Color.Transparent,   // bord gauche invisible
-                stop to Color.White,       // redevient opaque
-                1f to Color.White          // reste opaque jusqu’à droite
-            )
-        )
-
-        onDrawWithContent {
-            // 1) icône normale
-            drawContent()
-
-            // 2) halo sur les pixels de l’icône uniquement
-            drawRect(softHalo, blendMode = BlendMode.SrcAtop)
-            drawRect(coreHalo, blendMode = BlendMode.SrcAtop)
-
-            // 3) mask alpha pour rendre la gauche transparente
-            drawRect(fadeMask, blendMode = BlendMode.DstIn)
+    val preview = toBuy
+        .take(3)
+        .map { item ->
+            buildString {
+                append(item.name.trim().ifBlank { "Produit" })
+                item.quantity
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { qty -> append(" — $qty") }
+            }
         }
-    }
+
+    return DashboardShoppingUi(
+        totalToBuy = toBuy.size,
+        preview = preview
+    )
+}

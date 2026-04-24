@@ -1,11 +1,12 @@
 package com.example.barcode.core
 
 import android.content.Context
+import androidx.datastore.preferences.preferencesDataStore
+import com.example.barcode.common.utils.SeasonRegion
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
 import com.example.barcode.domain.models.UserProfile
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -25,24 +26,43 @@ class SessionManager(context: Context) {
     val userId = auth.userId
     val userEmail = auth.userEmail
     val userIsVerified = auth.userIsVerified
+    val currentHomeId = auth.currentHomeId
 
     suspend fun setAppMode(mode: AppMode) = auth.setAppMode(mode)
     suspend fun saveToken(token: String) = auth.saveToken(token)
     suspend fun saveRefreshToken(token: String) = auth.saveRefreshToken(token)
+
+    suspend fun saveTokens(token: String, refreshToken: String?) {
+        auth.saveToken(token)
+        refreshToken?.takeIf { it.isNotBlank() }?.let { auth.saveRefreshToken(it) }
+    }
+
     suspend fun saveUser(profile: UserProfile) = auth.saveUser(profile)
 
     suspend fun clear() = auth.clearTokensOnly()
+
     suspend fun logout() = withContext(NonCancellable) {
         auth.logout()
     }
 
     // --- Preferences ---
     val preferences = prefs.preferences
+    val countryCode = prefs.countryCode
+    val seasonRegionOverride = prefs.seasonRegionOverride
+    val seasonRegion = prefs.seasonRegion
+    val dashboardSeasonalExpanded = prefs.dashboardSeasonalExpanded
+
     suspend fun savePreferences(p: UserPreferences) = prefs.savePreferences(p)
     suspend fun clearPreferences() = prefs.clearPreferences()
     suspend fun setTheme(theme: ThemeMode) = prefs.setTheme(theme)
     suspend fun setLang(lang: String) = prefs.setLang(lang)
     suspend fun setFrigoLayout(layout: FrigoLayout) = prefs.setFrigoLayout(layout)
+    suspend fun setCountryCode(countryCode: String) = prefs.setCountryCode(countryCode)
+    suspend fun setSeasonRegionOverride(region: SeasonRegion?) =
+        prefs.setSeasonRegionOverride(region)
+    suspend fun setDashboardSeasonalExpanded(expanded: Boolean) =
+        prefs.setDashboardSeasonalExpanded(expanded)
+
     suspend fun isAuthenticated(): Boolean {
         val modeOk = appMode.first() == AppMode.AUTH
         val tokenOk = !token.first().isNullOrBlank()

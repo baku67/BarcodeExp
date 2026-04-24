@@ -9,11 +9,23 @@ import kotlinx.coroutines.flow.Flow
 interface ItemDao {
 
     // ✅ Vue “normale” : on masque les items supprimés (tombstones)
-    @Query("SELECT * FROM items WHERE deletedAt IS NULL ORDER BY expiryDate ASC")
+    //
+    // ⚠️ Important : si ton ancien schéma avait deletedAt = 0 par défaut,
+    // `deletedAt IS NULL` exclut à tort tous ces items.
+    // On considère donc NULL ou 0 comme "non supprimé".
+    @Query("""
+      SELECT * FROM items
+      WHERE (deletedAt IS NULL OR deletedAt = 0)
+        AND pendingOperation != 'DELETE'
+      ORDER BY ((expiryDate IS NULL) OR expiryDate = 0) ASC, expiryDate ASC, addedAt ASC
+    """)
     fun observeAll(): Flow<List<ItemEntity>>
 
     // (Optionnel) Debug / admin : voir aussi les tombstones
-    @Query("SELECT * FROM items ORDER BY expiryDate ASC")
+    @Query("""
+      SELECT * FROM items
+      ORDER BY ((expiryDate IS NULL) OR expiryDate = 0) ASC, expiryDate ASC, addedAt ASC
+    """)
     fun observeAllIncludingDeleted(): Flow<List<ItemEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

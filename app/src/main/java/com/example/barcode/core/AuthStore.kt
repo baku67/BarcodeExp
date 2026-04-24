@@ -6,8 +6,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.barcode.domain.models.UserProfile
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-
 
 private val TOKEN_KEY = stringPreferencesKey("token")
 private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
@@ -18,6 +18,7 @@ enum class AppMode { LOCAL, AUTH }
 private val USER_ID_KEY = stringPreferencesKey("user_id")
 private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
 private val USER_IS_VERIFIED_KEY = booleanPreferencesKey("user_is_verified")
+private val CURRENT_HOME_ID_KEY = stringPreferencesKey("current_home_id")
 
 class AuthStore(private val context: Context) {
 
@@ -36,6 +37,10 @@ class AuthStore(private val context: Context) {
     val userId: Flow<String?> = ds.data.map { it[USER_ID_KEY] }
     val userEmail: Flow<String?> = ds.data.map { it[USER_EMAIL_KEY] }
     val userIsVerified: Flow<Boolean?> = ds.data.map { it[USER_IS_VERIFIED_KEY] }
+    val currentHomeId: Flow<String?> = ds.data.map { it[CURRENT_HOME_ID_KEY] }
+
+    suspend fun getTokenOnce(): String? = token.first()
+    suspend fun getRefreshTokenOnce(): String? = refreshToken.first()
 
     suspend fun setAppMode(mode: AppMode) {
         ds.edit { it[APP_MODE_KEY] = mode.name }
@@ -49,11 +54,22 @@ class AuthStore(private val context: Context) {
         ds.edit { it[REFRESH_TOKEN_KEY] = token }
     }
 
+    suspend fun saveTokens(token: String, refreshToken: String?) {
+        ds.edit {
+            it[TOKEN_KEY] = token
+            refreshToken?.takeIf { it.isNotBlank() }?.let { rt -> it[REFRESH_TOKEN_KEY] = rt }
+        }
+    }
+
     suspend fun saveUser(profile: UserProfile) {
         ds.edit {
             it[USER_ID_KEY] = profile.id
             it[USER_EMAIL_KEY] = profile.email
             it[USER_IS_VERIFIED_KEY] = profile.isVerified
+
+            profile.currentHomeId?.takeIf { homeId -> homeId.isNotBlank() }?.let { homeId ->
+                it[CURRENT_HOME_ID_KEY] = homeId
+            } ?: it.remove(CURRENT_HOME_ID_KEY)
         }
     }
 
@@ -71,6 +87,7 @@ class AuthStore(private val context: Context) {
             it.remove(USER_ID_KEY)
             it.remove(USER_EMAIL_KEY)
             it.remove(USER_IS_VERIFIED_KEY)
+            it.remove(CURRENT_HOME_ID_KEY)
             it[APP_MODE_KEY] = AppMode.LOCAL.name
         }
     }

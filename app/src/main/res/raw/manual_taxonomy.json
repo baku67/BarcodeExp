@@ -1,0 +1,1471 @@
+{
+  "snippets": {
+    "nutrient.fibers": "**Fibres**: améliorent le transit, la satiété, et aident à réguler glycémie et cholestérol.",
+    "nutrient.potassium": "**Potassium**: utile pour la pression artérielle et la fonction musculaire.",
+    "nutrient.vitamin_k1": "**Vitamine K1**: participe à la coagulation et au maintien des os.",
+    "nutrient.vitamin_c": "**Vitamine C**: soutien immunitaire, antioxydant, participe au collagène (peau, gencives, cicatrisation).",
+    "nutrient.antioxidants": "**Antioxydants**: protection cellulaire (stress oxydatif), bénéfices possibles cardio sur le long terme.",
+    "nutrient.carotenoids": "**Caroténoïdes**: antioxydants ; certains (β-carotène…) contribuent à la vitamine A → vision, peau, immunité.",
+    "nutrient.folate": "**Folate (B9)**: utile au renouvellement cellulaire et à la formation des cellules sanguines (important grossesse/croissance).",
+    "nutrient.low_calories": "**Peu calorique**: pratique pour “faire du volume” et augmenter la satiété sans trop charger l’apport énergétique.",
+    "storage.cut_hermetic_paper_towel": "Si tu l’as coupée: boîte hermétique + papier absorbant + coupe fraîche (retire les bords bruns) → meilleure tenue.",
+    "storage.freeze_blanch_2_3min": "**Congélation**: blanchir 2–3 min, refroidir (eau glacée), égoutter puis congeler (texture bien meilleure qu’en cru).",
+    "storage.veg_drawer": "À mettre au **bac à légumes** (ralentit le ramollissement et la perte d’eau).",
+    "storage.avoid_ethylene": "**Évite l’éthylène**: ne colle pas aux pommes/bananes/avocats/tomates (ça accélère le vieillissement).",
+    "storage.dont_wash": "**Ne lave pas** avant stockage (sauf si tu sèches vraiment à fond): l’eau résiduelle accélère le pourrissement."
+  },
+  "types": [
+    {
+      "code": "VEGETABLES",
+      "title": "Légumes",
+      "image": "manual_type_vegetables"
+    },
+    {
+      "code": "FRUITS",
+      "title": "Fruits",
+      "image": "manual_type_fruits"
+    },
+    {
+      "code": "MEAT",
+      "title": "Viandes",
+      "image": "manual_type_meat"
+    },
+    {
+      "code": "FISH",
+      "title": "Poissons\nFruits de mer",
+      "image": "manual_type_fish"
+    },
+    {
+      "code": "DAIRY",
+      "title": "Produits laitiers",
+      "image": "manual_type_dairy"
+    },
+    {
+      "code": "LEFTOVERS",
+      "title": "Restes\nTupperware",
+      "image": "manual_type_leftovers"
+    }
+  ],
+  "subtypes": [
+    {
+      "code": "VEG_CARROT",
+      "parent": "VEGETABLES",
+      "title": "Carottes",
+      "image": "manual_subtype_veg_carrot",
+      "gradient": {
+        "colors": [
+          "#F0A358",
+          "#D2762B",
+          "#9F4D14"
+        ],
+        "angleDeg": 0
+      },
+      "commentary": "non épluchées:",
+      "storageDaysMin": 10,
+      "storageDaysMax": 21,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          4,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
+      "fridgeAdvise": {
+        "type": "bullets",
+        "items": [
+          "@ref:storage.veg_drawer",
+          "Astuce **anti-mou**: Retire les fanes si elles sont présentes, elles pompent l’humidité.",
+          "Pour garder le **croquant**: plonger les carottes (épluchées ou non) dans une boîte d’eau froide au frigo, et en changeant l’eau régulièrement."
+        ]
+      },
+      "health_good": {
+        "type": "bullets",
+        "items": [
+          "@ref:nutrient.fibers",
+          "@ref:nutrient.carotenoids",
+          "@ref:nutrient.potassium",
+          "@ref:nutrient.antioxidants",
+          "@ref:nutrient.vitamin_k1"
+        ]
+      },
+      "health_warning": {
+        "type": "bullets",
+        "items": [
+          "Compléments de bêta-carotène en plus: mauvaise idée surtout chez les fumeurs/ex-fumeurs."
+        ]
+      },
+      "goodToKnow": {
+        "type": "bullets",
+        "items": [
+          "Une carotte qui devient **molle** n’est pas forcément mauvaise: souvent juste déshydratée → un bain d’eau froide peut la raffermir.",
+          "Les **fanes** sont comestibles: pesto, soupe, poêlée (à condition qu’elles soient bien fraîches).",
+          "**Congélation**: mieux vaut blanchir 2–3 min puis congeler (texture bien meilleure qu’en congelant cru).",
+          "La couleur donne des indices: Orange (caroténoïdes), violette (anthocyanes), jaune (xanthophylles) → profils antioxydants un peu différents."
+        ]
+      }
+    },
+    {
+      "code": "VEG_GREEN_BEANS",
+      "parent": "VEGETABLES",
+      "title": "Haricots verts",
+      "image": "manual_subtype_veg_green_beans",
+      "gradient": {
+        "colors": [
+          "#AACA6A",
+          "#70962C",
+          "#314F0A"
+        ],
+        "angleDeg": 0
+      },
+      "commentary": "crus, 3-4j pour cuits:",
+      "storageDaysMin": 3,
+      "storageDaysMax": 6,
+      "seasons": {
+        "EU_SOUTH": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_TEMPERATE": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          7,
+          8,
+          9
+        ]
+      },
+      "fridgeAdvise": {
+        "type": "bullets",
+        "items": [
+          "@ref:storage.veg_drawer",
+          "@ref:storage.dont_wash",
+          "Évite : sac fermé “tout mouillé” / haricots déjà “pré-lavés” très humides → ça tourne vite."
+        ]
+      },
+      "health_good": {
+        "type": "bullets",
+        "items": [
+          "@ref:nutrient.fibers",
+          "@ref:nutrient.vitamin_c",
+          "@ref:nutrient.vitamin_k1",
+          "@ref:nutrient.carotenoids",
+          "**Vitamine B9** → utile pour la formation des cellules sanguines, important en période de croissance, et souvent mise en avant pour la santé cardio.",
+          "**Minéraux** (potassium, magnésium, calcium, fer) → pression artérielle, fonction musculaire, os, transport de l’oxygène.",
+          "Bonus : **peu caloriques** → top en accompagnement “volume” sans exploser l’apport énergétique."
+        ]
+      },
+      "health_warning": {
+        "type": "bullets",
+        "items": [
+          "Haricots verts en conserve: souvent plus salés → pense à rincer pour réduire le sodium."
+        ]
+      },
+      "goodToKnow": {
+        "type": "bullets",
+        "items": [
+          "Saison: en France, la pleine saison est surtout juillet–août (le reste de l’année, beaucoup viennent de l’import).",
+          "**Congélation**: blanchir ~3 min, refroidir eau glacée, égoutter puis congeler (idéalement en couche pour éviter le “bloc”)."
+        ]
+      }
+    },
+    {
+      "code": "VEG_SALAD",
+      "parent": "VEGETABLES",
+      "title": "Salade iceberg",
+      "image": "manual_subtype_veg_salad",
+      "gradient": {
+        "colors": [
+          "#E6E8A4",
+          "#A7B759",
+          "#4F6422"
+        ],
+        "angleDeg": 0
+      },
+      "commentary": "dépend de déjà lavée, non coupée",
+      "storageDaysMin": 4,
+      "storageDaysMax": 6,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      },
+      "fridgeAdvise": {
+        "type": "bullets",
+        "items": [
+          "@ref:storage.veg_drawer",
+          "@ref:storage.dont_wash",
+          "@ref:storage.avoid_ethylene",
+          "@ref:storage.cut_hermetic_paper_towel"
+        ]
+      },
+      "health_good": {
+        "type": "bullets",
+        "items": [
+          "@ref:nutrient.fibers",
+          "@ref:nutrient.vitamin_k1",
+          "@ref:nutrient.folate",
+          "@ref:nutrient.potassium",
+          "**Eau** (très riche): aide à l’hydratation et à la sensation de fraîcheur/satiété."
+        ]
+      },
+      "health_warning": {
+        "type": "bullets",
+        "items": [
+          "Risque microbien (salades crues) : une salade peut être contaminée (terre/eau de culture, manipulation).\nRince soigneusement, enlève les feuilles externes abîmées.\nPour personnes immunodéprimées, femmes enceintes, personnes âgées: vigilance accrue."
+        ]
+      },
+      "goodToKnow": {
+        "type": "bullets",
+        "items": [
+          "**Raviver une iceberg molle**: 10–15 min dans de l’eau glacée → elle redevient souvent croquante.",
+          "**Congélation déconseillée**: la texture devient spongieuse à la décongélation (trop d’eau).",
+          "**Usage anti-gaspillage**: Feuilles un peu fatiguées → wraps, tacos, ou salade sautée 2 min à la poêle (surprenant mais efficace)."
+        ]
+      }
+    },
+    {
+      "code": "VEG_TOMATO",
+      "parent": "VEGETABLES",
+      "title": "Tomates",
+      "image": "manual_subtype_veg_tomato",
+      "gradient": {
+        "colors": [
+          "#EE654A",
+          "#D54128",
+          "#881F16"
+        ],
+        "angleDeg": 0
+      },
+      "commentary": "se garde plus longtemps mais texture et gout dégradé",
+      "storageDaysMin": 2,
+      "storageDaysMax": 5,
+      "seasons": {
+        "EU_SOUTH": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "EU_TEMPERATE": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          6,
+          7,
+          8
+        ]
+      },
+      "fridgeAdvise": {
+        "type": "bullets",
+        "items": [
+          "À mettre au frigo (**bac à légumes**) uniquement si déjà bien mûres.",
+          "Astuce : **sors-les 30–60 min** avant de les manger → arômes plus présents.",
+          "Idéal si consommée bientôt (qualité gustative): température ambiante, tige vers le bas, loin du soleil et de la chaleur.",
+          "Si tu l’as coupée: Boîte hermétique + papier absorbant + coupe fraîche (retire les bords bruns) → meilleure tenue."
+        ]
+      },
+      "health_good": {
+        "type": "bullets",
+        "items": [
+          "Lycopène (caroténoïde)\nAntioxydant majeur des tomates rouges → soutien de la santé cardiovasculaire (stress oxydatif) et protection cellulaire.\nPlus biodisponible cuit (sauce, coulis) + avec un peu de gras (huile d’olive) → absorption nettement meilleure.",
+          "Vitamine C: Soutien immunité, collagène (peau, gencives), cicatrisation.",
+          "Potassium: Participe à l’équilibre tension artérielle, fonction musculaire et nerveuse.",
+          "**Folate**: utile pour le renouvellement cellulaire (particulièrement important en période de croissance/grossesse).",
+          "Fibres: Aide transit, satiété, et contribue à un meilleur contrôle glycémique.",
+          "Polyphénols: Effets antioxydants/anti-inflammatoires “modérés” mais intéressants sur le long terme (ça dépend beaucoup de la variété et de la maturité)."
+        ]
+      },
+      "health_warning": {
+        "type": "bullets",
+        "items": [
+          "Reflux / brûlures d’estomac : tomate acide → peut aggraver les symptômes chez certains."
+        ]
+      },
+      "goodToKnow": {
+        "type": "bullets",
+        "items": [
+          "Le frigo rend souvent la tomate “farineuse”: le froid perturbe la structure et les arômes.",
+          "Tomate cuite ≠ tomate crue (nutrition):\nCrue : mieux pour vitamine C (fragile à la chaleur).\nCuite : mieux pour lycopène assimilable.",
+          "Congélation: possible, mais la texture devient molle → parfait pour sauces/soupes, moins pour salade."
+        ]
+      }
+    },
+    {
+      "code": "VEG_CUCUMBER",
+      "parent": "VEGETABLES",
+      "title": "Concombre",
+      "image": "manual_subtype_veg_cucumber",
+      "gradient": {
+        "colors": [
+          "#DCE7A5",
+          "#88A852",
+          "#2E4E1F"
+        ],
+        "angleDeg": 0
+      },
+      "commentary": "entier et non lavé",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "EU_TEMPERATE": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      "fridgeAdvise": {
+        "type": "bullets",
+        "items": [
+          "À mettre au frigo (**bac à légumes**).",
+          "**Éviter l’éthylène**: ne le colle pas aux pommes/bananes/tomates/avocats (ça accélère le ramollissement).",
+          "**Lavage**: lave juste avant de consommer (et sèche bien).",
+          "**Attention au froid trop bas**: le concombre est sensible au froid ; évite les zones très froides du frigo (et la congélation si tu veux garder du croquant)."
+        ]
+      },
+      "health_good": {
+        "type": "bullets",
+        "items": [
+          "**Hydratation**: ~95% d’eau → aide à couvrir les besoins hydriques.",
+          "**Peu calorique**: ~14–16 kcal / 100 g → utile en “volume” alimentaire sans charger.",
+          "**Minéraux**: potassium (~170 mg/100 g) → participe à l’équilibre hydrique et à la fonction musculaire et nerveuse.",
+          "**Vitamine K** (~24 µg/100 g): impliquée dans la coagulation et la santé osseuse.",
+          "**Antioxydants**: présence de composés antioxydants (effet “bouclier” contre le stress oxydatif, modestement)."
+        ]
+      },
+      "health_warning": {
+        "type": "bullets",
+        "items": [
+          "Goût très amer = méfiance : une amertume marquée peut signaler des cucurbitacines (irritantes/toxiques chez certaines cucurbitacées). Si c’est franchement amer, n’insiste pas.",
+          "Résidus / cire : privilégie un bon rinçage + frottage (brosse si besoin), surtout si peau cirée."
+        ]
+      },
+      "goodToKnow": {
+        "type": "bullets",
+        "items": [
+          "Astuce **anti-ramollissement**: garde le concombre sec et protégé de la condensation (essuie-tout).",
+          "Botaniquement, c’est un fruit (comme la tomate), même si on le cuisine en légume."
+        ]
+      }
+    },
+    {
+      "code": "VEG_ZUCCHINI",
+      "parent": "VEGETABLES",
+      "title": "Courgette",
+      "image": "manual_subtype_veg_zucchini",
+      "gradient": {
+        "colors": [
+          "#D8DEB2",
+          "#74883F",
+          "#293B17"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_BROCCOLI",
+      "parent": "VEGETABLES",
+      "title": "Brocoli",
+      "image": "manual_subtype_veg_broccoli",
+      "gradient": {
+        "colors": [
+          "#C8DE71",
+          "#618C63",
+          "#25481E"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_CAULIFLOWER",
+      "parent": "VEGETABLES",
+      "title": "Chou-fleur",
+      "image": "manual_subtype_veg_cauliflower",
+      "gradient": {
+        "colors": [
+          "#F3E9D4",
+          "#DCC7A1",
+          "#8A7050"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_PEPPER",
+      "parent": "VEGETABLES",
+      "title": "Poivron",
+      "image": "manual_subtype_veg_pepper",
+      "gradient": {
+        "colors": [
+          "#F1E0C9",
+          "#C46B3A",
+          "#4A2A3D"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_MUSHROOM",
+      "parent": "VEGETABLES",
+      "title": "Champignons",
+      "image": "manual_subtype_veg_mushroom",
+      "gradient": {
+        "colors": [
+          "#F2E9DC",
+          "#D3C1AD",
+          "#7A5C44"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_ONION",
+      "parent": "VEGETABLES",
+      "title": "Oignons",
+      "image": "manual_subtype_veg_onion",
+      "gradient": {
+        "colors": [
+          "#F5EBDD",
+          "#D6A24E",
+          "#6D1F3A"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_POTATO",
+      "parent": "VEGETABLES",
+      "title": "Pommes de terre",
+      "image": "manual_subtype_veg_potato",
+      "gradient": {
+        "colors": [
+          "#E9D4AD",
+          "#C89B5A",
+          "#6A4A2B"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_LEEK",
+      "parent": "VEGETABLES",
+      "title": "Poireau",
+      "image": "manual_subtype_veg_leek",
+      "gradient": {
+        "colors": [
+          "#F2EEDC",
+          "#7FA07A",
+          "#1F3D2A"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_EGGPLANT",
+      "parent": "VEGETABLES",
+      "title": "Aubergine",
+      "image": "manual_subtype_veg_eggplant",
+      "gradient": {
+        "colors": [
+          "#C58BD9",
+          "#5C1E6B",
+          "#220A2C"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_RADISH",
+      "parent": "VEGETABLES",
+      "title": "Radis",
+      "image": "manual_subtype_veg_radish",
+      "gradient": {
+        "colors": [
+          "#F7EBD8",
+          "#C24741",
+          "#631A16"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_BEETROOT",
+      "parent": "VEGETABLES",
+      "title": "Betterave rouge",
+      "image": "manual_subtype_veg_beetroot",
+      "gradient": {
+        "colors": [
+          "#E0556A",
+          "#9B1B30",
+          "#3A0B14"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_TURNIP",
+      "parent": "VEGETABLES",
+      "title": "Navet",
+      "image": "manual_subtype_veg_turnip",
+      "gradient": {
+        "colors": [
+          "#F1E9DD",
+          "#C08AAE",
+          "#5B2A4B"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_CELERY",
+      "parent": "VEGETABLES",
+      "title": "Celeri",
+      "image": "manual_subtype_veg_celery",
+      "gradient": {
+        "colors": [
+          "#F2E9D1",
+          "#AFC86A",
+          "#3F5C1E"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_ARTICHOKE",
+      "parent": "VEGETABLES",
+      "title": "Artichaut",
+      "image": "manual_subtype_veg_artichoke",
+      "gradient": {
+        "colors": [
+          "#C7D98B",
+          "#6F9B4F",
+          "#2E4A2E"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_ASPARAGUS",
+      "parent": "VEGETABLES",
+      "title": "Asperges",
+      "image": "manual_subtype_veg_asparagus",
+      "gradient": {
+        "colors": [
+          "#F1E6C8",
+          "#9FC55E",
+          "#2E5A2A"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_BRUSSELS_SPROUTS",
+      "parent": "VEGETABLES",
+      "title": "Choux de Bruxelles",
+      "image": "manual_subtype_veg_brussels_sprouts",
+      "gradient": {
+        "colors": [
+          "#DDEB9A",
+          "#7FAF3E",
+          "#2F5A1C"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "VEG_SQUASH",
+      "parent": "VEGETABLES",
+      "title": "Courge",
+      "image": "manual_subtype_veg_squash",
+      "gradient": {
+        "colors": [
+          "#F2D7AE",
+          "#D97A2E",
+          "#7A3A1C"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_AVOCADO",
+      "parent": "FRUITS",
+      "title": "Avocat",
+      "image": "manual_subtype_fruits_avocado",
+      "gradient": {
+        "colors": [
+          "#E6E680",
+          "#88A845",
+          "#1F3A1F"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_APPLE",
+      "parent": "FRUITS",
+      "title": "Pomme",
+      "image": "manual_subtype_fruits_apple",
+      "gradient": {
+        "colors": [
+          "#F06A6A",
+          "#D61F1F",
+          "#7A0F12"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_PEAR",
+      "parent": "FRUITS",
+      "title": "Poire",
+      "image": "manual_subtype_fruits_pear",
+      "gradient": {
+        "colors": [
+          "#F4E7B2",
+          "#D7C14F",
+          "#8C4A2E"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_PEACH",
+      "parent": "FRUITS",
+      "title": "Pêche",
+      "image": "manual_subtype_fruits_peach",
+      "gradient": {
+        "colors": [
+          "#F6D7B8",
+          "#E8A15E",
+          "#B84A3A"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_GRAPE",
+      "parent": "FRUITS",
+      "title": "Raisins",
+      "image": "manual_subtype_fruits_grape",
+      "gradient": {
+        "colors": [
+          "#E9F2B8",
+          "#D8B36A",
+          "#5A0F2A"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_CHERRY",
+      "parent": "FRUITS",
+      "title": "Cerises",
+      "image": "manual_subtype_fruits_cherry",
+      "gradient": {
+        "colors": [
+          "#F24A5A",
+          "#C4152C",
+          "#520815"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_LEMON",
+      "parent": "FRUITS",
+      "title": "Citron jaune",
+      "image": "manual_subtype_fruits_lemon",
+      "gradient": {
+        "colors": [
+          "#FFF2A3",
+          "#FFD338",
+          "#C78A00"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_LIME",
+      "parent": "FRUITS",
+      "title": "Citron vert",
+      "image": "manual_subtype_fruits_lime",
+      "gradient": {
+        "colors": [
+          "#DDF48A",
+          "#78C63A",
+          "#2C5F18"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_MELON",
+      "parent": "FRUITS",
+      "title": "Melon",
+      "image": "manual_subtype_fruits_melon",
+      "gradient": {
+        "colors": [
+          "#F3E7CC",
+          "#F2A251",
+          "#5F6F2F"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_WATERMELON",
+      "parent": "FRUITS",
+      "title": "Pastèque",
+      "image": "manual_subtype_fruits_watermelon",
+      "gradient": {
+        "colors": [
+          "#F7D7D1",
+          "#F2403D",
+          "#0F4D2E"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_ORANGE",
+      "parent": "FRUITS",
+      "title": "Orange",
+      "image": "manual_subtype_fruits_orange",
+      "gradient": {
+        "colors": [
+          "#FFD2A8",
+          "#F58A1F",
+          "#B34A14"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_TANGERINE",
+      "parent": "FRUITS",
+      "title": "Mandarine",
+      "image": "manual_subtype_fruits_tangerine",
+      "gradient": {
+        "colors": [
+          "#FFD1A3",
+          "#FF7A1A",
+          "#B84212"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_GRAPEFRUIT",
+      "parent": "FRUITS",
+      "title": "Pamplemousse",
+      "image": "manual_subtype_fruits_grapefruit",
+      "gradient": {
+        "colors": [
+          "#FFE6D6",
+          "#FF6B5A",
+          "#B3192F"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_POMEGRANATE",
+      "parent": "FRUITS",
+      "title": "Grenade",
+      "image": "manual_subtype_fruits_pomegranate",
+      "gradient": {
+        "colors": [
+          "#F7E2D2",
+          "#D61A2C",
+          "#6E0C1B"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_FIG",
+      "parent": "FRUITS",
+      "title": "Figue",
+      "image": "manual_subtype_fruits_fig",
+      "gradient": {
+        "colors": [
+          "#F6E2C8",
+          "#D84B5A",
+          "#3A2354"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_KIWI",
+      "parent": "FRUITS",
+      "title": "Kiwi",
+      "image": "manual_subtype_fruits_kiwi",
+      "gradient": {
+        "colors": [
+          "#F3E8C7",
+          "#79B63A",
+          "#6A4A2F"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_APRICOT",
+      "parent": "FRUITS",
+      "title": "Abricot",
+      "image": "manual_subtype_fruits_apricot",
+      "gradient": {
+        "colors": [
+          "#FFD6B1",
+          "#FF8C3A",
+          "#C64A22"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_MANGO",
+      "parent": "FRUITS",
+      "title": "Mangue",
+      "image": "manual_subtype_fruits_mango",
+      "gradient": {
+        "colors": [
+          "#FFE5A6",
+          "#F6A22C",
+          "#C93B2B"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_BANANA",
+      "parent": "FRUITS",
+      "title": "Banana",
+      "image": "manual_subtype_fruits_banana",
+      "gradient": {
+        "colors": [
+          "#FFF2B5",
+          "#F6D23A",
+          "#B47414"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_PINEAPPLE",
+      "parent": "FRUITS",
+      "title": "Ananas",
+      "image": "manual_subtype_fruits_pineapple",
+      "gradient": {
+        "colors": [
+          "#F1D789",
+          "#F4BA36",
+          "#8C4E19"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_STRAWBERRIES",
+      "parent": "FRUITS",
+      "title": "Fraises",
+      "image": "manual_subtype_fruits_strawberries",
+      "gradient": {
+        "colors": [
+          "#FBA496",
+          "#D72E29",
+          "#AA0907"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_RASPBERRIES",
+      "parent": "FRUITS",
+      "title": "Framboises",
+      "image": "manual_subtype_fruits_raspberries",
+      "gradient": {
+        "colors": [
+          "#F46C7A",
+          "#D3203A",
+          "#7A0B22"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_BLACKBERRIES",
+      "parent": "FRUITS",
+      "title": "Mûres",
+      "image": "manual_subtype_fruits_blackberries",
+      "gradient": {
+        "colors": [
+          "#5A4F78",
+          "#241A3A",
+          "#0B0812"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FRUIT_BLUEBERRIES",
+      "parent": "FRUITS",
+      "title": "Myrtilles",
+      "image": "manual_subtype_fruits_blueberries",
+      "gradient": {
+        "colors": [
+          "#8FA9D8",
+          "#3E5F9A",
+          "#0E1B3A"
+        ],
+        "angleDeg": 0
+      },
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "MEAT_CHICKEN",
+      "parent": "MEAT",
+      "title": "Poulet",
+      "image": "manual_subtype_meat_chicken",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "MEAT_BEEF",
+      "parent": "MEAT",
+      "title": "Bœuf",
+      "image": "manual_subtype_meat_beef",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "MEAT_PORK",
+      "parent": "MEAT",
+      "title": "Porc",
+      "image": "manual_subtype_meat_pork",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "MEAT_TURKEY",
+      "parent": "MEAT",
+      "title": "Dinde",
+      "image": "manual_subtype_meat_turkey",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "MEAT_LAMB",
+      "parent": "MEAT",
+      "title": "Agneau",
+      "image": "manual_subtype_meat_lamb",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "MEAT_GROUND_MEAT",
+      "parent": "MEAT",
+      "title": "Viande hachée",
+      "image": "manual_subtype_meat_ground_meat",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "MEAT_DELI_MEAT",
+      "parent": "MEAT",
+      "title": "Charcuterie",
+      "image": "manual_subtype_meat_deli_meat",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "DAIRY_MILK",
+      "parent": "DAIRY",
+      "title": "Lait",
+      "image": "manual_subtype_dairy_milk",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "DAIRY_YOGURT",
+      "parent": "DAIRY",
+      "title": "Yaourt",
+      "image": "manual_subtype_dairy_yogurt",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "DAIRY_CREAM",
+      "parent": "DAIRY",
+      "title": "Crème",
+      "image": "manual_subtype_dairy_cream",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "DAIRY_BUTTER",
+      "parent": "DAIRY",
+      "title": "Beurre",
+      "image": "manual_subtype_dairy_butter",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "DAIRY_SOFT_CHEESE",
+      "parent": "DAIRY",
+      "title": "Fromage (pâte molle)",
+      "image": "manual_subtype_dairy_soft_cheese",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "DAIRY_HARD_CHEESE",
+      "parent": "DAIRY",
+      "title": "Fromage (pâte dure)",
+      "image": "manual_subtype_dairy_hard_cheese",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "DAIRY_FRESH_CHEESE",
+      "parent": "DAIRY",
+      "title": "Fromage frais / Faisselle",
+      "image": "manual_subtype_dairy_fresh_cheese",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FISH_WHITE",
+      "parent": "FISH",
+      "title": "Poisson blanc",
+      "image": "manual_subtype_fish_white",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FISH_SALMON",
+      "parent": "FISH",
+      "title": "Saumon",
+      "image": "manual_subtype_fish_salmon",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    },
+    {
+      "code": "FISH_SHELLFISH",
+      "parent": "FISH",
+      "title": "Fruits de mer",
+      "image": "manual_subtype_fish_shellfish",
+      "storageDaysMin": 5,
+      "storageDaysMax": 7,
+      "fridgeAdvise": "",
+      "health_good": "",
+      "health_warning": "",
+      "goodToKnow": "Bla bla tout regroupé (bon pour machin, infos originale, attention à"
+    }
+  ]
+}

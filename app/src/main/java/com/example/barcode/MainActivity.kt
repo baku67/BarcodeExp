@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -17,6 +18,7 @@ import androidx.navigation.compose.navigation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.barcode.features.addItems.AddItemViewModel
@@ -30,14 +32,11 @@ import androidx.compose.ui.unit.dp
 import com.example.barcode.features.addItems.AddItemChooseScreen
 import com.example.barcode.features.addItems.ItemAddMode
 import com.example.barcode.features.addItems.manual.ManualDetailsStepScreen
-import com.example.barcode.features.addItems.manual.ManualExpiryStepScreen
 import com.example.barcode.features.addItems.manual.ManualSubtypeStepScreen
-import com.example.barcode.features.addItems.manual.ManualType
 import com.example.barcode.features.addItems.manual.ManualTypeStepScreen
 import com.example.barcode.features.auth.RegisterScreen
 import com.example.barcode.common.ui.navigation.MainTabsScreen
 import com.example.barcode.features.bootstrap.TimelineIntroScreen
-import com.example.barcode.features.auth.AuthRepository
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.core.SessionManager
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,6 +44,14 @@ import kotlinx.coroutines.flow.asSharedFlow
 import com.example.barcode.common.bus.SnackbarBus
 import com.example.barcode.common.ui.components.AppBackground
 import com.example.barcode.common.ui.theme.Theme
+import com.example.barcode.features.addItems.manual.ManualLeftoversDetailsStepScreen
+import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
+import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
+import com.example.barcode.features.fridge.components.bottomSheetDetails.GoodToKnowScreen
+import com.example.barcode.features.listeCourse.ShoppingListAddScreen
+import com.example.barcode.features.listeCourse.ShoppingListScope
+import com.example.barcode.features.listeCourse.ShoppingListViewModel
+import com.example.barcode.features.listeCourse.ShoppingListViewModelFactory
 import com.example.barcode.sync.SyncScheduler
 
 
@@ -67,10 +74,14 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             val appContext = LocalContext.current.applicationContext
+            val app = appContext as BarcodeApp
 
-            val repo = remember { AuthRepository() }
+            val repo = remember { app.authRepository }
             val session = remember(appContext) { SessionManager(appContext) }
             val authVm = remember { AuthViewModel(repo, session) }
+
+            val currentUserId by session.userId.collectAsState(initial = null)
+            val currentHomeId by session.currentHomeId.collectAsState(initial = null)
 
             val navController = rememberNavController()
 
@@ -82,6 +93,14 @@ class MainActivity : ComponentActivity() {
                         color = Color.Transparent,
                         tonalElevation = 0.dp
                     ) {
+
+                        // ✅ charge la taxonomie dès le démarrage pour que le frigo ait les images SUBTYPES
+                        val taxonomyBoot = rememberManualTaxonomy()
+
+                        // ✅ optionnel (mais OK) : assure le chargement même si taxonomyBoot n’est pas “utilisé”
+                        LaunchedEffect(Unit) {
+                            ManualTaxonomyRepository.preload(appContext)
+                        }
 
                         // Si ouverture app suite a click lien email verification (page dédiée ou ici juste snack):
                         LaunchedEffect(Unit) {
@@ -182,14 +201,78 @@ class MainActivity : ComponentActivity() {
                                 )
                             } // contient la navigation au Swipe (Home/Items/Liste/Settings)
 
+                            composable("good_to_know/{itemName}") { backStackEntry ->
+                                val encoded = backStackEntry.arguments?.getString("itemName").orEmpty()
+                                val itemName = Uri.decode(encoded)
+
+                                GoodToKnowScreen(
+                                    itemName = itemName,
+                                    onClose = { navController.popBackStack() }
+                                )
+                            }
+
+                            composable("shoppingList/add/{scope}") { backStackEntry ->
+                                val scopeArg = backStackEntry.arguments?.getString("scope")
+                                val initialScope = ShoppingListScope.fromRoute(scopeArg)
+
+                                val tabsEntry = remember(backStackEntry) {
+                                    navController.getBackStackEntry("tabs")
+                                }
+
+                                val homeId = currentHomeId
+                                val userId = currentUserId
+
+                                if (homeId.isNullOrBlank() || userId.isNullOrBlank()) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
+                                    return@composable
+                                }
+
+                                val shoppingVm: ShoppingListViewModel = viewModel(
+                                    viewModelStoreOwner = tabsEntry,
+                                    factory = ShoppingListViewModelFactory(
+                                        app = app,
+                                        dao = app.shoppingListDao,
+                                        currentHomeId = homeId,
+                                        currentUserId = userId
+                                    )
+                                )
+
+                                ShoppingListAddScreen(
+                                    initialScope = initialScope,
+                                    onClose = { navController.popBackStack() },
+                                    onSubmit = { draft ->
+                                        shoppingVm.addCustomItem(
+                                            scope = initialScope,
+                                            name = draft.name,
+                                            quantity = draft.quantity,
+                                            note = draft.note,
+                                            isImportant = draft.isImportant
+                                        )
+                                        SnackbarBus.show("Produit ajouté")
+                                        navController.popBackStack()
+                                    }
+                                )
+                            }
 
                             // Parcours addItem (choix -> ScanBarCode -> ScanDate -> Confirm) ou (choix -> type -> selection/remplissage)
                             navigation(startDestination = "addItem/choose", route = "addItem") {
 
-                                fun close(addVm: AddItemViewModel) {
-                                    addVm.reset()
-                                    val popped = navController.popBackStack("tabs", false)
-                                    if (!popped) navController.navigate("tabs") { launchSingleTop = true }
+                                fun close() {
+                                    // ✅ Si "tabs" est déjà dans la backstack (cas normal), on pop directement.
+                                    val popped = navController.popBackStack("tabs", inclusive = false)
+
+                                    // ✅ Fallback si pour une raison quelconque tabs n'est pas dans la stack
+                                    if (!popped) {
+                                        navController.navigate("tabs") {
+                                            popUpTo("addItem") { inclusive = true }
+                                            launchSingleTop = true
+                                        }
+                                    }
                                 }
 
                                 // ✅ 0) Choix méthode
@@ -208,7 +291,7 @@ class MainActivity : ComponentActivity() {
                                             addVm.setAddMode(ItemAddMode.MANUAL)
                                             navController.navigate("addItem/manual/type")
                                         },
-                                        onCancel = { close(addVm) }
+                                        onCancel = { close() }
                                     )
                                 }
 
@@ -232,7 +315,7 @@ class MainActivity : ComponentActivity() {
                                             addVm.setNutriScore(product.nutriScore)
                                             navController.navigate("addItem/scan/expiry")
                                         },
-                                        onCancel = { close(addVm) }
+                                        onCancel = { close() }
                                     )
                                 }
 
@@ -253,7 +336,7 @@ class MainActivity : ComponentActivity() {
                                             navController.navigate("addItem/scan/confirm")
                                         },
                                         onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) }
+                                        onCancel = { close() }
                                     )
                                 }
 
@@ -288,10 +371,10 @@ class MainActivity : ComponentActivity() {
                                                 addMode = draft.addMode.value
                                             )
 
-                                            close(addVm)
+                                            close()
                                         },
                                         onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) },
+                                        onCancel = { close() },
                                         onCycleImage = { addVm.cycleNextImage() },
                                         onNutriScoreChange = { addVm.setNutriScore(it)}
                                     )
@@ -306,28 +389,54 @@ class MainActivity : ComponentActivity() {
                                     }
                                     val addVm: AddItemViewModel = viewModel(parentEntry)
 
+                                    val taxonomy = rememberManualTaxonomy()
+
+                                    if (taxonomy == null) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator()
+                                        }
+                                        return@composable
+                                    }
+
                                     ManualTypeStepScreen(
-                                        onPick = { type ->
-                                            addVm.setManualType(type)
+                                        taxonomy = taxonomy,
+                                        onPick = { typeCode: String ->
+                                            addVm.setManualType(typeCode)
 
-                                            when (type) {
+                                            val hasSubtypes = taxonomy.subtypesOf(typeCode).isNotEmpty()
 
-                                                ManualType.LEFTOVERS -> navController.navigate("addItem/manual/leftovers/details") // TODO
+                                            when {
+                                                typeCode == "LEFTOVERS" ->
+                                                    navController.navigate("addItem/manual/leftovers/details")
 
-                                                ManualType.VEGETABLES,
-                                                ManualType.MEAT,
-                                                ManualType.DAIRY
-                                                    -> navController.navigate("addItem/manual/subtype")
+                                                hasSubtypes ->
+                                                    navController.navigate("addItem/manual/subtype")
 
-                                                else -> navController.navigate("addItem/manual/details")
+                                                else ->
+                                                    navController.navigate("addItem/manual/details")
                                             }
                                         },
-                                        onCancel = { close(addVm) },
+                                        onPickSubtype = { typeCode: String, subtypeCode: String ->
+                                            addVm.setManualType(typeCode)
+                                            addVm.setManualSubtype(subtypeCode)
+
+                                            if (typeCode == "LEFTOVERS") {
+                                                navController.navigate("addItem/manual/leftovers/details")
+                                            } else {
+                                                navController.navigate("addItem/manual/details")
+                                            }
+                                        },
+                                        onCancel = { close() },
                                         onBack = { navController.popBackStack() }
                                     )
+
                                 }
 
-                                // ✅ Manuel - Étape 1.1 : subtype (vegetables, viande, laitiers)
+
+                                // ✅ Manuel - Étape 2 : subtype (vegetables, viande, laitiers)
                                 composable("addItem/manual/subtype") { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
                                         navController.getBackStackEntry("addItem")
@@ -342,11 +451,11 @@ class MainActivity : ComponentActivity() {
                                             navController.navigate("addItem/manual/details")
                                         },
                                         onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) }
+                                        onCancel = { close() }
                                     )
                                 }
 
-/*                              TODO: Branch “Restes / Tupperware” : parcours différent
+                                /* TODO: Branch “Restes / Tupperware” : parcours différent
                                 Tu as demandé un parcours différent : c’est une bonne idée (sinon ça va devenir bancal avec “marque”, “nutri-score”, etc.).
                                 Option recommandée (simple & clean)
                                 Dès ManualTypeStepScreen, si type == LEFTOVERS, navigate vers un autre flow :
@@ -354,50 +463,8 @@ class MainActivity : ComponentActivity() {
                                 addItem/manual/leftovers/expiry (proposition auto J+2 / J+3)
                                 confirm*/
 
-                                // ✅ Manuel - Étape 2 : détails
+                                // ✅ Manuel - Étape 3 : détails + confirm
                                 composable("addItem/manual/details") { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry("addItem")
-                                    }
-                                    val addVm: AddItemViewModel = viewModel(parentEntry)
-                                    val draft by addVm.draft.collectAsState()
-
-                                    ManualDetailsStepScreen(
-                                        draft = draft,
-                                        onNext = { name, brandOrNull ->
-                                            addVm.setDetails(name, brandOrNull)
-                                            navController.navigate("addItem/manual/expiry")
-                                        },
-                                        onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) }
-                                    )
-                                }
-
-                                // ✅ Manuel - Étape 3 : DLC optionnelle
-                                composable("addItem/manual/expiry") { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry("addItem")
-                                    }
-                                    val addVm: AddItemViewModel = viewModel(parentEntry)
-                                    val draft by addVm.draft.collectAsState()
-
-                                    ManualExpiryStepScreen(
-                                        title = draft.name ?: "Produit",
-                                        onPickExpiry = { expiryMs ->
-                                            addVm.setExpiryDate(expiryMs)
-                                            navController.navigate("addItem/manual/confirm")
-                                        },
-                                        onSkip = {
-                                            addVm.setExpiryDate(null)
-                                            navController.navigate("addItem/manual/confirm")
-                                        },
-                                        onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) }
-                                    )
-                                }
-
-                                // ✅ Manuel - Étape 4 : confirm (réutilise ton écran)
-                                composable("addItem/manual/confirm") { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
                                         navController.getBackStackEntry("addItem")
                                     }
@@ -409,30 +476,54 @@ class MainActivity : ComponentActivity() {
                                     }
                                     val itemsVm: ItemsViewModel = viewModel(homeEntry)
 
-                                    ConfirmStepScreen(
+                                    ManualDetailsStepScreen(
                                         draft = draft,
-                                        onConfirm = { name, brand, expiry ->
-                                            addVm.setDetails(name, brand)
-                                            addVm.setExpiryDate(expiry)
-
-                                            itemsVm.addItem(
-                                                barcode = (draft.barcode ?: "(sans barcode)"),
-                                                name = (name ?: draft.name ?: "(sans nom)"),
-                                                brand = (brand ?: draft.brand ?: "(sans brand)"),
-                                                expiry = (expiry ?: draft.expiryDate),
-                                                imageUrl = draft.imageUrl, // souvent null en manuel
-                                                imageIngredientsUrl = draft.imageIngredientsUrl,
-                                                imageNutritionUrl = draft.imageNutritionUrl,
-                                                nutriScore = draft.nutriScore,
-                                                addMode = draft.addMode.value
+                                        onNext = { name, brandOrNull, expiryMs ->
+                                            val finalDraft = draft.copy(
+                                                name = name,
+                                                brand = brandOrNull,
+                                                expiryDate = expiryMs
                                             )
 
-                                            close(addVm)
+                                            itemsVm.addItemFromDraft(finalDraft)
+                                            close()
                                         },
                                         onBack = { navController.popBackStack() },
-                                        onCancel = { close(addVm) },
-                                        onCycleImage = { addVm.cycleNextImage() },
-                                        onNutriScoreChange = { addVm.setNutriScore(it) }
+                                        onCancel = { close() }
+                                    )
+                                }
+
+
+                                // ✅ Manuel - Branch LEFTOVERS : détails spécifiques + confirm
+                                composable("addItem/manual/leftovers/details") { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("addItem")
+                                    }
+                                    val addVm: AddItemViewModel = viewModel(parentEntry)
+                                    val draft by addVm.draft.collectAsState()
+
+                                    val homeEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("tabs")
+                                    }
+                                    val itemsVm: ItemsViewModel = viewModel(homeEntry)
+
+                                    ManualLeftoversDetailsStepScreen(
+                                        draft = draft,
+                                        onMetaChange = { addVm.setManualMetaJson(it) },
+                                        onConfirm = { dishName, expiryMs, metaJson ->
+                                            val finalDraft = draft.copy(
+                                                name = dishName,
+                                                brand = null,
+                                                expiryDate = expiryMs,
+                                                manualSubtypeCode = null,     // ✅ pas de subtype pour LEFTOVERS
+                                                manualMetaJson = metaJson     // ✅ on stocke les toggles ici
+                                            )
+
+                                            itemsVm.addItemFromDraft(finalDraft)
+                                            close()
+                                        },
+                                        onBack = { navController.popBackStack() },
+                                        onCancel = { close() }
                                     )
                                 }
                             }

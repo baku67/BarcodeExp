@@ -2,12 +2,15 @@ package com.example.barcode.features.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.barcode.core.AppMode
@@ -20,8 +23,15 @@ import androidx.compose.ui.Alignment
 import com.example.barcode.common.bus.SnackbarBus
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.barcode.common.utils.SeasonRegion
+import com.example.barcode.common.utils.SeasonalityResolver
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.domain.models.UserPreferences
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -347,6 +357,76 @@ fun SettingsContent(
                     PermissionsCard()
                 }
 
+                item {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text("Saisonnalité", style = MaterialTheme.typography.titleLarge)
+
+                            CountrySelectorRow(
+                                selectedCountryCode = prefs.countryCode,
+                                onCountrySelected = { code ->
+                                    authVm.onCountryCodeSelected(code)
+                                }
+                            )
+
+                            Text(
+                                text = "Ce pays sert à déduire automatiquement la zone climatique utilisée pour les fruits et légumes de saison.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            val regionFromCountry = SeasonalityResolver.regionFromCountryCode(prefs.countryCode)
+                            val effectiveRegion = SeasonalityResolver.effectiveRegion(
+                                countryCode = prefs.countryCode,
+                                seasonRegionOverride = prefs.seasonRegionOverride
+                            )
+                            val regionLabel = SeasonalityResolver.regionLabel(effectiveRegion)
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "Zone utilisée :",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                Text(
+                                    text = regionLabel,
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+
+                                SeasonRegionOverrideButton(
+                                    countryCode = prefs.countryCode,
+                                    currentOverride = prefs.seasonRegionOverride,
+                                    onOverrideSelected = { region ->
+                                        authVm.onSeasonRegionOverrideSelected(region)
+                                    }
+                                )
+                            }
+
+                            Text(
+                                text = if (prefs.seasonRegionOverride == null) {
+                                    "Mode automatique : ${SeasonalityResolver.regionLabel(regionFromCountry)} est déduite du pays sélectionné."
+                                } else {
+                                    "Correction manuelle active."
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
                 // Toggle Theme Light/Dark
                 item {
                     ElevatedCard {
@@ -396,10 +476,169 @@ fun SettingsContent(
                 }
             }
         }
+    }
+}
 
 
+@Composable
+private fun CountrySelectorRow(
+    selectedCountryCode: String,
+    onCountrySelected: (String) -> Unit
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    val countries = remember { SeasonalityResolver.europeanCountries() }
+    val selectedLabel = remember(selectedCountryCode, countries) {
+        SeasonalityResolver.countryLabel(selectedCountryCode)
     }
 
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            CountryOptionRow(
+                countryCode = selectedCountryCode,
+                label = selectedLabel,
+                modifier = Modifier.weight(1f),
+                textStyle = MaterialTheme.typography.bodyLarge
+            )
+
+            Spacer(Modifier.width(8.dp))
+
+            Text("Changer")
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                countries.forEach { country ->
+                    DropdownMenuItem(
+                        text = {
+                            CountryOptionRow(
+                                countryCode = country.code,
+                                label = country.label,
+                                textStyle = MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            onCountrySelected(country.code)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeasonRegionOverrideButton(
+    countryCode: String,
+    currentOverride: SeasonRegion?,
+    onOverrideSelected: (SeasonRegion?) -> Unit
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    val automaticRegion = remember(countryCode) {
+        SeasonalityResolver.regionFromCountryCode(countryCode)
+    }
+
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Edit,
+                contentDescription = "Modifier la zone",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        "Automatique (${SeasonalityResolver.regionLabel(automaticRegion)})" +
+                                if (currentOverride == null) " ✓" else ""
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    onOverrideSelected(null)
+                }
+            )
+
+            SeasonRegion.entries.forEach { region ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            SeasonalityResolver.regionLabel(region) +
+                                    if (currentOverride == region) " ✓" else ""
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onOverrideSelected(region)
+                    }
+                )
+            }
+        }
+    }
+}
 
 
+@Composable
+private fun CountryOptionRow(
+    countryCode: String,
+    label: String,
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
+    textColor: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = countryCodeToFlagEmoji(countryCode),
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Text(
+            text = label,
+            style = textStyle,
+            color = textColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+private fun countryCodeToFlagEmoji(countryCode: String): String {
+    val normalized = countryCode
+        .trim()
+        .uppercase(Locale.ROOT)
+
+    if (normalized.length != 2 || normalized.any { !it.isLetter() }) {
+        return "🏳️"
+    }
+
+    val firstCodePoint = normalized[0].code - 'A'.code + 0x1F1E6
+    val secondCodePoint = normalized[1].code - 'A'.code + 0x1F1E6
+
+    return String(Character.toChars(firstCodePoint)) +
+            String(Character.toChars(secondCodePoint))
 }

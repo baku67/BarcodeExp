@@ -1,6 +1,8 @@
 package com.example.barcode.features.auth.data.remote.dto
 
+import com.google.gson.annotations.SerializedName
+
 data class RefreshResponseDto(
     val token: String,
-    val refresh_token: String? = null // rotation => souvent renvoyé
+    @SerializedName("refresh_token") val refreshToken: String? = null
 )

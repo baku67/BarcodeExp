@@ -1,6 +1,16 @@
 package com.example.barcode.features.fridge.components.bottomSheetDetails
 
+import android.graphics.Color as AndroidColor
+
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,9 +28,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.FactCheck
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,10 +41,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -40,7 +57,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -50,6 +69,13 @@ import com.example.barcode.common.expiry.expiryLevel
 import com.example.barcode.common.ui.expiry.expiryStrokeColor
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.entities.ItemNoteEntity
+import com.example.barcode.features.addItems.manual.MANUAL_TYPES_WITH_SUBTYPE_IMAGE
+import com.example.barcode.features.addItems.manual.ManualTaxonomyImageResolver
+import com.example.barcode.features.addItems.manual.ManualTaxonomyRepository
+import com.example.barcode.features.addItems.manual.rememberManualTaxonomy
+import org.json.JSONObject
+import java.time.Instant
+import java.time.ZoneId
 
 @Composable
 fun ItemDetailsBottomSheet(
@@ -59,6 +85,8 @@ fun ItemDetailsBottomSheet(
     onDeleteNote: (String) -> Unit = {},
     onClose: () -> Unit,
     onOpenViewer: (List<ViewerImage>, Int) -> Unit,
+    // ✅ Wiring: callback pour ouvrir la page dédiée "Bon à savoir"
+    onOpenGoodToKnow: (String) -> Unit = {},
     onEdit: (ItemEntity) -> Unit = {},
     onRemove: (ItemEntity) -> Unit = {},
     onAddToFavorites: (ItemEntity) -> Unit = {},
@@ -77,13 +105,56 @@ fun ItemDetailsBottomSheet(
         label = "sheetStrokeColor"
     )
 
+    val context = LocalContext.current
+    val pkg = context.packageName
+
+    val isManual = remember(itemEntity.addMode) {
+        itemEntity.addMode.equals("manual", ignoreCase = true)
+    }
+
+    val isManualLeftovers = remember(isManual, itemEntity.manualType) {
+        isManual && itemEntity.manualType?.equals("LEFTOVERS", ignoreCase = true) == true
+    }
+
+    // ✅ charge la taxonomy en arrière-plan (et alimente le cache pour les images)
+    val taxonomy = rememberManualTaxonomy()
+
+    val effectivePreviewUrl = remember(
+        taxonomy, // ✅ déclenche recomposition quand loaded -> images resolver OK
+        itemEntity.addMode,
+        itemEntity.manualType,
+        itemEntity.manualSubtype,
+        itemEntity.imageUrl,
+        pkg
+    ) {
+        if (!isManual) return@remember itemEntity.imageUrl
+
+        val type = itemEntity.manualType?.trim().orEmpty()
+        val subtype = itemEntity.manualSubtype?.trim().orEmpty()
+
+        // 1) Sous-type (VEGETABLES/MEAT/FISH/DAIRY)
+        if (type in MANUAL_TYPES_WITH_SUBTYPE_IMAGE && subtype.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveSubtypeDrawableResId(context, subtype)
+            if (resId != 0) return@remember "android.resource://$pkg/$resId"
+        }
+
+        // 2) Type (ex: LEFTOVERS n’a pas de sous-type)
+        if (type.isNotBlank()) {
+            val resId = ManualTaxonomyImageResolver.resolveTypeDrawableResId(context, type)
+            if (resId != 0) return@remember "android.resource://$pkg/$resId"
+        }
+
+        itemEntity.imageUrl
+    }
+
     val viewerImages = remember(
         itemEntity.imageUrl,
+        effectivePreviewUrl,
         itemEntity.imageIngredientsUrl,
         itemEntity.imageNutritionUrl
     ) {
         buildViewerImages(
-            previewUrl = itemEntity.imageUrl,
+            previewUrl = effectivePreviewUrl,
             ingredientsUrl = itemEntity.imageIngredientsUrl,
             nutritionUrl = itemEntity.imageNutritionUrl
         )
@@ -162,24 +233,78 @@ fun ItemDetailsBottomSheet(
                 item(key = "header") {
                     BottomSheetDetailsHeaderContent(
                         itemEntity = itemEntity,
+                        previewImageUrl = effectivePreviewUrl,
                         onClose = onClose,
                         onOpenViewer = openViewerFromKind
                     )
                 }
 
-                item(key = "open_images") {
-                    DetailsOpenImageButtons(
-                        ingredientsUrl = itemEntity.imageIngredientsUrl,
-                        nutritionUrl = itemEntity.imageNutritionUrl,
-                        onOpenViewer = openViewerFromUrl
-                    )
+                // ✅ Barcode_scan (et autres) => boutons images
+                if (!isManual) {
+                    item(key = "open_images") {
+                        DetailsOpenImageButtons(
+                            ingredientsUrl = itemEntity.imageIngredientsUrl,
+                            nutritionUrl = itemEntity.imageNutritionUrl,
+                            onOpenViewer = openViewerFromUrl
+                        )
+                    }
                 }
 
-                item(key = "good_to_know") {
-                    GoodToKnowCollapsibleSection(
-                        enabled = !itemEntity.barcode.isNullOrBlank(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                // ✅ Manual + NOT leftovers => Bon à savoir (teaser -> page dédiée)
+                if (isManual && !isManualLeftovers) {
+                    item(key = "good_to_know") {
+                        val goodToKnowCode =
+                            itemEntity.manualSubtype?.trim().takeIf { !it.isNullOrBlank() }
+                                ?: itemEntity.manualType?.trim().takeIf { !it.isNullOrBlank() }
+                                ?: ""
+
+                        val displayTitle = remember(goodToKnowCode, taxonomy) {
+                            taxonomy?.subtypeMeta(goodToKnowCode)?.title
+                                ?: taxonomy?.typeMeta(goodToKnowCode)?.title
+                                ?: prettifyTaxonomyCodeForUi(goodToKnowCode)
+                        }
+
+                        // ✅ Rappel couleur (depuis le gradient du subtype, si dispo)
+                        val teaserGradientColors: List<Color> = remember(goodToKnowCode, taxonomy, cs) {
+                            val hexes = taxonomy?.subtypeMeta(goodToKnowCode)?.gradient?.colors?.take(3).orEmpty()
+                            val parsed = hexes.mapNotNull { hex ->
+                                runCatching { Color(AndroidColor.parseColor(hex)) }.getOrNull()
+                            }
+
+                            if (parsed.size >= 2) {
+                                when (parsed.size) {
+                                    2 -> listOf(parsed[0], parsed[1], parsed[1])
+                                    else -> parsed.take(3)
+                                }
+                            } else {
+                                listOf(cs.primary, cs.tertiary, cs.secondary)
+                            }
+                        }
+
+                        val teaserAccent = remember(teaserGradientColors, cs.primary) {
+                            teaserGradientColors.getOrNull(1)
+                                ?: teaserGradientColors.firstOrNull()
+                                ?: cs.primary
+                        }
+
+                        GoodToKnowTeaserCard(
+                            itemName = displayTitle, // utile pour a11y
+                            accentColor = teaserAccent,
+                            gradientColors = teaserGradientColors,
+                            onOpen = { onOpenGoodToKnow(goodToKnowCode) }, // ✅ on navigate toujours avec le code
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // ✅ Manual + leftovers => Infos plat (manualMetaJson)
+                if (isManualLeftovers) {
+                    item(key = "leftovers_meta") {
+                        LeftoversMetaCollapsibleSection(
+                            manualMetaJson = itemEntity.manualMetaJson,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 item(key = "notes") {
@@ -417,4 +542,259 @@ private fun buildViewerImages(
     }
 
     return out
+}
+
+private const val DAY_MS = 24L * 60L * 60L * 1000L
+
+private data class LeftoversMeta(
+    val cookedAtMs: Long?,
+    val storageDays: Int?,
+    val containsMeat: Boolean,
+    val containsCream: Boolean,
+    val containsRice: Boolean,
+    val containsFish: Boolean,
+    val containsEggs: Boolean,
+    val portions: Int?,
+    val notes: String?
+)
+
+@Composable
+private fun LeftoversMetaCollapsibleSection(
+    manualMetaJson: String?,
+    modifier: Modifier = Modifier
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    val meta = remember(manualMetaJson) { parseLeftoversMeta(manualMetaJson) }
+    if (meta == null) return
+
+    val cs = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(18.dp)
+
+    val arrow by animateFloatAsState(
+        targetValue = if (expanded) 90f else 0f,
+        animationSpec = tween(220),
+        label = "leftoversArrow"
+    )
+
+    val bg = cs.surfaceColorAtElevation(1.dp)
+    val border = cs.outlineVariant.copy(alpha = 0.75f)
+
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .background(bg)
+            .border(1.dp, border, shape)
+            .animateContentSize()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.FactCheck,
+                contentDescription = null,
+                tint = cs.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Infos du plat",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "Détails (portions, cuisson, notes…) ",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cs.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = cs.onSurfaceVariant,
+                modifier = Modifier.rotate(arrow)
+            )
+        }
+
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                val cookedAt = meta.cookedAtMs?.let { "Cuit le ${formatDate(it)}" }
+                val storage = meta.storageDays?.let { "Conservation : $it jours" }
+
+                if (cookedAt != null) Text("• $cookedAt")
+                if (storage != null) Text("• $storage")
+                if (meta.portions != null) Text("• Portions : ${meta.portions}")
+
+                val flags = buildList {
+                    if (meta.containsMeat) add("contient viande")
+                    if (meta.containsFish) add("contient poisson")
+                    if (meta.containsEggs) add("contient œufs")
+                    if (meta.containsCream) add("contient crème")
+                    if (meta.containsRice) add("contient riz")
+                }
+                if (flags.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Contenu : ${flags.joinToString(", ")}",
+                        color = cs.onSurfaceVariant
+                    )
+                }
+
+                meta.notes?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(text = it)
+                }
+            }
+        }
+    }
+}
+
+private fun parseLeftoversMeta(s: String?): LeftoversMeta? {
+    if (s.isNullOrBlank()) return null
+
+    return runCatching {
+        val o = JSONObject(s)
+
+        // On tolère l'absence de "kind", mais si présent et pas leftovers => on ignore
+        val kind = o.optString("kind", "")
+        if (kind.isNotBlank() && kind != "leftovers") return@runCatching null
+
+        val cookedAtMs = if (o.has("cookedAt")) o.optLong("cookedAt") else null
+        val storageDays = if (o.has("storageDays")) o.optInt("storageDays") else null
+
+        LeftoversMeta(
+            cookedAtMs = cookedAtMs,
+            storageDays = storageDays,
+            containsMeat = o.optBoolean("containsMeat", false),
+            containsCream = o.optBoolean("containsCream", false),
+            containsRice = o.optBoolean("containsRice", false),
+            containsFish = o.optBoolean("containsFish", false),
+            containsEggs = o.optBoolean("containsEggs", false),
+            portions = if (o.has("portions")) o.optInt("portions") else null,
+            notes = o.optString("notes", "").takeIf { it.isNotBlank() }
+        )
+    }.getOrNull()
+}
+
+private fun formatDate(ms: Long): String {
+    val zone = ZoneId.systemDefault()
+    val d = Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()
+    return "%02d/%02d/%04d".format(d.dayOfMonth, d.monthValue, d.year)
+}
+
+private fun prettifyTaxonomyCodeForUi(raw: String): String {
+    val s = raw.trim()
+    if (s.isBlank()) return "Cet aliment"
+
+    // Ex: "GREEN_BEANS" -> "Green Beans"
+    val normalized = s
+        .replace('-', '_')
+        .replace(Regex("_+"), "_")
+        .trim('_')
+
+    if (normalized.isBlank()) return "Cet aliment"
+
+    return normalized
+        .split('_')
+        .filter { it.isNotBlank() }
+        .joinToString(" ") { part ->
+            part.lowercase().replaceFirstChar { c ->
+                if (c.isLowerCase()) c.titlecase() else c.toString()
+            }
+        }
+}
+
+@Composable
+private fun GoodToKnowTeaserCard(
+    itemName: String,
+    accentColor: Color,
+    gradientColors: List<Color>,
+    onOpen: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val cs = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(18.dp)
+
+    val baseBg = cs.surfaceColorAtElevation(2.dp)
+
+    val c0 = gradientColors.getOrNull(0) ?: accentColor
+    val c1 = gradientColors.getOrNull(1) ?: accentColor
+    val c2 = gradientColors.getOrNull(2) ?: c1
+
+    // ✅ Test : gradient très léger (discret)
+    val bg0 = lerp(baseBg, c0, 0.12f)
+    val bg1 = lerp(baseBg, c1, 0.07f)
+    val bg2 = lerp(baseBg, c2, 0.03f)
+
+    val bgBrush = remember(baseBg, bg0, bg1, bg2) {
+        Brush.linearGradient(listOf(bg0, bg1, bg2))
+    }
+
+    val border = remember(accentColor, cs.outlineVariant) {
+        lerp(cs.outlineVariant, accentColor, 0.70f).copy(alpha = 0.55f)
+    }
+
+    val iconTint = remember(accentColor) { accentColor.copy(alpha = 0.95f) }
+    val chevronTint = remember(accentColor) { accentColor.copy(alpha = 0.70f) }
+    val iconHalo = remember(accentColor) { accentColor.copy(alpha = 0.14f) }
+
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(bgBrush)
+            .border(1.dp, border, shape)
+            .clickable(onClick = onOpen)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(iconHalo, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(Modifier.width(10.dp))
+
+            Text(
+                text = "Bon à savoir",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+
+            Spacer(Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Ouvrir Bon à savoir pour $itemName",
+                tint = chevronTint
+            )
+        }
+    }
 }

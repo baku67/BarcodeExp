@@ -69,7 +69,7 @@ dependencies {
     // Nav
     implementation("androidx.navigation:navigation-compose:2.5.3")
     // AsyncImage
-    implementation("io.coil-kt:coil-compose:2.0.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
     // Lottie
     implementation("com.airbnb.android:lottie-compose:6.1.0")
     // DataStore
@@ -78,6 +78,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.androidx.ui.unit)
+    implementation(libs.androidx.foundation.layout.android)
     // Room (localStorage DB ?)
     val room = "2.6.1"
     implementation("androidx.room:room-runtime:$room")

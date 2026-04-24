@@ -3,27 +3,34 @@ package com.example.barcode.features.addItems
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.barcode.features.addItems.manual.ManualSubType
-import com.example.barcode.features.addItems.manual.ManualType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class AddItemViewModel(
     private val savedState: SavedStateHandle
 ) : ViewModel() {
 
-    private val _draft = MutableStateFlow(savedState.get<AddItemDraft>("draft") ?: AddItemDraft())
+    private val _draft = MutableStateFlow(
+        savedState.get<AddItemDraft>("draft")
+            ?: AddItemDraft(photoId = UUID.randomUUID().toString())
+    )
+
     val draft = _draft.asStateFlow()
 
     init {
+        if (_draft.value.photoId.isNullOrBlank()) {
+            _draft.update { it.copy(photoId = UUID.randomUUID().toString()) }
+        }
+
         viewModelScope.launch {
             draft.collect { savedState["draft"] = it }
         }
     }
 
-    // *** Propriétés ajout manuel
+    // *** Propriétés (scan / commun)
     fun setBarcode(code: String) = _draft.update { it.copy(barcode = code) }
     fun setDetails(name: String?, brand: String?) = _draft.update { it.copy(name = name, brand = brand) }
     fun setExpiryDate(ts: Long?) = _draft.update { it.copy(expiryDate = ts) }
@@ -33,26 +40,25 @@ class AddItemViewModel(
     fun setNutriScore(v: String?) = _draft.update { it.copy(nutriScore = v) }
     fun setAddMode(mode: ItemAddMode) = _draft.update { it.copy(addMode = mode) }
 
-    // *** Propriétés ajout manuel
-    fun setManualType(type: ManualType) {
+    // *** Propriétés ajout manuel (JSON = source de vérité)
+    fun setManualType(typeCode: String) {
         _draft.update {
-            // Important: si on change le type, on reset le subtype (sinon incohérent)
-            it.copy(manualType = type, manualSubtype = null)
+            // ✅ si on change le type, on reset le subtype (sinon incohérent)
+            it.copy(manualTypeCode = typeCode, manualSubtypeCode = null)
         }
     }
-    fun setManualSubtype(subtype: ManualSubType) {
+
+    fun setManualSubtype(subtypeCode: String) {
         _draft.update { d ->
-            // Garde-fou : subtype doit correspondre au type
-            val type = d.manualType
-            if (type != null && subtype.parentType != type) d
-            else d.copy(manualSubtype = subtype)
+            // garde-fou simple : pas de subtype si aucun type choisi
+            if (d.manualTypeCode.isNullOrBlank()) d
+            else d.copy(manualSubtypeCode = subtypeCode)
         }
     }
 
-    fun reset() { _draft.value = AddItemDraft() }
-
-
-
+    fun reset() {
+        _draft.value = AddItemDraft(photoId = UUID.randomUUID().toString())
+    }
 
     // Pour tester les 4 images candidates récupérées
     fun setImageCandidates(urls: List<String>) = _draft.update { d ->
@@ -80,4 +86,11 @@ class AddItemViewModel(
             imageUrl = list[next]
         )
     }
+
+
+    // *** Propriétés ajout manuel (meta JSON: champs spécifiques, ex: leftovers)
+    fun setManualMetaJson(json: String?) {
+        _draft.update { it.copy(manualMetaJson = json) }
+    }
+
 }

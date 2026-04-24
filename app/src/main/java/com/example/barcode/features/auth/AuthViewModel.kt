@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.barcode.features.fridge.ViewMode
 import com.example.barcode.common.bus.SnackbarBus
+import com.example.barcode.common.utils.SeasonRegion
+import com.example.barcode.common.utils.SeasonalityResolver
 import com.example.barcode.core.AppMode
 import com.example.barcode.core.SessionManager
 import com.example.barcode.domain.models.FrigoLayout
@@ -23,13 +25,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-// Etat réseau uniquement
 data class AuthUiState(
     val loading: Boolean = false,
     val error: String? = null
-) {}
-
-
+)
 
 class AuthViewModel(
     private val repo: AuthRepository,
@@ -44,30 +43,26 @@ class AuthViewModel(
     val userIsVerified: Flow<Boolean?> = session.userIsVerified
     val preferences: Flow<UserPreferences> = session.preferences
 
-    // Pour auth auto après register
     sealed interface AuthEvent {
         data object GoHome : AuthEvent
-        data object GoHomeLocal : AuthEvent   // ✅ NEW
+        data object GoHomeLocal : AuthEvent
     }
+
     private val _events = Channel<AuthEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
-    private val patchFlow = MutableSharedFlow<Map<String, String>>(extraBufferCapacity = 1)
 
+    private val patchFlow = MutableSharedFlow<Map<String, Any?>>(extraBufferCapacity = 1) // any au lieu de string parce que peut etre null pour seasonOrverride (comme dans AuthApi)
     private var loginJob: Job? = null
 
-
-    // Patch des préférences en BDD au lancement ?
     init {
         viewModelScope.launch {
             patchFlow
-                .debounce(500)              // ✅ évite spam
-                .distinctUntilChanged()     // ✅ évite PATCH identiques
-                .collectLatest { body ->    // ✅ annule l’ancien si nouveau arrive
+                .debounce(500)
+                .distinctUntilChanged()
+                .collectLatest { body ->
                     val token = session.token.first() ?: return@collectLatest
                     repo.patchPreferences(token, body)
                         .onFailure {
-                            // IMPORTANT : tu ne reverts pas l'UI.
-                            // Option : afficher un snackbar + marquer "pending sync"
                             SnackbarBus.show("Sync préférences impossible : ${it.message ?: it}")
                         }
                 }
@@ -83,6 +78,7 @@ class AuthViewModel(
             onSuccess = { profile ->
                 session.saveUser(profile)
                 session.savePreferences(profile.toUserPreferences())
+                syncDefaultCountryCodeIfMissing(profile)
                 Result.success(Unit)
             },
             onFailure = { Result.failure(it) }
@@ -106,14 +102,12 @@ class AuthViewModel(
     }
 
     fun onLogin(email: String, password: String) {
-        // évite double taps / auto-login + bouton
         if (uiState.value.loading) return
 
         loginJob?.cancel()
         loginJob = viewModelScope.launch {
             uiState.value = AuthUiState(loading = true, error = null)
 
-            // IMPORTANT : évite de te faire croire qu’un vieux token = login OK
             session.saveToken("")
             runCatching { session.saveRefreshToken("") }
 
@@ -124,17 +118,16 @@ class AuthViewModel(
                     session.saveToken(res.token)
                     res.refreshToken?.let { session.saveRefreshToken(it) }
 
-                    // ✅ mets le mode + navigation tout de suite
                     session.setAppMode(AppMode.AUTH)
                     uiState.value = AuthUiState(loading = false, error = null)
                     _events.trySend(AuthEvent.GoHome)
 
-                    // ✅ /me en background (ne bloque pas l’UI)
                     viewModelScope.launch {
                         repo.me(res.token)
                             .onSuccess { profile ->
                                 session.saveUser(profile)
                                 session.savePreferences(profile.toUserPreferences())
+                                syncDefaultCountryCodeIfMissing(profile)
                             }
                             .onFailure {
                                 SnackbarBus.show("Profil non chargé : ${it.message ?: it}")
@@ -151,9 +144,7 @@ class AuthViewModel(
         }
     }
 
-
     fun onRegister(email: String, password: String, confirmPassword: String) {
-        // petit garde-fou front (évite un call inutile)
         if (password != confirmPassword) {
             uiState.value = uiState.value.copy(error = "Les mots de passe ne correspondent pas")
             return
@@ -163,48 +154,61 @@ class AuthViewModel(
             uiState.value = uiState.value.copy(loading = true, error = null)
 
             repo.register(email, password, confirmPassword)
-                .onSuccess { res ->
-                    // res.token vient de /auth/register
-                    session.saveToken(res.token)
-                    res.refreshToken?.let { session.saveRefreshToken(it) }
-                    session.saveUser(UserProfile(id = res.id, email = email, isVerified = false))
-                    session.setAppMode(AppMode.AUTH)
+                .onSuccess { reg ->
+                    repo.login(email.trim(), password)
+                        .onSuccess { login ->
+                            session.saveToken(login.token)
+                            login.refreshToken?.let { session.saveRefreshToken(it) }
+                            session.setAppMode(AppMode.AUTH)
 
-                    _events.send(AuthEvent.GoHome)
+                            _events.trySend(AuthEvent.GoHome)
+
+                            viewModelScope.launch {
+                                repo.me(login.token)
+                                    .onSuccess { profile ->
+                                        session.saveUser(profile)
+                                        session.savePreferences(profile.toUserPreferences())
+                                        syncDefaultCountryCodeIfMissing(profile)
+                                    }
+                                    .onFailure {
+                                        session.saveUser(
+                                            UserProfile(
+                                                id = reg.id,
+                                                email = email,
+                                                roles = emptyList(),
+                                                isVerified = false,
+                                                currentHomeId = null,
+                                                preferences = null,
+                                                preferencesUpdatedAt = null
+                                            )
+                                        )
+                                    }
+                            }
+                        }
+                        .onFailure { err ->
+                            uiState.value = uiState.value.copy(
+                                loading = false,
+                                error = "Compte créé (id=${reg.id}) mais login auto KO: ${err.message ?: err}"
+                            )
+                        }
                 }
                 .onFailure { err ->
-                    uiState.value = uiState.value.copy(error = err.message ?: "Erreur", loading = false)
+                    uiState.value = uiState.value.copy(
+                        error = err.message ?: "Erreur",
+                        loading = false
+                    )
                 }
 
             uiState.value = uiState.value.copy(loading = false)
         }
     }
 
-
     fun onUseLocalMode() {
         viewModelScope.launch {
-            // ✅ mieux que clear(): ça nettoie aussi userId/email/isVerified + force AppMode.LOCAL
             session.logout()
-
-            // ✅ déclenche la sortie du flow auth (LoginScreen va naviguer)
             _events.trySend(AuthEvent.GoHomeLocal)
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // CACHES DES PREFERENCES UTILISATEUR (Theme, displayFridge, lang)
 
     fun onFridgeDisplaySelected(mode: ViewMode) {
         viewModelScope.launch {
@@ -224,38 +228,67 @@ class AuthViewModel(
         viewModelScope.launch {
             val newTheme = if (isDark) ThemeMode.DARK else ThemeMode.LIGHT
             session.setTheme(newTheme)
-
-            // ✅ en AUTH ça partira dans patchFlow (debounce), en LOCAL ça ne fera rien
             emitPrefsPatch(theme = newTheme)
         }
     }
 
+    fun onCountryCodeSelected(countryCode: String) {
+        viewModelScope.launch {
+            val normalized = SeasonalityResolver.normalizeCountryCodeOrDefault(countryCode)
+            val current = session.preferences.first().countryCode
+            if (current == normalized) return@launch
+
+            session.setCountryCode(normalized)
+            emitPrefsPatch(countryCode = normalized)
+        }
+    }
+
+    fun onSeasonRegionOverrideSelected(region: SeasonRegion?) {
+        viewModelScope.launch {
+            val current = session.preferences.first().seasonRegionOverride
+            if (current == region) return@launch
+
+            session.setSeasonRegionOverride(region)
+            emitPrefsPatch(
+                seasonRegionOverride = region?.name,
+                includeSeasonRegionOverride = true
+            )
+        }
+    }
+
+    private suspend fun syncDefaultCountryCodeIfMissing(profile: UserProfile) {
+        val remoteCountryCode = profile.preferences?.countryCode
+            ?.trim()
+            ?.uppercase()
+
+        if (!remoteCountryCode.isNullOrBlank()) return
+
+        emitPrefsPatch(
+            countryCode = profile.toUserPreferences().countryCode
+        )
+    }
+
     private suspend fun emitPrefsPatch(
         theme: ThemeMode? = null,
-        frigoLayout: FrigoLayout? = null
+        frigoLayout: FrigoLayout? = null,
+        countryCode: String? = null,
+        seasonRegionOverride: String? = null,
+        includeSeasonRegionOverride: Boolean = false
     ) {
-        val mode = session.appMode.first()
-        val token = session.token.first()
+        val body = buildMap<String, Any?> {
+            theme?.let { put("theme", it.name.lowercase()) }
+            frigoLayout?.let { put("frigo_layout", it.name.lowercase()) }
+            countryCode?.let { put("country_code", it) }
 
-        if (mode != AppMode.AUTH || token.isNullOrBlank()) return
-
-        val body = mutableMapOf<String, String>()
-
-        theme?.let {
-            body["theme"] = when (it) {
-                ThemeMode.DARK -> "dark"
-                ThemeMode.LIGHT -> "light"
-                ThemeMode.SYSTEM -> "system"
+            if (includeSeasonRegionOverride) {
+                put("season_region_override", seasonRegionOverride)
             }
         }
 
-        frigoLayout?.let {
-            body["frigo_layout"] = when (it) {
-                FrigoLayout.LIST -> "list"
-                FrigoLayout.DESIGN -> "design"
-            }
-        }
+        if (body.isEmpty()) return
 
-        if (body.isNotEmpty()) patchFlow.tryEmit(body)
+        if (session.appMode.first() == AppMode.AUTH) {
+            patchFlow.emit(body)
+        }
     }
 }

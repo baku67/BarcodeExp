@@ -14,22 +14,6 @@ class LocalItemRepository(private val dao: ItemDao) {
         dao.upsert(itemEntity)
     }
 
-    // Surcharge
-    suspend fun addOrUpdate(
-        name: String,
-        brand: String,
-        expiry: Long? = null,
-        imageUrl: String? = null,
-        id: String? = null
-    ) {
-        val itemEntity = if (id == null) {
-            ItemEntity(name = name, brand = brand, expiryDate = expiry, imageUrl = imageUrl)
-        } else {
-            ItemEntity(id = id, name = name, brand = brand, expiryDate = expiry, imageUrl = imageUrl)
-        }
-        dao.upsert(itemEntity)
-    }
-
     suspend fun updateItem(
         id: String,
         name: String?,

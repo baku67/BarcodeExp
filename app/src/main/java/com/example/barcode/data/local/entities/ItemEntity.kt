@@ -38,8 +38,9 @@ data class ItemEntity(
     // Timestamp serveur (pour delta sync / debug / merge):
     val serverUpdatedAt: Long? = null,
 
+    val photoId: String? = null, // photoId == clientId
 
-    // 🔹 Métier
+    // 🔹 Scan
     val barcode: String? = null,
     val name: String? = null,
     val brand: String? = null,
@@ -55,4 +56,9 @@ data class ItemEntity(
 
     @ColumnInfo(defaultValue = "barcode_scan")
     val addMode: String = "barcode_scan",
+
+    // ✅ Manual
+    val manualType: String? = null,
+    val manualSubtype: String? = null,
+    val manualMetaJson: String? = null,
 )

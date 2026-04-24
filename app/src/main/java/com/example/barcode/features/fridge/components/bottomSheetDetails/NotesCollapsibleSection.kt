@@ -87,6 +87,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.key
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 
 const val NOTE_MAX_LEN = 100
@@ -133,6 +135,27 @@ fun NotesCollapsibleSection(
 
     val containerShape = RoundedCornerShape(16.dp)
 
+    val hasNotes = notes.isNotEmpty()
+    val surface = MaterialTheme.colorScheme.surface
+
+    // ✅ même “jaune” que ton compteur (ItemNote) + dégradé subtil
+    val notesBrush = remember(surface) {
+        Brush.verticalGradient(
+            0f to ItemNote.copy(alpha = 0.12f),
+            1f to surface
+        )
+    }
+
+    // ✅ bordure + lisible, qui ressort un peu plus quand ouvert
+    val borderColor by animateColorAsState(
+        targetValue = if (hasNotes) {
+            if (expanded) ItemNote.copy(alpha = 0.55f) else ItemNote.copy(alpha = 0.30f)
+        } else {
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f)
+        },
+        label = "notesBorderColor"
+    )
+
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 90f else 0f,
         label = "notesChevronRotation"
@@ -150,12 +173,11 @@ fun NotesCollapsibleSection(
     Column(
         modifier = modifier
             .clip(containerShape)
-            .background(MaterialTheme.colorScheme.surface)
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.85f),
-                shape = containerShape
+            .then(
+                if (hasNotes) Modifier.background(notesBrush)
+                else Modifier.background(MaterialTheme.colorScheme.surface)
             )
+            .border(1.dp, borderColor, containerShape)
             .animateContentSize()
     ) {
         Row(
@@ -168,7 +190,7 @@ fun NotesCollapsibleSection(
             Icon(
                 imageVector = Icons.Outlined.StickyNote2,
                 contentDescription = null,
-                tint = labelTint,
+                tint = accentTint,
                 modifier = Modifier.size(18.dp)
             )
 
@@ -579,12 +601,10 @@ private fun NotePostIt(
             }
 
             Text(
-                text = note.body,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontStyle = FontStyle.Italic
-                ),
-                color = Color(0xFF1F1F1F).copy(alpha = 0.88f), // ✅ opacity “contenu utilisateur”
-                fontWeight = FontWeight.Normal                // ✅ plus naturel en italique
+                text = italicExceptEmoji(note.body),
+                style = MaterialTheme.typography.bodyMedium, // pas italique ici
+                color = Color(0xFF1F1F1F).copy(alpha = 0.88f),
+                fontWeight = FontWeight.Normal
             )
         }
     }
@@ -609,3 +629,37 @@ private fun Modifier.disarmIfOtherArmed(
 }
 
 
+
+private fun italicExceptEmoji(text: String): AnnotatedString {
+    return buildAnnotatedString {
+        var i = 0
+        while (i < text.length) {
+            val cp = text.codePointAt(i)
+            val cpLen = Character.charCount(cp)
+
+            if (isEmojiLike(cp)) {
+                // Emoji => style normal (donc pas d’italique)
+                append(String(Character.toChars(cp)))
+            } else {
+                // Non-emoji => italique
+                withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+                    append(String(Character.toChars(cp)))
+                }
+            }
+
+            i += cpLen
+        }
+    }
+}
+
+/**
+ * Heuristique simple et efficace pour la majorité des emojis.
+ * (Beaucoup plus fiable que “tout en So” et évite d’italiquer la plupart des pictos)
+ */
+private fun isEmojiLike(cp: Int): Boolean {
+    return (cp in 0x1F000..0x1FAFF) ||   // Emoticons, pictos, symboles, etc.
+            (cp in 0x2600..0x27BF) ||    // Dingbats & symboles divers souvent emojis
+            (cp in 0x1F1E6..0x1F1FF) ||  // Drapeaux (regional indicators)
+            (cp == 0x200D) ||            // ZWJ (compose les emojis complexes)
+            (cp == 0xFE0F)               // Variation selector “emoji”
+}
