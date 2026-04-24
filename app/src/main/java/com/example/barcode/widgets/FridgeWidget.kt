@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,8 +58,10 @@ import com.example.barcode.common.ui.theme.AppWidgetBackgroundDark
 import com.example.barcode.common.ui.theme.AppWidgetBackgroundLight
 import com.example.barcode.common.ui.theme.AppWidgetSurfaceDark
 import com.example.barcode.common.ui.theme.AppWidgetSurfaceLight
+import com.example.barcode.core.SessionManager
 import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
+import com.example.barcode.data.local.entities.ShoppingListItemEntity
 import com.example.barcode.sync.SyncPreferences
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -78,7 +81,10 @@ class FridgeWidget : GlanceAppWidget() {
         val colors = WidgetPalette.fromContext(appContext)
 
         val syncPrefs = SyncPreferences(appContext)
-        val itemDao = AppDb.get(appContext).itemDao()
+        val db = AppDb.get(appContext)
+        val itemDao = db.itemDao()
+        val shoppingListDao = db.shoppingListDao()
+        val sessionManager = SessionManager(appContext)
 
         provideContent {
             val lastSyncFinishedAt by syncPrefs
@@ -100,6 +106,49 @@ class FridgeWidget : GlanceAppWidget() {
             val displayMode = WidgetDisplayMode.fromStoredValue(
                 widgetState[WidgetDisplayModeKey]
             )
+
+            val shoppingScope = WidgetShoppingScope.fromStoredValue(
+                widgetState[WidgetShoppingScopeKey]
+            )
+
+            val currentUserId by sessionManager
+                .userId
+                .collectAsState(initial = null)
+
+            val currentHomeId by sessionManager
+                .currentHomeId
+                .collectAsState(initial = null)
+
+            val effectiveUserId = currentUserId
+                ?.takeIf { it.isNotBlank() }
+                ?: ShoppingListItemEntity.LOCAL_USER_ID
+
+            val effectiveHomeId = currentHomeId
+                ?.takeIf { it.isNotBlank() }
+                ?: ShoppingListItemEntity.LOCAL_HOME_ID
+
+            val sharedShoppingItems by remember(effectiveHomeId, effectiveUserId) {
+                shoppingListDao.observeFirstUncheckedForWidget(
+                    homeId = effectiveHomeId,
+                    userId = effectiveUserId,
+                    scope = WidgetShoppingScope.SHARED.daoValue,
+                    limit = 5
+                )
+            }.collectAsState(initial = emptyList())
+
+            val personalShoppingItems by remember(effectiveHomeId, effectiveUserId) {
+                shoppingListDao.observeFirstUncheckedForWidget(
+                    homeId = effectiveHomeId,
+                    userId = effectiveUserId,
+                    scope = WidgetShoppingScope.PERSONAL.daoValue,
+                    limit = 5
+                )
+            }.collectAsState(initial = emptyList())
+
+            val activeShoppingItems = when (shoppingScope) {
+                WidgetShoppingScope.SHARED -> sharedShoppingItems
+                WidgetShoppingScope.PERSONAL -> personalShoppingItems
+            }
 
             Column(
                 modifier = GlanceModifier
@@ -127,6 +176,15 @@ class FridgeWidget : GlanceAppWidget() {
                             displayMode = displayMode,
                             colors = colors
                         )
+
+                        if (displayMode == WidgetDisplayMode.SHOPPING) {
+                            Spacer(modifier = GlanceModifier.width(4.dp))
+
+                            WidgetShoppingScopeChip(
+                                shoppingScope = shoppingScope,
+                                colors = colors
+                            )
+                        }
 
                         Spacer(modifier = GlanceModifier.defaultWeight())
 
@@ -215,7 +273,11 @@ class FridgeWidget : GlanceAppWidget() {
                                 verticalAlignment = Alignment.Vertical.Top,
                                 horizontalAlignment = Alignment.Horizontal.Start
                             ) {
-                                WidgetShoppingPreviewPlaceholder(colors = colors)
+                                WidgetShoppingListContent(
+                                    items = activeShoppingItems,
+                                    shoppingScope = shoppingScope,
+                                    colors = colors
+                                )
                             }
                         }
                     }
@@ -263,23 +325,149 @@ private fun WidgetModeChip(
     }
 }
 
+
 @Composable
-private fun WidgetShoppingPreviewPlaceholder(
+private fun WidgetShoppingScopeChip(
+    shoppingScope: WidgetShoppingScope,
     colors: WidgetPalette
 ) {
+    Row(
+        modifier = GlanceModifier
+            .background(colors.background)
+            .cornerRadius(12.dp)
+            .padding(horizontal = 7.dp, vertical = 5.dp)
+            .clickable(
+                actionRunCallback<ToggleWidgetShoppingScopeActionCallback>()
+            ),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+        horizontalAlignment = Alignment.Horizontal.Start
+    ) {
+        Text(
+            text = shoppingScope.label,
+            maxLines = 1,
+            style = TextStyle(
+                color = colors.primary.toColorProvider(),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+        )
+
+        Spacer(modifier = GlanceModifier.width(3.dp))
+
+        Image(
+            provider = ImageProvider(R.drawable.ic_widget_expand_all),
+            contentDescription = "Changer de liste de courses",
+            modifier = GlanceModifier.size(12.dp),
+            colorFilter = ColorFilter.tint(colors.primary.toColorProvider())
+        )
+    }
+}
+
+
+@Composable
+private fun WidgetShoppingListContent(
+    items: List<ShoppingListItemEntity>,
+    shoppingScope: WidgetShoppingScope,
+    colors: WidgetPalette
+) {
+    if (items.isEmpty()) {
+        WidgetShoppingEmptyState(
+            shoppingScope = shoppingScope,
+            colors = colors
+        )
+    } else {
+        items.take(5).forEach { item ->
+            WidgetShoppingCompactRow(
+                item = item,
+                colors = colors
+            )
+        }
+    }
+}
+
+@Composable
+private fun WidgetShoppingCompactRow(
+    item: ShoppingListItemEntity,
+    colors: WidgetPalette
+) {
+    val name = item.name
+        .trim()
+        .takeIf { it.isNotBlank() }
+        ?: "Article sans nom"
+
+    val quantity = item.quantity
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+
+    val trailingText = quantity ?: if (item.isImportant) "!" else null
+
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(18.dp),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+        horizontalAlignment = Alignment.Horizontal.Start
+    ) {
+        Text(
+            text = name,
+            modifier = GlanceModifier.defaultWeight(),
+            maxLines = 1,
+            style = TextStyle(
+                color = if (item.isImportant) {
+                    colors.primary.toColorProvider()
+                } else {
+                    colors.text.toColorProvider()
+                },
+                fontSize = 12.sp,
+                fontWeight = if (item.isImportant) {
+                    FontWeight.Bold
+                } else {
+                    FontWeight.Medium
+                }
+            )
+        )
+
+        if (trailingText != null) {
+            Text(
+                text = trailingText,
+                maxLines = 1,
+                style = TextStyle(
+                    color = if (item.isImportant) {
+                        colors.primary.toColorProvider()
+                    } else {
+                        colors.muted.toColorProvider()
+                    },
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun WidgetShoppingEmptyState(
+    shoppingScope: WidgetShoppingScope,
+    colors: WidgetPalette
+) {
+    val label = when (shoppingScope) {
+        WidgetShoppingScope.SHARED -> "Liste partagée vide"
+        WidgetShoppingScope.PERSONAL -> "Liste perso vide"
+    }
+
     Text(
-        text = "Liste de courses",
+        text = label,
         style = TextStyle(
             color = colors.text.toColorProvider(),
             fontSize = 13.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Medium
         )
     )
 
     Spacer(modifier = GlanceModifier.height(4.dp))
 
     Text(
-        text = "Aperçu à brancher",
+        text = "Aucun article à acheter",
         style = TextStyle(
             color = colors.muted.toColorProvider(),
             fontSize = 12.sp

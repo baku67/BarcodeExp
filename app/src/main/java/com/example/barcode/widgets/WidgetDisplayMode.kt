@@ -3,6 +3,7 @@ package com.example.barcode.widgets
 import androidx.datastore.preferences.core.stringPreferencesKey
 
 internal val WidgetDisplayModeKey = stringPreferencesKey("widget_display_mode")
+internal val WidgetShoppingScopeKey = stringPreferencesKey("widget_shopping_scope")
 
 internal enum class WidgetDisplayMode(
     val storedValue: String,
@@ -27,7 +28,38 @@ internal enum class WidgetDisplayMode(
 
     companion object {
         fun fromStoredValue(value: String?): WidgetDisplayMode {
-            return values().firstOrNull { it.storedValue == value } ?: FRIDGE
+            return entries.firstOrNull { it.storedValue == value } ?: FRIDGE
+        }
+    }
+}
+
+internal enum class WidgetShoppingScope(
+    val storedValue: String,
+    val daoValue: String,
+    val label: String
+) {
+    SHARED(
+        storedValue = "shared",
+        daoValue = "SHARED",
+        label = "Partagée"
+    ),
+
+    PERSONAL(
+        storedValue = "personal",
+        daoValue = "PERSONAL",
+        label = "Perso"
+    );
+
+    fun toggled(): WidgetShoppingScope {
+        return when (this) {
+            SHARED -> PERSONAL
+            PERSONAL -> SHARED
+        }
+    }
+
+    companion object {
+        fun fromStoredValue(value: String?): WidgetShoppingScope {
+            return entries.firstOrNull { it.storedValue == value } ?: SHARED
         }
     }
 }

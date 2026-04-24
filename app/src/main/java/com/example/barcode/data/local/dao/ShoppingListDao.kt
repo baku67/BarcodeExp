@@ -23,6 +23,27 @@ interface ShoppingListDao {
     """)
     fun observeVisible(homeId: String, userId: String): Flow<List<ShoppingListItemEntity>>
 
+    @Query("""
+        SELECT * FROM shopping_list_items
+        WHERE deletedAt IS NULL
+          AND pendingOperation != 'DELETE'
+          AND isChecked = 0
+          AND homeId = :homeId
+          AND scope = :scope
+          AND (
+              scope = 'SHARED'
+              OR (scope = 'PERSONAL' AND ownerUserId = :userId)
+          )
+        ORDER BY isImportant DESC, updatedAt DESC
+        LIMIT :limit
+    """)
+    fun observeFirstUncheckedForWidget(
+        homeId: String,
+        userId: String,
+        scope: String,
+        limit: Int
+    ): Flow<List<ShoppingListItemEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(item: ShoppingListItemEntity)
 
