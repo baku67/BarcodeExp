@@ -329,6 +329,14 @@ private fun WidgetModeChip(
 }
 
 
+private fun WidgetShoppingScope.iconRes(): Int {
+    return when (this) {
+        WidgetShoppingScope.SHARED -> R.drawable.ic_widget_scope_shared
+        WidgetShoppingScope.PERSONAL -> R.drawable.ic_widget_scope_personal
+    }
+}
+
+
 @Composable
 private fun WidgetShoppingScopeChip(
     shoppingScope: WidgetShoppingScope,
@@ -337,30 +345,30 @@ private fun WidgetShoppingScopeChip(
     Row(
         modifier = GlanceModifier
             .background(colors.background)
-            .cornerRadius(12.dp)
-            .padding(horizontal = 7.dp, vertical = 5.dp)
+            .cornerRadius(14.dp)
+            .padding(horizontal = 9.dp, vertical = 5.dp)
             .clickable(
                 actionRunCallback<ToggleWidgetShoppingScopeActionCallback>()
             ),
         verticalAlignment = Alignment.Vertical.CenterVertically,
-        horizontalAlignment = Alignment.Horizontal.Start
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally
     ) {
-        Text(
-            text = shoppingScope.label,
-            maxLines = 1,
-            style = TextStyle(
-                color = colors.primary.toColorProvider(),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
+        Image(
+            provider = ImageProvider(shoppingScope.iconRes()),
+            contentDescription = when (shoppingScope) {
+                WidgetShoppingScope.SHARED -> "Liste partagée"
+                WidgetShoppingScope.PERSONAL -> "Liste personnelle"
+            },
+            modifier = GlanceModifier.size(22.dp),
+            colorFilter = ColorFilter.tint(colors.primary.toColorProvider())
         )
 
-        Spacer(modifier = GlanceModifier.width(3.dp))
+        Spacer(modifier = GlanceModifier.width(0.dp))
 
         Image(
             provider = ImageProvider(R.drawable.ic_widget_expand_all),
             contentDescription = "Changer de liste de courses",
-            modifier = GlanceModifier.size(12.dp),
+            modifier = GlanceModifier.size(16.dp),
             colorFilter = ColorFilter.tint(colors.primary.toColorProvider())
         )
     }
@@ -400,7 +408,7 @@ private fun WidgetShoppingListContent(
             horizontalAlignment = Alignment.Horizontal.Start
         ) {
             leftItems.forEach { item ->
-                WidgetShoppingBulletRow(
+                WidgetShoppingCompactRow(
                     item = item,
                     colors = colors
                 )
@@ -424,7 +432,7 @@ private fun WidgetShoppingListContent(
             horizontalAlignment = Alignment.Horizontal.Start
         ) {
             rightItems.forEach { item ->
-                WidgetShoppingBulletRow(
+                WidgetShoppingCompactRow(
                     item = item,
                     colors = colors
                 )
@@ -434,7 +442,7 @@ private fun WidgetShoppingListContent(
 }
 
 @Composable
-private fun WidgetShoppingBulletRow(
+private fun WidgetShoppingCompactRow(
     item: ShoppingListItemEntity,
     colors: WidgetPalette
 ) {
@@ -454,31 +462,23 @@ private fun WidgetShoppingBulletRow(
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.Start
     ) {
-        Text(
-            text = "•",
-            style = TextStyle(
-                color = if (item.isImportant) {
-                    colors.primary.toColorProvider()
-                } else {
-                    colors.text.toColorProvider()
-                },
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+        if (item.isImportant) {
+            Image(
+                provider = ImageProvider(R.drawable.ic_widget_important),
+                contentDescription = "Important",
+                modifier = GlanceModifier.size(11.dp),
+                colorFilter = ColorFilter.tint(ExpiryWarning.toColorProvider())
             )
-        )
 
-        Spacer(modifier = GlanceModifier.width(4.dp))
+            Spacer(modifier = GlanceModifier.width(3.dp))
+        }
 
         Text(
             text = name,
             modifier = GlanceModifier.defaultWeight(),
             maxLines = 1,
             style = TextStyle(
-                color = if (item.isImportant) {
-                    colors.primary.toColorProvider()
-                } else {
-                    colors.text.toColorProvider()
-                },
+                color = colors.text.toColorProvider(),
                 fontSize = 12.sp,
                 fontWeight = if (item.isImportant) {
                     FontWeight.Bold
@@ -498,18 +498,6 @@ private fun WidgetShoppingBulletRow(
                     color = colors.muted.toColorProvider(),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium
-                )
-            )
-        } else if (item.isImportant) {
-            Spacer(modifier = GlanceModifier.width(4.dp))
-
-            Text(
-                text = "!",
-                maxLines = 1,
-                style = TextStyle(
-                    color = colors.primary.toColorProvider(),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
                 )
             )
         }
