@@ -18,7 +18,16 @@ enum class SeasonRegion {
 
     companion object {
         fun fromStorage(value: String?): SeasonRegion {
-            return entries.firstOrNull { it.name == value } ?: EU_TEMPERATE
+            return fromStorageOrNull(value) ?: EU_TEMPERATE
+        }
+
+        fun fromStorageOrNull(value: String?): SeasonRegion? {
+            val normalized = value
+                ?.trim()
+                ?.uppercase(Locale.ROOT)
+                .orEmpty()
+
+            return entries.firstOrNull { it.name == normalized }
         }
     }
 }
@@ -123,6 +132,13 @@ object SeasonalityResolver {
         }
     }
 
+    fun effectiveRegion(
+        countryCode: String?,
+        seasonRegionOverride: SeasonRegion?
+    ): SeasonRegion {
+        return seasonRegionOverride ?: regionFromCountryCode(countryCode)
+    }
+
     fun currentMonth(
         zoneId: ZoneId = defaultZoneId,
         clock: Clock = Clock.system(zoneId)
@@ -148,13 +164,14 @@ object SeasonalityResolver {
         )
     }
 
-    fun currentContextFromCountryCode(
+    fun currentContext(
         countryCode: String?,
+        seasonRegionOverride: SeasonRegion?,
         zoneId: ZoneId = defaultZoneId,
         clock: Clock = Clock.system(zoneId)
     ): SeasonContext {
         return currentContext(
-            region = regionFromCountryCode(countryCode),
+            region = effectiveRegion(countryCode, seasonRegionOverride),
             zoneId = zoneId,
             clock = clock
         )
@@ -187,9 +204,13 @@ object SeasonalityResolver {
 
     fun monthsFor(
         subtype: ManualSubtypeMeta?,
-        countryCode: String?
+        countryCode: String?,
+        seasonRegionOverride: SeasonRegion?
     ): List<Int> {
-        return monthsFor(subtype, regionFromCountryCode(countryCode))
+        return monthsFor(
+            subtype = subtype,
+            region = effectiveRegion(countryCode, seasonRegionOverride)
+        )
     }
 
     fun isInSeason(
@@ -201,6 +222,7 @@ object SeasonalityResolver {
     fun isInSeason(
         subtype: ManualSubtypeMeta?,
         countryCode: String?,
+        seasonRegionOverride: SeasonRegion?,
         month: Int
-    ): Boolean = month in monthsFor(subtype, countryCode)
+    ): Boolean = month in monthsFor(subtype, countryCode, seasonRegionOverride)
 }

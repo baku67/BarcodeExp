@@ -30,7 +30,7 @@ interface AuthApi {
     @PATCH("api/me/preferences")
     suspend fun patchPreferences(
         @Header("Authorization") token: String,
-        @Body body: Map<String, String>
+        @Body body: Map<String, @JvmSuppressWildcards Any?> // any au lieu de string parce que peut etre null pour seasonOrverride (comme dans AuthViewModel)
     ): Response<Unit>
 
     @DELETE("api/me")

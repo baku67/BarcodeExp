@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.barcode.features.fridge.ViewMode
 import com.example.barcode.common.bus.SnackbarBus
+import com.example.barcode.common.utils.SeasonRegion
 import com.example.barcode.common.utils.SeasonalityResolver
 import com.example.barcode.core.AppMode
 import com.example.barcode.core.SessionManager
@@ -50,7 +51,7 @@ class AuthViewModel(
     private val _events = Channel<AuthEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    private val patchFlow = MutableSharedFlow<Map<String, String>>(extraBufferCapacity = 1)
+    private val patchFlow = MutableSharedFlow<Map<String, Any?>>(extraBufferCapacity = 1) // any au lieu de string parce que peut etre null pour seasonOrverride (comme dans AuthApi)
     private var loginJob: Job? = null
 
     init {
@@ -242,6 +243,19 @@ class AuthViewModel(
         }
     }
 
+    fun onSeasonRegionOverrideSelected(region: SeasonRegion?) {
+        viewModelScope.launch {
+            val current = session.preferences.first().seasonRegionOverride
+            if (current == region) return@launch
+
+            session.setSeasonRegionOverride(region)
+            emitPrefsPatch(
+                seasonRegionOverride = region?.name,
+                includeSeasonRegionOverride = true
+            )
+        }
+    }
+
     private suspend fun syncDefaultCountryCodeIfMissing(profile: UserProfile) {
         val remoteCountryCode = profile.preferences?.countryCode
             ?.trim()
@@ -257,12 +271,18 @@ class AuthViewModel(
     private suspend fun emitPrefsPatch(
         theme: ThemeMode? = null,
         frigoLayout: FrigoLayout? = null,
-        countryCode: String? = null
+        countryCode: String? = null,
+        seasonRegionOverride: String? = null,
+        includeSeasonRegionOverride: Boolean = false
     ) {
-        val body = buildMap<String, String> {
+        val body = buildMap<String, Any?> {
             theme?.let { put("theme", it.name.lowercase()) }
             frigoLayout?.let { put("frigo_layout", it.name.lowercase()) }
             countryCode?.let { put("country_code", it) }
+
+            if (includeSeasonRegionOverride) {
+                put("season_region_override", seasonRegionOverride)
+            }
         }
 
         if (body.isEmpty()) return

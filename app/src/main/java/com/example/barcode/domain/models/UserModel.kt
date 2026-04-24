@@ -1,5 +1,6 @@
 package com.example.barcode.domain.models
 
+import com.example.barcode.common.utils.SeasonRegion
 import com.example.barcode.common.utils.SeasonalityResolver
 import com.google.gson.annotations.SerializedName
 
@@ -29,7 +30,8 @@ data class UserPreferencesDto(
     val theme: String? = null,
     val lang: String? = null,
     @SerializedName("frigo_layout") val frigoLayout: String? = null,
-    @SerializedName("country_code") val countryCode: String? = null
+    @SerializedName("country_code") val countryCode: String? = null,
+    @SerializedName("season_region_override") val seasonRegionOverride: String? = null
 )
 
 data class UserPreferences(
@@ -37,6 +39,7 @@ data class UserPreferences(
     val lang: String = "fr",
     val frigoLayout: FrigoLayout = FrigoLayout.LIST,
     val countryCode: String = SeasonalityResolver.defaultCountryCode(),
+    val seasonRegionOverride: SeasonRegion? = null,
     val updatedAtEpochSec: Long? = null
 )
 
@@ -64,6 +67,7 @@ fun UserProfile.toUserPreferences(): UserPreferences {
         lang = dto?.lang ?: "fr",
         frigoLayout = layout,
         countryCode = SeasonalityResolver.normalizeCountryCodeOrDefault(dto?.countryCode),
+        seasonRegionOverride = SeasonRegion.fromStorageOrNull(dto?.seasonRegionOverride),
         updatedAtEpochSec = preferencesUpdatedAt
     )
 }

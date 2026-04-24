@@ -17,6 +17,7 @@ private val PREF_THEME = stringPreferencesKey("pref_theme")
 private val PREF_LANG = stringPreferencesKey("pref_lang")
 private val PREF_FRIGO_LAYOUT = stringPreferencesKey("pref_frigo_layout")
 private val PREF_COUNTRY_CODE = stringPreferencesKey("pref_country_code")
+private val PREF_SEASON_REGION_OVERRIDE = stringPreferencesKey("pref_season_region_override")
 private val LEGACY_PREF_SEASON_REGION = stringPreferencesKey("pref_season_region")
 private val PREF_DASHBOARD_SEASONAL_EXPANDED =
     booleanPreferencesKey("pref_dashboard_seasonal_expanded")
@@ -39,6 +40,10 @@ class UserPreferencesStore(private val context: Context) {
             else -> FrigoLayout.DESIGN
         }
 
+        val override = SeasonRegion.fromStorageOrNull(
+            p[PREF_SEASON_REGION_OVERRIDE] ?: p[LEGACY_PREF_SEASON_REGION]
+        )
+
         UserPreferences(
             theme = theme,
             lang = p[PREF_LANG] ?: "fr",
@@ -46,14 +51,20 @@ class UserPreferencesStore(private val context: Context) {
             countryCode = SeasonalityResolver.normalizeCountryCodeOrDefault(
                 p[PREF_COUNTRY_CODE]
             ),
+            seasonRegionOverride = override,
             updatedAtEpochSec = p[PREF_UPDATED_AT]
         )
     }
 
     val countryCode: Flow<String> = preferences.map { it.countryCode }
 
+    val seasonRegionOverride: Flow<SeasonRegion?> = preferences.map { it.seasonRegionOverride }
+
     val seasonRegion: Flow<SeasonRegion> = preferences.map { prefs ->
-        SeasonalityResolver.regionFromCountryCode(prefs.countryCode)
+        SeasonalityResolver.effectiveRegion(
+            countryCode = prefs.countryCode,
+            seasonRegionOverride = prefs.seasonRegionOverride
+        )
     }
 
     val dashboardSeasonalExpanded: Flow<Boolean> = ds.data.map { p ->
@@ -74,6 +85,13 @@ class UserPreferencesStore(private val context: Context) {
             }
             p[PREF_COUNTRY_CODE] =
                 SeasonalityResolver.normalizeCountryCodeOrDefault(prefs.countryCode)
+
+            prefs.seasonRegionOverride?.let { override ->
+                p[PREF_SEASON_REGION_OVERRIDE] = override.name
+            } ?: p.remove(PREF_SEASON_REGION_OVERRIDE)
+
+            p.remove(LEGACY_PREF_SEASON_REGION)
+
             p[PREF_UPDATED_AT] = prefs.updatedAtEpochSec ?: (System.currentTimeMillis() / 1000)
         }
     }
@@ -84,6 +102,7 @@ class UserPreferencesStore(private val context: Context) {
             it.remove(PREF_LANG)
             it.remove(PREF_FRIGO_LAYOUT)
             it.remove(PREF_COUNTRY_CODE)
+            it.remove(PREF_SEASON_REGION_OVERRIDE)
             it.remove(LEGACY_PREF_SEASON_REGION)
             it.remove(PREF_DASHBOARD_SEASONAL_EXPANDED)
             it.remove(PREF_UPDATED_AT)
@@ -122,6 +141,17 @@ class UserPreferencesStore(private val context: Context) {
         ds.edit {
             it[PREF_COUNTRY_CODE] =
                 SeasonalityResolver.normalizeCountryCodeOrDefault(countryCode)
+            it[PREF_UPDATED_AT] = System.currentTimeMillis() / 1000
+        }
+    }
+
+    suspend fun setSeasonRegionOverride(region: SeasonRegion?) {
+        ds.edit {
+            region?.let { override ->
+                it[PREF_SEASON_REGION_OVERRIDE] = override.name
+            } ?: it.remove(PREF_SEASON_REGION_OVERRIDE)
+
+            it.remove(LEGACY_PREF_SEASON_REGION)
             it[PREF_UPDATED_AT] = System.currentTimeMillis() / 1000
         }
     }

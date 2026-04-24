@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.barcode.core.AppMode
@@ -26,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import com.example.barcode.common.utils.SeasonRegion
 import com.example.barcode.common.utils.SeasonalityResolver
 import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.domain.models.UserPreferences
@@ -378,14 +380,17 @@ fun SettingsContent(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            val regionLabel = SeasonalityResolver.regionLabel(
-                                SeasonalityResolver.regionFromCountryCode(prefs.countryCode)
+                            val regionFromCountry = SeasonalityResolver.regionFromCountryCode(prefs.countryCode)
+                            val effectiveRegion = SeasonalityResolver.effectiveRegion(
+                                countryCode = prefs.countryCode,
+                                seasonRegionOverride = prefs.seasonRegionOverride
                             )
+                            val regionLabel = SeasonalityResolver.regionLabel(effectiveRegion)
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
                                     text = "Zone utilisée :",
@@ -395,10 +400,29 @@ fun SettingsContent(
 
                                 Text(
                                     text = regionLabel,
+                                    modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
+
+                                SeasonRegionOverrideButton(
+                                    countryCode = prefs.countryCode,
+                                    currentOverride = prefs.seasonRegionOverride,
+                                    onOverrideSelected = { region ->
+                                        authVm.onSeasonRegionOverrideSelected(region)
+                                    }
+                                )
                             }
+
+                            Text(
+                                text = if (prefs.seasonRegionOverride == null) {
+                                    "Mode automatique : ${SeasonalityResolver.regionLabel(regionFromCountry)} est déduite du pays sélectionné."
+                                } else {
+                                    "Correction manuelle active."
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -509,6 +533,66 @@ private fun CountrySelectorRow(
                         }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeasonRegionOverrideButton(
+    countryCode: String,
+    currentOverride: SeasonRegion?,
+    onOverrideSelected: (SeasonRegion?) -> Unit
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    val automaticRegion = remember(countryCode) {
+        SeasonalityResolver.regionFromCountryCode(countryCode)
+    }
+
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Edit,
+                contentDescription = "Modifier la zone",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        "Automatique (${SeasonalityResolver.regionLabel(automaticRegion)})" +
+                                if (currentOverride == null) " ✓" else ""
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    onOverrideSelected(null)
+                }
+            )
+
+            SeasonRegion.entries.forEach { region ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            SeasonalityResolver.regionLabel(region) +
+                                    if (currentOverride == region) " ✓" else ""
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onOverrideSelected(region)
+                    }
+                )
             }
         }
     }

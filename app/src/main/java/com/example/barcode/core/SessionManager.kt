@@ -2,6 +2,7 @@ package com.example.barcode.core
 
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.barcode.common.utils.SeasonRegion
 import com.example.barcode.domain.models.FrigoLayout
 import com.example.barcode.domain.models.ThemeMode
 import com.example.barcode.domain.models.UserPreferences
@@ -47,6 +48,7 @@ class SessionManager(context: Context) {
     // --- Preferences ---
     val preferences = prefs.preferences
     val countryCode = prefs.countryCode
+    val seasonRegionOverride = prefs.seasonRegionOverride
     val seasonRegion = prefs.seasonRegion
     val dashboardSeasonalExpanded = prefs.dashboardSeasonalExpanded
 
@@ -56,6 +58,8 @@ class SessionManager(context: Context) {
     suspend fun setLang(lang: String) = prefs.setLang(lang)
     suspend fun setFrigoLayout(layout: FrigoLayout) = prefs.setFrigoLayout(layout)
     suspend fun setCountryCode(countryCode: String) = prefs.setCountryCode(countryCode)
+    suspend fun setSeasonRegionOverride(region: SeasonRegion?) =
+        prefs.setSeasonRegionOverride(region)
     suspend fun setDashboardSeasonalExpanded(expanded: Boolean) =
         prefs.setDashboardSeasonalExpanded(expanded)
 

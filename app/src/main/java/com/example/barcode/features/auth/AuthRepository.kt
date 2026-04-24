@@ -88,7 +88,7 @@ class AuthRepository(private val api: AuthApi) {
         Result.failure(e)
     }
 
-    suspend fun patchPreferences(token: String, body: Map<String, String>): Result<Unit> {
+    suspend fun patchPreferences(token: String, body: Map<String, Any?>): Result<Unit> {
         return try {
             val response = api.patchPreferences("Bearer $token", body)
             if (response.isSuccessful) Result.success(Unit)
