@@ -1,6 +1,7 @@
 package com.example.barcode.sync
 
 import android.content.Context
+import androidx.glance.appwidget.updateAll
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.barcode.BarcodeApp
@@ -20,6 +21,7 @@ import com.example.barcode.features.addItems.data.remote.dto.ScanPayload
 import com.example.barcode.features.listeCourse.ShoppingItemDto
 import com.example.barcode.features.listeCourse.ShoppingListApi
 import com.example.barcode.common.utils.sanitizeNutriScore
+import com.example.barcode.widgets.FridgeWidget
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.ZoneId
@@ -677,6 +679,9 @@ class SyncWorker(
         }
 
         prefs.markSyncSuccessAt(newWatermarkMs)
+
+        SyncScheduler.enqueueWidgetRefresh(applicationContext)
+
         return Result.success()
     }
 

@@ -8,6 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.barcode.widgets.FridgeWidgetRefreshWorker
 import java.util.concurrent.TimeUnit
 
 object SyncScheduler {
@@ -35,6 +36,10 @@ object SyncScheduler {
      */
     const val SYNC_TAG = "SYNC_ITEMS"
 
+    const val WIDGET_REFRESH_UNIQUE_NAME = "fridge_widget_refresh_once"
+    const val PERIODIC_WIDGET_REFRESH_UNIQUE_NAME = "fridge_widget_refresh_periodic"
+
+    // Sync utilisé lors des pull-to-refresh, ou modifs entités etc... (?)
     fun enqueueSync(context: Context) {
         val appContext = context.applicationContext
 
@@ -51,6 +56,24 @@ object SyncScheduler {
             )
     }
 
+    // Sync forcée depuis le widget (?)
+    fun enqueueForceSync(context: Context) {
+        val appContext = context.applicationContext
+
+        val req = OneTimeWorkRequestBuilder<SyncWorker>()
+            .addTag(SYNC_TAG)
+            .setConstraints(syncConstraints())
+            .build()
+
+        WorkManager.getInstance(appContext)
+            .enqueueUniqueWork(
+                SYNC_UNIQUE_NAME,
+                ExistingWorkPolicy.REPLACE,
+                req
+            )
+    }
+
+    // Sync en arrière plan toutes les 2h (?)
     fun enqueuePeriodicSync(context: Context) {
         val appContext = context.applicationContext
 
@@ -80,4 +103,19 @@ object SyncScheduler {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
     }
+
+    fun enqueueWidgetRefresh(context: Context) {
+        val appContext = context.applicationContext
+
+        val req = OneTimeWorkRequestBuilder<FridgeWidgetRefreshWorker>()
+            .build()
+
+        WorkManager.getInstance(appContext)
+            .enqueueUniqueWork(
+                WIDGET_REFRESH_UNIQUE_NAME,
+                ExistingWorkPolicy.REPLACE,
+                req
+            )
+    }
+
 }
