@@ -155,7 +155,7 @@ class FridgeWidget : GlanceAppWidget() {
                 modifier = GlanceModifier
                     .fillMaxSize()
                     .background(color = colors.background)
-                    .padding(10.dp),
+                    .padding(3.dp),
                 verticalAlignment = Alignment.Vertical.Top,
                 horizontalAlignment = Alignment.Horizontal.Start
             ) {
@@ -164,7 +164,7 @@ class FridgeWidget : GlanceAppWidget() {
                         .fillMaxSize()
                         .background(color = colors.surface)
                         .cornerRadius(22.dp)
-                        .padding(14.dp),
+                        .padding(12.dp),
                     verticalAlignment = Alignment.Vertical.Top,
                     horizontalAlignment = Alignment.Horizontal.Start
                 ) {
