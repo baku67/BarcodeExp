@@ -17,7 +17,9 @@ import com.example.barcode.features.bootstrap.GlobalLoaderScreen
 import androidx.navigation.compose.navigation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -53,6 +55,7 @@ import com.example.barcode.features.listeCourse.ShoppingListScope
 import com.example.barcode.features.listeCourse.ShoppingListViewModel
 import com.example.barcode.features.listeCourse.ShoppingListViewModelFactory
 import com.example.barcode.sync.SyncScheduler
+import com.example.barcode.widgets.WidgetNavigation
 
 
 object DeepLinkBus {
@@ -66,10 +69,13 @@ object DeepLinkBus {
 
 class MainActivity : ComponentActivity() {
 
+    private var pendingWidgetDestination by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         handleDeepLink(intent)
+        handleWidgetNavigationIntent(intent)
 
         setContent {
 
@@ -84,6 +90,33 @@ class MainActivity : ComponentActivity() {
             val currentHomeId by session.currentHomeId.collectAsState(initial = null)
 
             val navController = rememberNavController()
+
+            LaunchedEffect(pendingWidgetDestination) {
+                val destination = pendingWidgetDestination ?: return@LaunchedEffect
+
+                val currentRoute = navController.currentBackStackEntry
+                    ?.destination
+                    ?.route
+
+                if (currentRoute != "tabs") {
+                    val poppedToTabs = navController.popBackStack(
+                        route = "tabs",
+                        inclusive = false
+                    )
+
+                    if (!poppedToTabs) {
+                        navController.navigate("tabs") {
+                            launchSingleTop = true
+                        }
+                    }
+                }
+
+                navController
+                    .getBackStackEntry("tabs")
+                    .savedStateHandle[WidgetNavigation.SAVED_STATE_DESTINATION] = destination
+
+                pendingWidgetDestination = null
+            }
 
             Theme(session = session) {
                 AppBackground {
@@ -536,13 +569,34 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+
+        setIntent(intent)
+
         handleDeepLink(intent)
+        handleWidgetNavigationIntent(intent)
     }
 
     private fun handleDeepLink(intent: Intent?) {
         val uri = intent?.data ?: return
         if (uri.scheme != "frigozen") return
         DeepLinkBus.emit(uri)
+    }
+
+    private fun handleWidgetNavigationIntent(intent: Intent?) {
+        pendingWidgetDestination = intent.getWidgetDestination()
+    }
+
+    private fun Intent?.getWidgetDestination(): String? {
+        val destination = this?.getStringExtra(
+            WidgetNavigation.EXTRA_DESTINATION
+        ) ?: return null
+
+        return when (destination) {
+            WidgetNavigation.DESTINATION_FRIDGE,
+            WidgetNavigation.DESTINATION_SHOPPING -> destination
+
+            else -> null
+        }
     }
 
 }

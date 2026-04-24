@@ -1,6 +1,7 @@
 package com.example.barcode.widgets
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.text.format.DateUtils
 import android.util.Log
@@ -21,6 +22,7 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -39,6 +41,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.example.barcode.MainActivity
 import com.example.barcode.R
 import com.example.barcode.common.expiry.ExpiryLevel
 import com.example.barcode.common.expiry.ExpiryPolicy
@@ -170,20 +173,50 @@ class FridgeWidget : GlanceAppWidget() {
 
                     when (displayMode) {
                         WidgetDisplayMode.FRIDGE -> {
-                            if (fridgeItems.isEmpty()) {
-                                WidgetEmptyState(colors = colors)
-                            } else {
-                                fridgeItems.take(5).forEach { item ->
-                                    WidgetFridgeCompactRow(
-                                        item = item,
-                                        colors = colors
-                                    )
+                            Column(
+                                modifier = GlanceModifier
+                                    .fillMaxWidth()
+                                    .clickable(
+                                        actionStartActivity(
+                                            openAppIntent(
+                                                context = appContext,
+                                                destination = WidgetNavigation.DESTINATION_FRIDGE
+                                            )
+                                        )
+                                    ),
+                                verticalAlignment = Alignment.Vertical.Top,
+                                horizontalAlignment = Alignment.Horizontal.Start
+                            ) {
+                                if (fridgeItems.isEmpty()) {
+                                    WidgetEmptyState(colors = colors)
+                                } else {
+                                    fridgeItems.take(5).forEach { item ->
+                                        WidgetFridgeCompactRow(
+                                            item = item,
+                                            colors = colors
+                                        )
+                                    }
                                 }
                             }
                         }
 
                         WidgetDisplayMode.SHOPPING -> {
-                            WidgetShoppingPreviewPlaceholder(colors = colors)
+                            Column(
+                                modifier = GlanceModifier
+                                    .fillMaxWidth()
+                                    .clickable(
+                                        actionStartActivity(
+                                            openAppIntent(
+                                                context = appContext,
+                                                destination = WidgetNavigation.DESTINATION_SHOPPING
+                                            )
+                                        )
+                                    ),
+                                verticalAlignment = Alignment.Vertical.Top,
+                                horizontalAlignment = Alignment.Horizontal.Start
+                            ) {
+                                WidgetShoppingPreviewPlaceholder(colors = colors)
+                            }
                         }
                     }
                 }
@@ -410,6 +443,18 @@ private fun Long?.toWidgetExpiryColor(
         ExpiryLevel.OK -> colors.primary
     }
 }
+
+private fun openAppIntent(
+    context: Context,
+    destination: String
+): Intent {
+    return Intent(context, MainActivity::class.java)
+        .putExtra(WidgetNavigation.EXTRA_DESTINATION, destination)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+}
+
 
 suspend fun updateFridgeWidgets(context: Context) {
     val appContext = context.applicationContext

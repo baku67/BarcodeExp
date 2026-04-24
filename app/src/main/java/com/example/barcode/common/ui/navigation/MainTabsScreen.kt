@@ -1,5 +1,6 @@
 package com.example.barcode.common.ui.navigation
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -14,6 +15,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -44,9 +46,11 @@ import com.example.barcode.features.settings.SettingsContent
 import com.example.barcode.sync.SyncPreferences
 import com.example.barcode.sync.SyncScheduler
 import com.example.barcode.sync.SyncUiState
+import com.example.barcode.widgets.WidgetNavigation
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
+@SuppressLint("UnrememberedGetBackStackEntry")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainTabsScreen(
@@ -75,6 +79,44 @@ fun MainTabsScreen(
                 )
             }
         }
+    }
+
+    val tabsEntry = remember(navController) {
+        navController.getBackStackEntry("tabs")
+    }
+
+    val widgetDestination by tabsEntry
+        .savedStateHandle
+        .getStateFlow<String?>(
+            WidgetNavigation.SAVED_STATE_DESTINATION,
+            null
+        )
+        .collectAsState()
+
+    LaunchedEffect(widgetDestination) {
+        val destination = widgetDestination ?: return@LaunchedEffect
+
+        val targetRoute = when (destination) {
+            WidgetNavigation.DESTINATION_FRIDGE -> "items"
+            WidgetNavigation.DESTINATION_SHOPPING -> "listeCourses"
+            else -> null
+        }
+
+        val targetIndex = targetRoute?.let { tabs.indexOf(it) } ?: -1
+
+        if (targetIndex >= 0) {
+            if (pagerState.currentPage == targetIndex) {
+                if (targetRoute == "items") {
+                    itemsReselectToken++
+                }
+            } else {
+                pagerState.scrollToPage(targetIndex)
+            }
+        }
+
+        tabsEntry.savedStateHandle.remove<String>(
+            WidgetNavigation.SAVED_STATE_DESTINATION
+        )
     }
 
     val selectedRoute = tabs[pagerState.currentPage]
