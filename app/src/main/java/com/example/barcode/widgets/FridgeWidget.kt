@@ -130,6 +130,7 @@ class FridgeWidget : GlanceAppWidget() {
                         if (isWidgetForceSyncRunning) {
                             Text(
                                 text = "Sync en cours",
+                                maxLines = 1,
                                 style = TextStyle(
                                     color = colors.primary.toColorProvider(),
                                     fontSize = 11.sp,
@@ -137,29 +138,35 @@ class FridgeWidget : GlanceAppWidget() {
                                 )
                             )
                         } else {
-                            Image(
-                                provider = ImageProvider(R.drawable.ic_widget_refresh),
-                                contentDescription = "Forcer la synchronisation",
-                                modifier = GlanceModifier
-                                    .size(22.dp)
-                                    .clickable(
-                                        actionRunCallback<ForceWidgetSyncActionCallback>()
+                            Row(
+                                verticalAlignment = Alignment.Vertical.CenterVertically,
+                                horizontalAlignment = Alignment.Horizontal.End
+                            ) {
+                                Text(
+                                    text = lastSyncText,
+                                    maxLines = 1,
+                                    style = TextStyle(
+                                        color = colors.muted.toColorProvider(),
+                                        fontSize = 11.sp
                                     )
-                            )
+                                )
+
+                                Spacer(modifier = GlanceModifier.width(5.dp))
+
+                                Image(
+                                    provider = ImageProvider(R.drawable.ic_widget_refresh),
+                                    contentDescription = "Forcer la synchronisation",
+                                    modifier = GlanceModifier
+                                        .size(22.dp)
+                                        .clickable(
+                                            actionRunCallback<ForceWidgetSyncActionCallback>()
+                                        )
+                                )
+                            }
                         }
                     }
 
-                    Spacer(modifier = GlanceModifier.height(4.dp))
-
-                    Text(
-                        text = lastSyncText,
-                        style = TextStyle(
-                            color = colors.muted.toColorProvider(),
-                            fontSize = 12.sp
-                        )
-                    )
-
-                    Spacer(modifier = GlanceModifier.height(6.dp))
+                    Spacer(modifier = GlanceModifier.height(8.dp))
 
                     when (displayMode) {
                         WidgetDisplayMode.FRIDGE -> {
