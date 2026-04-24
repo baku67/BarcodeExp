@@ -375,6 +375,11 @@ private fun WidgetShoppingScopeChip(
 }
 
 
+private enum class WidgetShoppingRowLayout {
+    SINGLE_COLUMN,
+    TWO_COLUMNS
+}
+
 @Composable
 private fun WidgetShoppingListContent(
     items: List<ShoppingListItemEntity>,
@@ -389,10 +394,33 @@ private fun WidgetShoppingListContent(
         return
     }
 
-    val visibleItems = items.take(6)
-    val splitIndex = (visibleItems.size + 1) / 2
-    val leftItems = visibleItems.take(splitIndex)
-    val rightItems = visibleItems.drop(splitIndex)
+    val visibleItems = items.take(14)
+
+    // Nombre d'items avant de créer 2eme colonne
+    if (visibleItems.size <= 7) {
+        Column(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(top = 2.dp),
+            verticalAlignment = Alignment.Vertical.Top,
+            horizontalAlignment = Alignment.Horizontal.Start
+        ) {
+            visibleItems.forEach { item ->
+                WidgetShoppingCompactRow(
+                    item = item,
+                    colors = colors,
+                    layout = WidgetShoppingRowLayout.SINGLE_COLUMN
+                )
+            }
+        }
+
+        return
+    }
+
+    val firstColumnMaxItems = 6
+    val leftItems = visibleItems.take(firstColumnMaxItems)
+    val rightItems = visibleItems.drop(firstColumnMaxItems)
 
     Row(
         modifier = GlanceModifier
@@ -410,7 +438,8 @@ private fun WidgetShoppingListContent(
             leftItems.forEach { item ->
                 WidgetShoppingCompactRow(
                     item = item,
-                    colors = colors
+                    colors = colors,
+                    layout = WidgetShoppingRowLayout.TWO_COLUMNS
                 )
             }
         }
@@ -434,7 +463,8 @@ private fun WidgetShoppingListContent(
             rightItems.forEach { item ->
                 WidgetShoppingCompactRow(
                     item = item,
-                    colors = colors
+                    colors = colors,
+                    layout = WidgetShoppingRowLayout.TWO_COLUMNS
                 )
             }
         }
@@ -444,7 +474,8 @@ private fun WidgetShoppingListContent(
 @Composable
 private fun WidgetShoppingCompactRow(
     item: ShoppingListItemEntity,
-    colors: WidgetPalette
+    colors: WidgetPalette,
+    layout: WidgetShoppingRowLayout
 ) {
     val name = item.name
         .trim()
@@ -475,7 +506,10 @@ private fun WidgetShoppingCompactRow(
 
         Text(
             text = name,
-            modifier = GlanceModifier.defaultWeight(),
+            modifier = when (layout) {
+                WidgetShoppingRowLayout.SINGLE_COLUMN -> GlanceModifier
+                WidgetShoppingRowLayout.TWO_COLUMNS -> GlanceModifier.defaultWeight()
+            },
             maxLines = 1,
             style = TextStyle(
                 color = colors.text.toColorProvider(),
@@ -489,7 +523,7 @@ private fun WidgetShoppingCompactRow(
         )
 
         if (quantity != null) {
-            Spacer(modifier = GlanceModifier.width(4.dp))
+            Spacer(modifier = GlanceModifier.width(6.dp))
 
             Text(
                 text = quantity,
