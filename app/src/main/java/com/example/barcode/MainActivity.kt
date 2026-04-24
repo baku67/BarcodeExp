@@ -593,11 +593,11 @@ class MainActivity : ComponentActivity() {
 
         return when (destination) {
             WidgetNavigation.DESTINATION_FRIDGE,
-            WidgetNavigation.DESTINATION_SHOPPING -> destination
+            WidgetNavigation.DESTINATION_SHOPPING,
+            WidgetNavigation.DESTINATION_SHOPPING_SHARED,
+            WidgetNavigation.DESTINATION_SHOPPING_PERSONAL -> destination
 
             else -> null
         }
     }
-
 }
-

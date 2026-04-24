@@ -269,7 +269,7 @@ class FridgeWidget : GlanceAppWidget() {
                                         actionStartActivity(
                                             openAppIntent(
                                                 context = appContext,
-                                                destination = WidgetNavigation.DESTINATION_SHOPPING
+                                                destination = shoppingScope.toWidgetDestination()
                                             )
                                         )
                                     ),
@@ -733,6 +733,14 @@ private fun openAppIntent(
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+}
+
+
+private fun WidgetShoppingScope.toWidgetDestination(): String {
+    return when (this) {
+        WidgetShoppingScope.SHARED -> WidgetNavigation.DESTINATION_SHOPPING_SHARED
+        WidgetShoppingScope.PERSONAL -> WidgetNavigation.DESTINATION_SHOPPING_PERSONAL
+    }
 }
 
 

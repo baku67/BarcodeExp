@@ -104,6 +104,8 @@ fun ListeCoursesContent(
     isActive: Boolean,
     onAddItem: (ShoppingListScope) -> Unit,
     vm: ShoppingListViewModel,
+    widgetRequestedScope: ShoppingListScope? = null,
+    onWidgetRequestedScopeConsumed: () -> Unit = {},
 ) {
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val session = remember { SessionManager(appContext) }
@@ -231,6 +233,18 @@ fun ListeCoursesContent(
     val collapseThresholdPx = with(density) { 28.dp.roundToPx() }
     val expandThresholdPx = with(density) { 2.dp.roundToPx() }
     var showExpandedFilters by rememberSaveable { mutableStateOf(true) }
+
+    LaunchedEffect(widgetRequestedScope) {
+        val requestedScope = widgetRequestedScope ?: return@LaunchedEffect
+
+        if (tab != requestedScope) {
+            tab = requestedScope
+            filter = ShoppingFilter.ALL
+        }
+
+        listState.scrollToItem(0)
+        onWidgetRequestedScopeConsumed()
+    }
 
     LaunchedEffect(listState, collapseThresholdPx, expandThresholdPx) {
         snapshotFlow {

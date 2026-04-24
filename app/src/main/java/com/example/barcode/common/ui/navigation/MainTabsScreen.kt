@@ -39,6 +39,7 @@ import com.example.barcode.features.auth.AuthViewModel
 import com.example.barcode.features.dashboard.HomeContent
 import com.example.barcode.features.fridge.FridgePage
 import com.example.barcode.features.listeCourse.ListeCoursesContent
+import com.example.barcode.features.listeCourse.ShoppingListScope
 import com.example.barcode.features.listeCourse.ShoppingListViewModel
 import com.example.barcode.features.listeCourse.ShoppingListViewModelFactory
 import com.example.barcode.features.recipies.RecipesContent
@@ -65,6 +66,8 @@ fun MainTabsScreen(
     val scope = rememberCoroutineScope()
 
     var itemsReselectToken by rememberSaveable { mutableStateOf(0) }
+
+    var pendingWidgetShoppingScope by rememberSaveable { mutableStateOf<String?>(null) }
 
     fun goToTab(route: String) {
         val idx = tabs.indexOf(route)
@@ -98,8 +101,22 @@ fun MainTabsScreen(
 
         val targetRoute = when (destination) {
             WidgetNavigation.DESTINATION_FRIDGE -> "items"
-            WidgetNavigation.DESTINATION_SHOPPING -> "listeCourses"
+
+            WidgetNavigation.DESTINATION_SHOPPING,
+            WidgetNavigation.DESTINATION_SHOPPING_SHARED,
+            WidgetNavigation.DESTINATION_SHOPPING_PERSONAL -> "listeCourses"
+
             else -> null
+        }
+
+        pendingWidgetShoppingScope = when (destination) {
+            WidgetNavigation.DESTINATION_SHOPPING_SHARED -> WidgetNavigation.DESTINATION_SHOPPING_SHARED
+            WidgetNavigation.DESTINATION_SHOPPING_PERSONAL -> WidgetNavigation.DESTINATION_SHOPPING_PERSONAL
+
+            // fallback si une ancienne version du widget envoie encore "shopping"
+            WidgetNavigation.DESTINATION_SHOPPING -> WidgetNavigation.DESTINATION_SHOPPING_SHARED
+
+            else -> pendingWidgetShoppingScope
         }
 
         val targetIndex = targetRoute?.let { tabs.indexOf(it) } ?: -1
@@ -211,7 +228,11 @@ fun MainTabsScreen(
                                     launchSingleTop = true
                                 }
                             },
-                            vm = vm
+                            vm = vm,
+                            widgetRequestedScope = pendingWidgetShoppingScope.toShoppingListScopeOrNull(),
+                            onWidgetRequestedScopeConsumed = {
+                                pendingWidgetShoppingScope = null
+                            }
                         )
                     } ?: Box(
                         modifier = Modifier.fillMaxSize(),
@@ -265,4 +286,12 @@ private fun isOnline(context: Context): Boolean {
     val network = cm.activeNetwork ?: return false
     val caps = cm.getNetworkCapabilities(network) ?: return false
     return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+}
+
+private fun String?.toShoppingListScopeOrNull(): ShoppingListScope? {
+    return when (this) {
+        WidgetNavigation.DESTINATION_SHOPPING_SHARED -> ShoppingListScope.SHARED
+        WidgetNavigation.DESTINATION_SHOPPING_PERSONAL -> ShoppingListScope.PERSONAL
+        else -> null
+    }
 }
