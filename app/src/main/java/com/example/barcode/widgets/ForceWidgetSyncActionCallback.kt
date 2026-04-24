@@ -23,6 +23,9 @@ class ForceWidgetSyncActionCallback : ActionCallback {
         val token = prefs.markWidgetForceSyncStarted()
 
         // Feedback immédiat côté widget.
+        // Feedback immédiat sur le widget cliqué.
+        FridgeWidget().update(appContext, glanceId)
+
         // On garde updateFridgeWidgets() pour synchroniser toutes les instances du widget.
         updateFridgeWidgets(appContext)
 
