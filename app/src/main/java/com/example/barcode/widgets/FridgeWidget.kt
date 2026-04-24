@@ -3,6 +3,7 @@ package com.example.barcode.widgets
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.text.format.DateUtils
 import android.util.Log
 import androidx.compose.runtime.Composable
@@ -12,12 +13,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.ColorFilter
-import androidx.glance.Image
-import androidx.glance.ImageProvider
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -29,7 +31,9 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxHeight
@@ -39,10 +43,14 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import coil.ImageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.example.barcode.MainActivity
 import com.example.barcode.R
 import com.example.barcode.common.expiry.ExpiryLevel
@@ -64,15 +72,29 @@ import com.example.barcode.data.local.AppDb
 import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.data.local.entities.ShoppingListItemEntity
 import com.example.barcode.sync.SyncPreferences
+import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.min
+import kotlin.math.roundToInt
+
+private const val WidgetFridgeTextListMaxItems = 5
+
+private const val WidgetFridgeGridColumns = 6
+private const val WidgetFridgeGridRows = 2
+private const val WidgetFridgeGridMaxItems = WidgetFridgeGridColumns * WidgetFridgeGridRows
+
+private const val WidgetShoppingMaxItems = 14
+private const val WidgetShoppingOneColumnMaxItems = 7
+
+private const val WidgetProductBitmapMaxPx = 180
 
 class FridgeWidget : GlanceAppWidget() {
 
     override val sizeMode: SizeMode = SizeMode.Single
 
-    override val stateDefinition = androidx.glance.state.PreferencesGlanceStateDefinition
+    override val stateDefinition = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(
         context: Context,
@@ -87,7 +109,30 @@ class FridgeWidget : GlanceAppWidget() {
         val shoppingListDao = db.shoppingListDao()
         val sessionManager = SessionManager(appContext)
 
+        val initialFridgeItems = itemDao
+            .observeFirstExpiringForWidget(limit = WidgetFridgeGridMaxItems)
+            .first()
+
+        val fridgeImageBitmaps = loadWidgetProductBitmaps(
+            context = appContext,
+            items = initialFridgeItems
+        )
+
         provideContent {
+            val widgetState = currentState<Preferences>()
+
+            val displayMode = WidgetDisplayMode.fromStoredValue(
+                widgetState[WidgetDisplayModeKey]
+            )
+
+            val fridgeContentMode = WidgetFridgeContentMode.fromStoredValue(
+                widgetState[WidgetFridgeContentModeKey]
+            )
+
+            val shoppingScope = WidgetShoppingScope.fromStoredValue(
+                widgetState[WidgetShoppingScopeKey]
+            )
+
             val lastSyncFinishedAt by syncPrefs
                 .lastSyncFinishedAt
                 .collectAsState(initial = 0L)
@@ -97,20 +142,8 @@ class FridgeWidget : GlanceAppWidget() {
                 .collectAsState(initial = false)
 
             val fridgeItems by itemDao
-                .observeFirstExpiringForWidget(limit = 10)
+                .observeFirstExpiringForWidget(limit = WidgetFridgeGridMaxItems)
                 .collectAsState(initial = emptyList())
-
-            val lastSyncText = lastSyncFinishedAt.toLastSyncTimeLabel()
-
-            val widgetState = currentState<Preferences>()
-
-            val displayMode = WidgetDisplayMode.fromStoredValue(
-                widgetState[WidgetDisplayModeKey]
-            )
-
-            val shoppingScope = WidgetShoppingScope.fromStoredValue(
-                widgetState[WidgetShoppingScopeKey]
-            )
 
             val currentUserId by sessionManager
                 .userId
@@ -133,7 +166,7 @@ class FridgeWidget : GlanceAppWidget() {
                     homeId = effectiveHomeId,
                     userId = effectiveUserId,
                     scope = WidgetShoppingScope.SHARED.daoValue,
-                    limit = 10
+                    limit = WidgetShoppingMaxItems
                 )
             }.collectAsState(initial = emptyList())
 
@@ -142,7 +175,7 @@ class FridgeWidget : GlanceAppWidget() {
                     homeId = effectiveHomeId,
                     userId = effectiveUserId,
                     scope = WidgetShoppingScope.PERSONAL.daoValue,
-                    limit = 10
+                    limit = WidgetShoppingMaxItems
                 )
             }.collectAsState(initial = emptyList())
 
@@ -150,6 +183,8 @@ class FridgeWidget : GlanceAppWidget() {
                 WidgetShoppingScope.SHARED -> sharedShoppingItems
                 WidgetShoppingScope.PERSONAL -> personalShoppingItems
             }
+
+            val lastSyncText = lastSyncFinishedAt.toLastSyncTimeLabel()
 
             Column(
                 modifier = GlanceModifier
@@ -178,13 +213,24 @@ class FridgeWidget : GlanceAppWidget() {
                             colors = colors
                         )
 
-                        if (displayMode == WidgetDisplayMode.SHOPPING) {
-                            Spacer(modifier = GlanceModifier.width(4.dp))
+                        when (displayMode) {
+                            WidgetDisplayMode.FRIDGE -> {
+                                Spacer(modifier = GlanceModifier.width(4.dp))
 
-                            WidgetShoppingScopeChip(
-                                shoppingScope = shoppingScope,
-                                colors = colors
-                            )
+                                WidgetFridgeContentModeChip(
+                                    fridgeContentMode = fridgeContentMode,
+                                    colors = colors
+                                )
+                            }
+
+                            WidgetDisplayMode.SHOPPING -> {
+                                Spacer(modifier = GlanceModifier.width(4.dp))
+
+                                WidgetShoppingScopeChip(
+                                    shoppingScope = shoppingScope,
+                                    colors = colors
+                                )
+                            }
                         }
 
                         Spacer(modifier = GlanceModifier.defaultWeight())
@@ -250,11 +296,25 @@ class FridgeWidget : GlanceAppWidget() {
                                 if (fridgeItems.isEmpty()) {
                                     WidgetEmptyState(colors = colors)
                                 } else {
-                                    fridgeItems.take(5).forEach { item ->
-                                        WidgetFridgeCompactRow(
-                                            item = item,
-                                            colors = colors
-                                        )
+                                    when (fridgeContentMode) {
+                                        WidgetFridgeContentMode.LIST -> {
+                                            fridgeItems
+                                                .take(WidgetFridgeTextListMaxItems)
+                                                .forEach { item ->
+                                                    WidgetFridgeCompactRow(
+                                                        item = item,
+                                                        colors = colors
+                                                    )
+                                                }
+                                        }
+
+                                        WidgetFridgeContentMode.GRID -> {
+                                            WidgetFridgeImageGrid(
+                                                items = fridgeItems.take(WidgetFridgeGridMaxItems),
+                                                imageBitmaps = fridgeImageBitmaps,
+                                                colors = colors
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -289,7 +349,6 @@ class FridgeWidget : GlanceAppWidget() {
         }
     }
 }
-
 
 @Composable
 private fun WidgetModeChip(
@@ -328,6 +387,49 @@ private fun WidgetModeChip(
     }
 }
 
+@Composable
+private fun WidgetFridgeContentModeChip(
+    fridgeContentMode: WidgetFridgeContentMode,
+    colors: WidgetPalette
+) {
+    Row(
+        modifier = GlanceModifier
+            .background(colors.background)
+            .cornerRadius(14.dp)
+            .padding(horizontal = 9.dp, vertical = 5.dp)
+            .clickable(
+                actionRunCallback<ToggleWidgetFridgeContentModeActionCallback>()
+            ),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally
+    ) {
+        Image(
+            provider = ImageProvider(fridgeContentMode.iconRes()),
+            contentDescription = when (fridgeContentMode) {
+                WidgetFridgeContentMode.LIST -> "Affichage liste"
+                WidgetFridgeContentMode.GRID -> "Affichage grille"
+            },
+            modifier = GlanceModifier.size(21.dp),
+            colorFilter = ColorFilter.tint(colors.primary.toColorProvider())
+        )
+
+        Spacer(modifier = GlanceModifier.width(2.dp))
+
+        Image(
+            provider = ImageProvider(R.drawable.ic_widget_expand_all),
+            contentDescription = "Changer l’affichage du frigo",
+            modifier = GlanceModifier.size(16.dp),
+            colorFilter = ColorFilter.tint(colors.primary.toColorProvider())
+        )
+    }
+}
+
+private fun WidgetFridgeContentMode.iconRes(): Int {
+    return when (this) {
+        WidgetFridgeContentMode.LIST -> R.drawable.ic_widget_display_list
+        WidgetFridgeContentMode.GRID -> R.drawable.ic_widget_display_grid
+    }
+}
 
 private fun WidgetShoppingScope.iconRes(): Int {
     return when (this) {
@@ -335,7 +437,6 @@ private fun WidgetShoppingScope.iconRes(): Int {
         WidgetShoppingScope.PERSONAL -> R.drawable.ic_widget_scope_personal
     }
 }
-
 
 @Composable
 private fun WidgetShoppingScopeChip(
@@ -363,7 +464,7 @@ private fun WidgetShoppingScopeChip(
             colorFilter = ColorFilter.tint(colors.primary.toColorProvider())
         )
 
-        Spacer(modifier = GlanceModifier.width(0.dp))
+        Spacer(modifier = GlanceModifier.width(2.dp))
 
         Image(
             provider = ImageProvider(R.drawable.ic_widget_expand_all),
@@ -373,7 +474,6 @@ private fun WidgetShoppingScopeChip(
         )
     }
 }
-
 
 private enum class WidgetShoppingRowLayout {
     SINGLE_COLUMN,
@@ -394,10 +494,9 @@ private fun WidgetShoppingListContent(
         return
     }
 
-    val visibleItems = items.take(14)
+    val visibleItems = items.take(WidgetShoppingMaxItems)
 
-    // Nombre d'items avant de créer 2eme colonne
-    if (visibleItems.size <= 7) {
+    if (visibleItems.size <= WidgetShoppingOneColumnMaxItems) {
         Column(
             modifier = GlanceModifier
                 .fillMaxWidth()
@@ -418,9 +517,8 @@ private fun WidgetShoppingListContent(
         return
     }
 
-    val firstColumnMaxItems = 6
-    val leftItems = visibleItems.take(firstColumnMaxItems)
-    val rightItems = visibleItems.drop(firstColumnMaxItems)
+    val leftItems = visibleItems.take(WidgetShoppingOneColumnMaxItems)
+    val rightItems = visibleItems.drop(WidgetShoppingOneColumnMaxItems)
 
     Row(
         modifier = GlanceModifier
@@ -674,6 +772,120 @@ private fun WidgetEmptyState(
     )
 }
 
+@Composable
+private fun WidgetFridgeImageGrid(
+    items: List<ItemEntity>,
+    imageBitmaps: Map<String, Bitmap>,
+    colors: WidgetPalette
+) {
+    val visibleItems = items.take(WidgetFridgeGridMaxItems)
+    val rows = visibleItems
+        .chunked(WidgetFridgeGridColumns)
+        .take(WidgetFridgeGridRows)
+
+    Column(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
+        verticalAlignment = Alignment.Vertical.Top,
+        horizontalAlignment = Alignment.Horizontal.Start
+    ) {
+        rows.forEachIndexed { rowIndex, rowItems ->
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Vertical.CenterVertically,
+                horizontalAlignment = Alignment.Horizontal.Start
+            ) {
+                rowItems.forEach { item ->
+                    WidgetFridgeImageTile(
+                        item = item,
+                        bitmap = imageBitmaps[item.id],
+                        colors = colors,
+                        modifier = GlanceModifier.defaultWeight()
+                    )
+                }
+
+                repeat(WidgetFridgeGridColumns - rowItems.size) {
+                    Spacer(
+                        modifier = GlanceModifier
+                            .defaultWeight()
+                            .height(54.dp)
+                    )
+                }
+            }
+
+            if (rowIndex < rows.lastIndex) {
+                Spacer(modifier = GlanceModifier.height(7.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun WidgetFridgeImageTile(
+    item: ItemEntity,
+    bitmap: Bitmap?,
+    colors: WidgetPalette,
+    modifier: GlanceModifier = GlanceModifier
+) {
+    Column(
+        modifier = modifier
+            .height(54.dp)
+            .padding(horizontal = 2.dp),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally
+    ) {
+        if (bitmap != null) {
+            Image(
+                provider = ImageProvider(bitmap),
+                contentDescription = item.name ?: "Produit",
+                modifier = GlanceModifier
+                    .size(50.dp)
+                    .background(colors.background)
+                    .cornerRadius(13.dp)
+                    .padding(3.dp),
+                contentScale = ContentScale.Fit
+            )
+        } else {
+            WidgetFridgeImageFallback(
+                item = item,
+                colors = colors
+            )
+        }
+    }
+}
+
+@Composable
+private fun WidgetFridgeImageFallback(
+    item: ItemEntity,
+    colors: WidgetPalette
+) {
+    val initial = item.name
+        ?.trim()
+        ?.firstOrNull()
+        ?.uppercaseChar()
+        ?.toString()
+        ?: "?"
+
+    Box(
+        modifier = GlanceModifier
+            .size(50.dp)
+            .background(colors.background)
+            .cornerRadius(13.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = initial,
+            maxLines = 1,
+            style = TextStyle(
+                color = colors.primary.toColorProvider(),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        )
+    }
+}
+
 private fun Color.toColorProvider(): ColorProvider {
     return ColorProvider(this)
 }
@@ -724,6 +936,68 @@ private fun Long?.toWidgetExpiryColor(
     }
 }
 
+private suspend fun loadWidgetProductBitmaps(
+    context: Context,
+    items: List<ItemEntity>
+): Map<String, Bitmap> {
+    val imageLoader = ImageLoader(context)
+
+    return items
+        .take(WidgetFridgeGridMaxItems)
+        .mapNotNull { item ->
+            val imageUrl = item.imageUrl
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
+
+            runCatching {
+                val request = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .size(WidgetProductBitmapMaxPx, WidgetProductBitmapMaxPx)
+                    .allowHardware(false)
+                    .build()
+
+                val result = imageLoader.execute(request) as? SuccessResult
+                    ?: return@runCatching null
+
+                val drawable = result.drawable
+
+                val sourceWidth = drawable.intrinsicWidth
+                    .takeIf { it > 0 }
+                    ?: WidgetProductBitmapMaxPx
+
+                val sourceHeight = drawable.intrinsicHeight
+                    .takeIf { it > 0 }
+                    ?: WidgetProductBitmapMaxPx
+
+                val scale = min(
+                    1f,
+                    min(
+                        WidgetProductBitmapMaxPx.toFloat() / sourceWidth.toFloat(),
+                        WidgetProductBitmapMaxPx.toFloat() / sourceHeight.toFloat()
+                    )
+                )
+
+                val targetWidth = (sourceWidth * scale)
+                    .roundToInt()
+                    .coerceAtLeast(1)
+
+                val targetHeight = (sourceHeight * scale)
+                    .roundToInt()
+                    .coerceAtLeast(1)
+
+                val bitmap = drawable.toBitmap(
+                    width = targetWidth,
+                    height = targetHeight,
+                    config = Bitmap.Config.ARGB_8888
+                )
+
+                item.id to bitmap
+            }.getOrNull()
+        }
+        .toMap()
+}
+
 private fun openAppIntent(
     context: Context,
     destination: String
@@ -735,14 +1009,12 @@ private fun openAppIntent(
         .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
 }
 
-
 private fun WidgetShoppingScope.toWidgetDestination(): String {
     return when (this) {
         WidgetShoppingScope.SHARED -> WidgetNavigation.DESTINATION_SHOPPING_SHARED
         WidgetShoppingScope.PERSONAL -> WidgetNavigation.DESTINATION_SHOPPING_PERSONAL
     }
 }
-
 
 suspend fun updateFridgeWidgets(context: Context) {
     val appContext = context.applicationContext
