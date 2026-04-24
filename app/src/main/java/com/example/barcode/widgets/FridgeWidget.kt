@@ -10,23 +10,32 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
+import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.example.barcode.R
 import com.example.barcode.common.ui.theme.AppMutedDark
 import com.example.barcode.common.ui.theme.AppMutedLight
 import com.example.barcode.common.ui.theme.AppOnSurfaceDark
@@ -36,20 +45,13 @@ import com.example.barcode.common.ui.theme.AppWidgetBackgroundDark
 import com.example.barcode.common.ui.theme.AppWidgetBackgroundLight
 import com.example.barcode.common.ui.theme.AppWidgetSurfaceDark
 import com.example.barcode.common.ui.theme.AppWidgetSurfaceLight
+import com.example.barcode.data.local.AppDb
+import com.example.barcode.data.local.entities.ItemEntity
 import com.example.barcode.sync.SyncPreferences
-import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import androidx.glance.Image
-import androidx.glance.ImageProvider
-import androidx.glance.action.clickable
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.layout.Row
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.size
-import com.example.barcode.R
 
 class FridgeWidget : GlanceAppWidget() {
 
@@ -59,9 +61,11 @@ class FridgeWidget : GlanceAppWidget() {
         context: Context,
         id: GlanceId
     ) {
-        val colors = WidgetPalette.fromContext(context)
+        val appContext = context.applicationContext
+        val colors = WidgetPalette.fromContext(appContext)
 
-        val syncPrefs = SyncPreferences(context)
+        val syncPrefs = SyncPreferences(appContext)
+        val itemDao = AppDb.get(appContext).itemDao()
 
         provideContent {
             val lastSyncFinishedAt by syncPrefs
@@ -71,6 +75,10 @@ class FridgeWidget : GlanceAppWidget() {
             val isWidgetForceSyncRunning by syncPrefs
                 .isWidgetForceSyncRunning
                 .collectAsState(initial = false)
+
+            val fridgeItems by itemDao
+                .observeFirstExpiringForWidget(limit = 5)
+                .collectAsState(initial = emptyList())
 
             val lastSyncText = lastSyncFinishedAt.toLastSyncTimeLabel()
 
@@ -138,32 +146,18 @@ class FridgeWidget : GlanceAppWidget() {
                         )
                     )
 
-                    Spacer(modifier = GlanceModifier.height(10.dp))
+                    Spacer(modifier = GlanceModifier.height(6.dp))
 
-                    Text(
-                        text = "À surveiller",
-                        style = TextStyle(
-                            color = colors.muted.toColorProvider(),
-                            fontSize = 13.sp
-                        )
-                    )
-
-                    Spacer(modifier = GlanceModifier.height(12.dp))
-
-                    WidgetItemText(
-                        text = "🥕 Carottes — demain",
-                        colors = colors
-                    )
-
-                    WidgetItemText(
-                        text = "🥛 Lait — dans 2 jours",
-                        colors = colors
-                    )
-
-                    WidgetItemText(
-                        text = "🍓 Fraises — aujourd’hui",
-                        colors = colors
-                    )
+                    if (fridgeItems.isEmpty()) {
+                        WidgetEmptyState(colors = colors)
+                    } else {
+                        fridgeItems.take(5).forEach { item ->
+                            WidgetFridgeCompactRow(
+                                item = item,
+                                colors = colors
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -204,19 +198,68 @@ private data class WidgetPalette(
 }
 
 @Composable
-private fun WidgetItemText(
-    text: String,
+private fun WidgetFridgeCompactRow(
+    item: ItemEntity,
+    colors: WidgetPalette
+) {
+    val name = item.name
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?: "Sans nom"
+
+    val expiryLabel = item.expiryDate.toWidgetExpiryLabel()
+
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(18.dp),
+        verticalAlignment = Alignment.Vertical.CenterVertically,
+        horizontalAlignment = Alignment.Horizontal.Start
+    ) {
+        Text(
+            text = name,
+            modifier = GlanceModifier.defaultWeight(),
+            maxLines = 1,
+            style = TextStyle(
+                color = colors.text.toColorProvider(),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+        )
+
+        Text(
+            text = expiryLabel,
+            maxLines = 1,
+            style = TextStyle(
+                color = colors.muted.toColorProvider(),
+                fontSize = 11.sp
+            )
+        )
+    }
+}
+
+@Composable
+private fun WidgetEmptyState(
     colors: WidgetPalette
 ) {
     Text(
-        text = text,
+        text = "Aucun produit à surveiller",
         style = TextStyle(
             color = colors.text.toColorProvider(),
-            fontSize = 14.sp
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium
         )
     )
 
-    Spacer(modifier = GlanceModifier.height(5.dp))
+    Spacer(modifier = GlanceModifier.height(4.dp))
+
+    Text(
+        text = "Ajoute des produits dans ton frigo",
+        style = TextStyle(
+            color = colors.muted.toColorProvider(),
+            fontSize = 12.sp
+        )
+    )
 }
 
 private fun Color.toColorProvider(): ColorProvider {
@@ -239,6 +282,67 @@ private fun Long.toLastSyncTimeLabel(): String {
 
         "Dernière sync : $date à $time"
     }
+}
+
+private fun Long?.toWidgetExpiryLabel(): String {
+    val value = this ?: return "sans date"
+
+    if (value <= 0L) {
+        return "sans date"
+    }
+
+    val diffDays = daysBetweenStartOfDay(
+        fromMillis = System.currentTimeMillis(),
+        toMillis = value
+    )
+
+    return when {
+        diffDays < -1 -> "expiré ${-diffDays} j"
+        diffDays == -1 -> "expiré hier"
+        diffDays == 0 -> "aujourd’hui"
+        diffDays == 1 -> "demain"
+        diffDays in 2..6 -> "dans $diffDays j"
+        else -> SimpleDateFormat("dd/MM", Locale.getDefault())
+            .format(Date(value))
+    }
+}
+
+private fun Long?.isUrgentExpiry(): Boolean {
+    val value = this ?: return false
+
+    if (value <= 0L) {
+        return false
+    }
+
+    val diffDays = daysBetweenStartOfDay(
+        fromMillis = System.currentTimeMillis(),
+        toMillis = value
+    )
+
+    return diffDays <= 1
+}
+
+private fun daysBetweenStartOfDay(
+    fromMillis: Long,
+    toMillis: Long
+): Int {
+    val from = Calendar.getInstance().apply {
+        timeInMillis = fromMillis
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+
+    val to = Calendar.getInstance().apply {
+        timeInMillis = toMillis
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+
+    return ((to.timeInMillis - from.timeInMillis) / DateUtils.DAY_IN_MILLIS).toInt()
 }
 
 suspend fun updateFridgeWidgets(context: Context) {

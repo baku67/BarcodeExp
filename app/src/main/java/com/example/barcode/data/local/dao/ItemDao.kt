@@ -21,6 +21,18 @@ interface ItemDao {
     """)
     fun observeAll(): Flow<List<ItemEntity>>
 
+    // ✅ Version légère pour le widget :
+    // on récupère uniquement les X premiers items visibles du frigo,
+    // triés par date d'expiration.
+    @Query("""
+      SELECT * FROM items
+      WHERE (deletedAt IS NULL OR deletedAt = 0)
+        AND pendingOperation != 'DELETE'
+      ORDER BY ((expiryDate IS NULL) OR expiryDate = 0) ASC, expiryDate ASC, addedAt ASC
+      LIMIT :limit
+    """)
+    fun observeFirstExpiringForWidget(limit: Int): Flow<List<ItemEntity>>
+
     // (Optionnel) Debug / admin : voir aussi les tombstones
     @Query("""
       SELECT * FROM items

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
+import com.example.barcode.widgets.updateFridgeWidgets
 
 class ItemsViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -85,6 +86,7 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
         )
 
         repo.addOrUpdate(entity)
+        updateFridgeWidgets(getApplication())
 
         // 2) Si connecté (AUTH + token), déclenche la sync distante en background
         if (session.isAuthenticated()) {
@@ -113,6 +115,7 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
             imageNutritionUrl = imageNutritionUrl,
             nutriScore = nutriScore
         )
+        updateFridgeWidgets(getApplication())
 
         if (session.isAuthenticated()) {
             SyncScheduler.enqueueSync(getApplication())
@@ -121,6 +124,7 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteItem(id: String) = viewModelScope.launch {
         repo.delete(id) // ✅ devient un soft delete
+        updateFridgeWidgets(getApplication())
 
         // ✅ Si authentifié, on push la suppression
         if (session.isAuthenticated()) {
@@ -180,6 +184,7 @@ class ItemsViewModel(app: Application) : AndroidViewModel(app) {
         )
 
         repo.addOrUpdate(entity)
+        updateFridgeWidgets(getApplication())
 
         if (session.isAuthenticated()) {
             SyncScheduler.enqueueSync(getApplication())
