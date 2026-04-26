@@ -738,15 +738,7 @@ private fun CourseRow(
         label = "rowBg"
     )
 
-    val emoji = when (item.category) {
-        ShoppingCategory.FRUITS_LEGUMES -> "🥕"
-        ShoppingCategory.FRAIS -> "🧀"
-        ShoppingCategory.EPICERIE -> "🍚"
-        ShoppingCategory.VIANDE -> "🥩"
-        ShoppingCategory.POISSON -> "🐟"
-        ShoppingCategory.MAISON -> "🧼"
-        ShoppingCategory.OTHER -> "🛒"
-    }
+    val emoji = item.category.emoji
 
     val titleDecoration = if (item.isChecked) TextDecoration.LineThrough else TextDecoration.None
 

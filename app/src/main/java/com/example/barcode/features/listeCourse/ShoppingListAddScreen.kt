@@ -19,7 +19,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,8 +66,16 @@ fun ShoppingListAddScreen(
     var searchIndex by remember { mutableStateOf<ShoppingSearchIndex?>(null) }
     var selectedSuggestion by remember { mutableStateOf<ShoppingSearchSuggestion?>(null) }
 
+    var selectedCategoryKey by rememberSaveable {
+        mutableStateOf(ShoppingCategory.OTHER.key)
+    }
+
     val trimmedName = name.trim()
     val canSearch = trimmedName.length >= 3
+
+    val selectedCategory = remember(selectedCategoryKey) {
+        ShoppingCategory.fromKey(selectedCategoryKey)
+    }
 
     LaunchedEffect(Unit) {
         val taxonomy = ManualTaxonomyRepository.load(context)
@@ -243,6 +254,14 @@ fun ShoppingListAddScreen(
                             }
                         }
 
+                        ShoppingCategorySelect(
+                            selectedCategory = selectedCategory,
+                            onCategorySelected = { category ->
+                                selectedCategoryKey = category.key
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
                         OutlinedTextField(
                             value = quantity,
                             onValueChange = { quantity = it },
@@ -300,6 +319,7 @@ fun ShoppingListAddScreen(
                                             quantity = quantity.trim().ifBlank { null },
                                             note = note.trim().ifBlank { null },
                                             isImportant = isImportant,
+                                            category = selectedCategory,
                                             selectedSuggestion = selectedSuggestion,
                                         )
                                     )
@@ -376,6 +396,60 @@ private fun ShoppingSuggestionRow(
                         MaterialTheme.colorScheme.primary
                     } else {
                         MaterialTheme.colorScheme.secondary
+                    }
+                )
+            }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShoppingCategorySelect(
+    selectedCategory: ShoppingCategory,
+    onCategorySelected: (ShoppingCategory) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = selectedCategory.displayLabel,
+            onValueChange = {},
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            readOnly = true,
+            label = { Text("Catégorie") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            singleLine = true
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            ShoppingCategory.entries.forEach { category ->
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(category.emoji)
+                            Text(category.label)
+                        }
+                    },
+                    onClick = {
+                        onCategorySelected(category)
+                        expanded = false
                     }
                 )
             }

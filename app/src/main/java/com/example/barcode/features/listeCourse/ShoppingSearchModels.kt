@@ -36,6 +36,7 @@ data class ShoppingListAddDraft(
     val quantity: String?,
     val note: String?,
     val isImportant: Boolean,
+    val category: ShoppingCategory,
     val selectedSuggestion: ShoppingSearchSuggestion?,
 )
 

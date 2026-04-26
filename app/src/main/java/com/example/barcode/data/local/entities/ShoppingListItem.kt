@@ -4,7 +4,6 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.example.barcode.features.listeCourse.ShoppingCategory
 import java.util.UUID
 
 @Entity(
@@ -48,7 +47,9 @@ data class ShoppingListItemEntity(
     val isImportant: Boolean = false,
     val isFavorite: Boolean = false,
     val isChecked: Boolean = false,
-    val category: String = ShoppingCategory.OTHER.name,
+
+    @ColumnInfo(defaultValue = "'OTHER'")
+    val category: String = "OTHER",
 
     val createdAt: Long = System.currentTimeMillis(),
     val deletedAt: Long? = null,

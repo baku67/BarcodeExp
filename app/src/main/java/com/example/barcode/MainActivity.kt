@@ -284,8 +284,9 @@ class MainActivity : ComponentActivity() {
                                             name = draft.name,
                                             quantity = draft.quantity,
                                             note = draft.note,
-                                            isImportant = draft.isImportant
-                                        )
+                                            isImportant = draft.isImportant,
+                                            category = draft.category,
+                                            )
                                         SnackbarBus.show("Produit ajouté")
                                         navController.popBackStack()
                                     }

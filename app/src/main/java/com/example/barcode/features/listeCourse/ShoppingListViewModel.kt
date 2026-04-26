@@ -2,7 +2,6 @@ package com.example.barcode.features.listeCourse
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.barcode.core.SessionManager
 import com.example.barcode.data.local.dao.ShoppingListDao
@@ -40,6 +39,7 @@ private val currentUserId: String,
         quantity: String?,
         note: String?,
         isImportant: Boolean,
+        category: ShoppingCategory = ShoppingCategory.OTHER,
     ) {
         viewModelScope.launch {
             dao.upsert(
@@ -51,7 +51,7 @@ private val currentUserId: String,
                     quantity = quantity?.trim()?.takeIf { it.isNotEmpty() },
                     note = note?.trim()?.takeIf { it.isNotEmpty() },
                     isImportant = isImportant,
-                    category = ShoppingCategory.OTHER.name,
+                    category = category.key,
                     pendingOperation = PendingOperation.CREATE,
                     syncState = SyncState.OK
                 )
@@ -107,8 +107,7 @@ private fun ShoppingListItemEntity.toUi(): ShoppingListItemUi {
     val safeScope = runCatching { ShoppingListScope.valueOf(scope) }
         .getOrDefault(ShoppingListScope.SHARED)
 
-    val safeCategory = runCatching { ShoppingCategory.valueOf(category) }
-        .getOrDefault(ShoppingCategory.OTHER)
+    val safeCategory = ShoppingCategory.fromKey(category)
 
     return ShoppingListItemUi(
         id = id,

@@ -9,7 +9,7 @@ data class ShoppingItemDto(
     val name: String,
     val quantity: String? = null,
     val note: String? = null,
-    val category: String,
+    val category: String? = null,
     val isImportant: Boolean,
     val isFavorite: Boolean,
     val isChecked: Boolean,

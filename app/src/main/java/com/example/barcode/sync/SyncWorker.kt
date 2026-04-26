@@ -21,6 +21,7 @@ import com.example.barcode.features.addItems.data.remote.dto.ScanPayload
 import com.example.barcode.features.listeCourse.ShoppingItemDto
 import com.example.barcode.features.listeCourse.ShoppingListApi
 import com.example.barcode.common.utils.sanitizeNutriScore
+import com.example.barcode.features.listeCourse.ShoppingCategory
 import com.example.barcode.widgets.FridgeWidget
 import com.example.barcode.widgets.updateFridgeWidgets
 import kotlinx.coroutines.NonCancellable
@@ -551,7 +552,7 @@ class SyncWorker(
                     name = name,
                     quantity = item.quantity,
                     note = item.note,
-                    category = item.category,
+                    category = ShoppingCategory.fromKey(item.category).key,
                     isImportant = item.isImportant,
                     isFavorite = item.isFavorite,
                     isChecked = item.isChecked,
@@ -591,7 +592,7 @@ class SyncWorker(
                     name = name,
                     quantity = item.quantity,
                     note = item.note,
-                    category = item.category,
+                    category = ShoppingCategory.fromKey(item.category).key,
                     isImportant = item.isImportant,
                     isFavorite = item.isFavorite,
                     isChecked = item.isChecked,
@@ -632,6 +633,7 @@ class SyncWorker(
             }
 
             val remoteItems = pullShopping.body().orEmpty()
+
             remoteItems.forEach { dto ->
                 val clientId = dto.clientId
 
@@ -655,6 +657,7 @@ class SyncWorker(
                 }
 
                 val createdAt = dto.createdAt?.let { parseAtomToEpochMs(it) } ?: serverUpdatedAt
+                val safeCategory = ShoppingCategory.fromKey(dto.category).key
 
                 val merged = (local ?: ShoppingListItemEntity(
                     id = clientId,
@@ -667,7 +670,7 @@ class SyncWorker(
                     isImportant = dto.isImportant,
                     isFavorite = dto.isFavorite,
                     isChecked = dto.isChecked,
-                    category = dto.category,
+                    category = safeCategory,
                     createdAt = createdAt,
                     pendingOperation = PendingOperation.NONE,
                     syncState = SyncState.OK,
@@ -689,7 +692,7 @@ class SyncWorker(
                     isImportant = dto.isImportant,
                     isFavorite = dto.isFavorite,
                     isChecked = dto.isChecked,
-                    category = dto.category,
+                    category = safeCategory,
                     createdAt = createdAt,
                     pendingOperation = PendingOperation.NONE,
                     syncState = SyncState.OK,
