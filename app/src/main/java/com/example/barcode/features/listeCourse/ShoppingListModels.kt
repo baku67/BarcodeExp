@@ -31,11 +31,24 @@ enum class ShoppingCategory(
 
     companion object {
         fun fromKey(value: String?): ShoppingCategory {
-            if (value.isNullOrBlank()) return OTHER
+            return fromTechnicalValue(value) ?: OTHER
+        }
+
+        fun fromTechnicalValue(value: String?): ShoppingCategory? {
+            val cleaned = value?.trim()
+            if (cleaned.isNullOrBlank()) return null
 
             return entries.firstOrNull {
-                it.key == value || it.name == value
-            } ?: OTHER
+                it.key.equals(cleaned, ignoreCase = true) ||
+                        it.name.equals(cleaned, ignoreCase = true)
+            }
+        }
+
+        fun displayLabelFromTechnicalValueOrRaw(value: String?): String? {
+            val cleaned = value?.trim()
+            if (cleaned.isNullOrBlank()) return null
+
+            return fromTechnicalValue(cleaned)?.displayLabel ?: cleaned
         }
     }
 }

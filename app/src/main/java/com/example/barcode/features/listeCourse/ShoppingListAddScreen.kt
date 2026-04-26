@@ -196,6 +196,11 @@ fun ShoppingListAddScreen(
                                                 onClick = {
                                                     selectedSuggestion = suggestion
                                                     name = suggestion.label
+
+                                                    ShoppingCategory.fromTechnicalValue(suggestion.categoryLabel)?.let { category ->
+                                                        selectedCategoryKey = category.key
+                                                    }
+
                                                     step = 2
                                                 }
                                             )
@@ -243,7 +248,7 @@ fun ShoppingListAddScreen(
                                         color = MaterialTheme.colorScheme.primary
                                     )
 
-                                    suggestion.categoryLabel?.let {
+                                    ShoppingCategory.displayLabelFromTechnicalValueOrRaw(suggestion.categoryLabel)?.let {
                                         Text(
                                             text = it,
                                             style = MaterialTheme.typography.bodySmall,
@@ -362,11 +367,15 @@ private fun ShoppingSuggestionRow(
                     fontWeight = FontWeight.SemiBold
                 )
 
+                val readableCategoryLabel =
+                    ShoppingCategory.displayLabelFromTechnicalValueOrRaw(suggestion.categoryLabel)
+
                 val subtitle = when (suggestion.source) {
                     ShoppingSuggestionSource.TAXONOMY ->
-                        suggestion.categoryLabel ?: "Générique"
+                        readableCategoryLabel ?: "Générique"
+
                     ShoppingSuggestionSource.CATALOG ->
-                        suggestion.categoryLabel ?: "Catalogue"
+                        readableCategoryLabel ?: "Catalogue"
                 }
 
                 Text(
