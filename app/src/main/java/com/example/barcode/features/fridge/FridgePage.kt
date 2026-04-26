@@ -98,12 +98,7 @@ fun FridgePage(
         .observeAsState(emptyList())
 
     val isSyncing = syncInfos.any { info ->
-        when (info.state) {
-            WorkInfo.State.RUNNING,
-            WorkInfo.State.ENQUEUED,
-            WorkInfo.State.BLOCKED -> true
-            else -> false
-        }
+        info.state == WorkInfo.State.RUNNING
     }
 
     var showVegDrawerAll by remember { mutableStateOf(false) }
@@ -117,17 +112,6 @@ fun FridgePage(
 
     // ✅ L’état de refresh réellement utilisé par le pull-to-refresh UI
     val isRefreshing = pullRefreshRequested || isSyncing
-
-    // ✅ Barre fine : anti-flicker (n'apparaît que si ça dure un peu)
-    var showTopProgress by remember { mutableStateOf(false) }
-    LaunchedEffect(isRefreshing) {
-        if (isRefreshing) {
-            delay(250) // ✅ délai UX
-            showTopProgress = true
-        } else {
-            showTopProgress = false
-        }
-    }
 
     // ✅ Quand la sync se termine, on reset le flag pull
     LaunchedEffect(isSyncing) {
@@ -572,18 +556,6 @@ fun FridgePage(
     }
 
     Box(Modifier.fillMaxSize()) {
-
-        // Barre de chargement top
-        if (showTopProgress) {
-            LinearProgressIndicator(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .align(Alignment.TopCenter),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-            )
-        }
 
         PullToRefreshBox(
             state = pullState,
