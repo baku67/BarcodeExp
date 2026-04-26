@@ -82,6 +82,7 @@
           1,
           2,
           3,
+          4,
           5,
           6,
           7,
@@ -458,6 +459,32 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "EU_TEMPERATE": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          7,
+          8,
+          9
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -478,6 +505,37 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -498,6 +556,33 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -518,6 +603,30 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "EU_TEMPERATE": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          7,
+          8,
+          9
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -538,6 +647,50 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -558,6 +711,50 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -578,6 +775,50 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -598,6 +839,37 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -618,6 +890,30 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "EU_TEMPERATE": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          7,
+          8,
+          9
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -638,6 +934,36 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -658,6 +984,46 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -678,6 +1044,38 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          4,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -698,6 +1096,39 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -718,6 +1149,29 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          10,
+          11
+        ],
+        "EU_TEMPERATE": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "EU_NORTH": [
+          6,
+          7,
+          8
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -738,6 +1192,24 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "EU_TEMPERATE": [
+          4,
+          5,
+          6
+        ],
+        "EU_NORTH": [
+          5,
+          6
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -758,6 +1230,33 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -778,6 +1277,33 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -798,6 +1324,38 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          4,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -818,6 +1376,37 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -838,6 +1427,39 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -858,6 +1480,25 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "EU_TEMPERATE": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "EU_NORTH": [
+          7,
+          8
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -878,6 +1519,24 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "EU_TEMPERATE": [
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          8,
+          9
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -898,6 +1557,23 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "EU_TEMPERATE": [
+          5,
+          6,
+          7
+        ],
+        "EU_NORTH": [
+          6,
+          7
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -918,6 +1594,32 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -938,6 +1640,32 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -958,6 +1686,26 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_TEMPERATE": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "EU_NORTH": [
+          7,
+          8
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -978,6 +1726,25 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "EU_TEMPERATE": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "EU_NORTH": [
+          7,
+          8
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -998,6 +1765,28 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1018,6 +1807,28 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1038,6 +1849,29 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1058,6 +1892,28 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1078,6 +1934,25 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_TEMPERATE": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          8,
+          9
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1098,6 +1973,30 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1118,6 +2017,23 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          5,
+          6,
+          7,
+          8
+        ],
+        "EU_TEMPERATE": [
+          6,
+          7,
+          8
+        ],
+        "EU_NORTH": [
+          7,
+          8
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1138,6 +2054,36 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          4,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1158,6 +2104,50 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1178,6 +2168,32 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          12
+        ],
+        "EU_TEMPERATE": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          12
+        ],
+        "EU_NORTH": [
+          1,
+          2,
+          3,
+          4,
+          12
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1198,6 +2214,28 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          12
+        ],
+        "EU_TEMPERATE": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "EU_NORTH": [
+          6,
+          7,
+          8
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1218,6 +2256,30 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "EU_TEMPERATE": [
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          7,
+          8,
+          9
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1238,6 +2300,26 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_TEMPERATE": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "EU_NORTH": [
+          8,
+          9
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
@@ -1258,6 +2340,26 @@
       },
       "storageDaysMin": 5,
       "storageDaysMax": 7,
+      "seasons": {
+        "EU_SOUTH": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "EU_TEMPERATE": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "EU_NORTH": [
+          7,
+          8,
+          9
+        ]
+      },
       "fridgeAdvise": "",
       "health_good": "",
       "health_warning": "",
