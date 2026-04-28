@@ -1053,6 +1053,47 @@ private fun WidgetFridgeImageFallback(
     }
 }
 
+private data class WidgetGlowSpec(
+    val color: Color,
+    val ultraFarAlpha: Float,
+    val farAlpha: Float,
+    val outerAlpha: Float,
+    val innerAlpha: Float,
+    val blurMultiplier: Float
+)
+
+private fun Long?.toWidgetExpiryGlowSpec(
+    colors: WidgetPalette,
+    policy: ExpiryPolicy = ExpiryPolicy()
+): WidgetGlowSpec? {
+    val value = this?.takeIf { it > 0L }
+
+    return when (expiryLevel(value, policy)) {
+        ExpiryLevel.EXPIRED -> WidgetGlowSpec(
+            // Rouge plus lumineux / corail-rosé pour mieux ressortir sur fond sombre
+            color = Color(0xFFFF6B7D),
+            ultraFarAlpha = 0.16f,
+            farAlpha = 0.34f,
+            outerAlpha = 0.74f,
+            innerAlpha = 1.00f,
+            blurMultiplier = 1.18f
+        )
+
+        ExpiryLevel.SOON -> WidgetGlowSpec(
+            // Jaune doré bien lumineux
+            color = Color(0xFFFFD54A),
+            ultraFarAlpha = 0.10f,
+            farAlpha = 0.24f,
+            outerAlpha = 0.56f,
+            innerAlpha = 0.96f,
+            blurMultiplier = 1.00f
+        )
+
+        ExpiryLevel.OK,
+        ExpiryLevel.NONE -> null
+    }
+}
+
 private fun Color.toColorProvider(): ColorProvider {
     return ColorProvider(this)
 }
@@ -1160,9 +1201,9 @@ private suspend fun loadWidgetProductBitmaps(
                     config = Bitmap.Config.ARGB_8888
                 )
 
-                val glowColor = item.expiryDate.toWidgetExpiryAlertColor(colors)
+                val glowSpec = item.expiryDate.toWidgetExpiryGlowSpec(colors)
 
-                item.id to bitmap.withWidgetExpiryGlow(glowColor)
+                item.id to bitmap.withWidgetExpiryGlow(glowSpec)
             }.getOrNull()
         }
         .toMap()
@@ -1170,9 +1211,9 @@ private suspend fun loadWidgetProductBitmaps(
 
 
 private fun Bitmap.withWidgetExpiryGlow(
-    glowColor: Color?
+    glowSpec: WidgetGlowSpec?
 ): Bitmap {
-    if (glowColor == null) {
+    if (glowSpec == null) {
         return this.toRoundedBitmap(WidgetProductGlowImageCornerRadiusPx)
     }
 
@@ -1224,38 +1265,38 @@ private fun Bitmap.withWidgetExpiryGlow(
 
     canvas.drawBitmapGlowLayer(
         source = roundedBitmap,
-        glowColor = glowColor,
+        glowColor = glowSpec.color,
         left = left,
         top = top,
-        blurRadius = WidgetProductGlowUltraFarBlurPx,
-        alpha = WidgetProductGlowUltraFarAlpha
+        blurRadius = WidgetProductGlowUltraFarBlurPx * glowSpec.blurMultiplier,
+        alpha = glowSpec.ultraFarAlpha
     )
 
     canvas.drawBitmapGlowLayer(
         source = roundedBitmap,
-        glowColor = glowColor,
+        glowColor = glowSpec.color,
         left = left,
         top = top,
-        blurRadius = WidgetProductGlowFarBlurPx,
-        alpha = WidgetProductGlowFarAlpha
+        blurRadius = WidgetProductGlowFarBlurPx * glowSpec.blurMultiplier,
+        alpha = glowSpec.farAlpha
     )
 
     canvas.drawBitmapGlowLayer(
         source = roundedBitmap,
-        glowColor = glowColor,
+        glowColor = glowSpec.color,
         left = left,
         top = top,
-        blurRadius = WidgetProductGlowOuterBlurPx,
-        alpha = WidgetProductGlowOuterAlpha
+        blurRadius = WidgetProductGlowOuterBlurPx * glowSpec.blurMultiplier,
+        alpha = glowSpec.outerAlpha
     )
 
     canvas.drawBitmapGlowLayer(
         source = roundedBitmap,
-        glowColor = glowColor,
+        glowColor = glowSpec.color,
         left = left,
         top = top,
-        blurRadius = WidgetProductGlowInnerBlurPx,
-        alpha = WidgetProductGlowInnerAlpha
+        blurRadius = WidgetProductGlowInnerBlurPx * glowSpec.blurMultiplier,
+        alpha = glowSpec.innerAlpha
     )
 
     val imagePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
