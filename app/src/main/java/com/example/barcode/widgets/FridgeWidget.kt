@@ -1155,17 +1155,21 @@ private fun buildWidgetTimelineColorSegments(
             end++
         }
 
-        val startX = slotWidth * start + slotWidth * 0.08f
-        val markerX = slotWidth * start + slotWidth / 2f
-        val endX = (slotWidth * (end + 1) - slotWidth * 0.08f)
-            .coerceAtMost(totalWidth)
+        val categoryStartX = slotWidth * start
+        val categoryEndX = if (end == items.lastIndex) {
+            totalWidth
+        } else {
+            slotWidth * (end + 1)
+        }
+
+        val markerX = categoryStartX + slotWidth / 2f
 
         segments += WidgetTimelineColorSegmentRenderData(
             startIndex = start,
             endIndex = end,
-            startX = startX,
+            startX = categoryStartX.coerceAtLeast(0f),
             markerX = markerX,
-            endX = endX,
+            endX = categoryEndX.coerceAtMost(totalWidth),
             color = items[start].expiryDate.toWidgetExpiryColor(colors, policy)
         )
 
@@ -1190,24 +1194,43 @@ private fun drawWidgetTimelineColorSegment(
         lineRect.bottom
     )
 
+    val segmentWidth = (segment.endX - segment.startX)
+        .coerceAtLeast(1f)
+
+    val markerStop = ((segment.markerX - segment.startX) / segmentWidth)
+        .coerceIn(0f, 1f)
+
+    val preMarkerStop = (markerStop * 0.58f)
+        .coerceIn(0.04f, markerStop)
+
+    val afterMarkerStop = (markerStop + 0.08f)
+        .coerceIn(markerStop, 0.72f)
+
+    val strongUntilStop = 0.94f
+    val fadeStartStop = 0.985f
+
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         shader = LinearGradient(
-            segment.markerX,
+            segment.startX,
             centerY,
             segment.endX,
             centerY,
             intArrayOf(
-                segment.color.copy(alpha = 0.82f).toArgb(),
-                segment.color.copy(alpha = 0.64f).toArgb(),
-                segment.color.copy(alpha = 0.56f).toArgb(),
-                segment.color.copy(alpha = 0.20f).toArgb(),
+                Color.Transparent.toArgb(),
+                segment.color.copy(alpha = 0.30f).toArgb(),
+                segment.color.copy(alpha = 0.90f).toArgb(),
+                segment.color.copy(alpha = 0.84f).toArgb(),
+                segment.color.copy(alpha = 0.76f).toArgb(),
+                segment.color.copy(alpha = 0.42f).toArgb(),
                 Color.Transparent.toArgb()
             ),
             floatArrayOf(
                 0f,
-                0.10f,
-                0.78f,
-                0.95f,
+                preMarkerStop,
+                markerStop,
+                afterMarkerStop,
+                strongUntilStop,
+                fadeStartStop,
                 1f
             ),
             Shader.TileMode.CLAMP
