@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.BitmapShader
 import android.text.format.DateUtils
 import android.util.Log
 import androidx.compose.runtime.Composable
@@ -84,6 +85,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.RectF
+import android.graphics.Shader
 import androidx.compose.ui.graphics.toArgb
 
 
@@ -95,8 +98,8 @@ private const val WidgetFridgeGridColumns = 5
 private const val WidgetFridgeGridRows = 1
 private const val WidgetFridgeGridMaxItems = WidgetFridgeGridColumns * WidgetFridgeGridRows
 
-private val WidgetFridgeGridTileHeight = 86.dp
-private val WidgetFridgeGridImageSize = 82.dp
+private val WidgetFridgeGridTileHeight = 90.dp
+private val WidgetFridgeGridImageSize = 86.dp
 private val WidgetFridgeGridImageCorner = 16.dp
 
 private val WidgetFridgeTimelineTopSpacing = 10.dp
@@ -107,25 +110,27 @@ private val WidgetFridgeTimelineLabelTopSpacing = 3.dp
 
 
 /* HALO BORDER-BLURRED images item (display grid) */
-private const val WidgetProductGlowCanvasPx = 360
+private const val WidgetProductGlowCanvasPx = 420
+private const val WidgetProductGlowBodyScale = 0.76f
+private const val WidgetProductGlowImageCornerRadiusPx = 26f
 
-private const val WidgetProductGlowBodyScale = 0.70f
+private const val WidgetProductGlowUltraFarBlurPx = 84f
+private const val WidgetProductGlowFarBlurPx = 58f
+private const val WidgetProductGlowOuterBlurPx = 36f
+private const val WidgetProductGlowInnerBlurPx = 16f
 
-private const val WidgetProductGlowFarBlurPx = 54f
-private const val WidgetProductGlowOuterBlurPx = 34f
-private const val WidgetProductGlowInnerBlurPx = 14f
+private const val WidgetProductGlowUltraFarAlpha = 0.10f
+private const val WidgetProductGlowFarAlpha = 0.24f
+private const val WidgetProductGlowOuterAlpha = 0.56f
+private const val WidgetProductGlowInnerAlpha = 0.96f
 
-private const val WidgetProductGlowFarAlpha = 0.22f
-private const val WidgetProductGlowOuterAlpha = 0.48f
-private const val WidgetProductGlowInnerAlpha = 0.88f
+private const val WidgetProductBitmapMaxPx = 320
 
 
 /* CONSTANTEs SHOPPING LIST */
 
 private const val WidgetShoppingMaxItems = 14
 private const val WidgetShoppingOneColumnMaxItems = 7
-
-private const val WidgetProductBitmapMaxPx = 260
 
 class FridgeWidget : GlanceAppWidget() {
 
@@ -1168,7 +1173,7 @@ private fun Bitmap.withWidgetExpiryGlow(
     glowColor: Color?
 ): Bitmap {
     if (glowColor == null) {
-        return this
+        return this.toRoundedBitmap(WidgetProductGlowImageCornerRadiusPx)
     }
 
     val source = if (config == Bitmap.Config.ARGB_8888) {
@@ -1210,11 +1215,24 @@ private fun Bitmap.withWidgetExpiryGlow(
         true
     )
 
-    val left = (canvasSize - scaledWidth) / 2f
-    val top = (canvasSize - scaledHeight) / 2f
+    val roundedBitmap = scaledBitmap.toRoundedBitmap(
+        radiusPx = WidgetProductGlowImageCornerRadiusPx
+    )
+
+    val left = (canvasSize - roundedBitmap.width) / 2f
+    val top = (canvasSize - roundedBitmap.height) / 2f
 
     canvas.drawBitmapGlowLayer(
-        source = scaledBitmap,
+        source = roundedBitmap,
+        glowColor = glowColor,
+        left = left,
+        top = top,
+        blurRadius = WidgetProductGlowUltraFarBlurPx,
+        alpha = WidgetProductGlowUltraFarAlpha
+    )
+
+    canvas.drawBitmapGlowLayer(
+        source = roundedBitmap,
         glowColor = glowColor,
         left = left,
         top = top,
@@ -1223,7 +1241,7 @@ private fun Bitmap.withWidgetExpiryGlow(
     )
 
     canvas.drawBitmapGlowLayer(
-        source = scaledBitmap,
+        source = roundedBitmap,
         glowColor = glowColor,
         left = left,
         top = top,
@@ -1232,7 +1250,7 @@ private fun Bitmap.withWidgetExpiryGlow(
     )
 
     canvas.drawBitmapGlowLayer(
-        source = scaledBitmap,
+        source = roundedBitmap,
         glowColor = glowColor,
         left = left,
         top = top,
@@ -1243,7 +1261,7 @@ private fun Bitmap.withWidgetExpiryGlow(
     val imagePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
 
     canvas.drawBitmap(
-        scaledBitmap,
+        roundedBitmap,
         left,
         top,
         imagePaint
@@ -1252,6 +1270,48 @@ private fun Bitmap.withWidgetExpiryGlow(
     if (scaledBitmap !== source) {
         scaledBitmap.recycle()
     }
+    if (roundedBitmap !== scaledBitmap) {
+        roundedBitmap.recycle()
+    }
+
+    return output
+}
+
+
+private fun Bitmap.toRoundedBitmap(
+    radiusPx: Float
+): Bitmap {
+    val output = Bitmap.createBitmap(
+        width,
+        height,
+        Bitmap.Config.ARGB_8888
+    )
+
+    val canvas = Canvas(output)
+
+    val shader = BitmapShader(
+        this,
+        Shader.TileMode.CLAMP,
+        Shader.TileMode.CLAMP
+    )
+
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+        this.shader = shader
+    }
+
+    val rect = RectF(
+        0f,
+        0f,
+        width.toFloat(),
+        height.toFloat()
+    )
+
+    canvas.drawRoundRect(
+        rect,
+        radiusPx,
+        radiusPx,
+        paint
+    )
 
     return output
 }
