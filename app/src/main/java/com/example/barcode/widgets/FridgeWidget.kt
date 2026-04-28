@@ -111,7 +111,7 @@ private val WidgetFridgeTimelineLabelTopSpacing = 3.dp
 
 /* HALO BORDER-BLURRED images item (display grid) */
 private const val WidgetProductGlowCanvasPx = 420
-private const val WidgetProductGlowBodyScale = 0.76f
+private const val WidgetProductGlowBodyScale = 0.62f
 private const val WidgetProductGlowImageCornerRadiusPx = 26f
 
 private const val WidgetProductGlowUltraFarBlurPx = 84f
