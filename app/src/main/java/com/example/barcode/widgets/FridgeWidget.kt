@@ -80,11 +80,24 @@ import java.util.Locale
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+/* CONSTANTEs FRIGO */
 private const val WidgetFridgeTextListMaxItems = 6
 
-private const val WidgetFridgeGridColumns = 6
-private const val WidgetFridgeGridRows = 2
+private const val WidgetFridgeGridColumns = 5
+private const val WidgetFridgeGridRows = 1
 private const val WidgetFridgeGridMaxItems = WidgetFridgeGridColumns * WidgetFridgeGridRows
+
+private val WidgetFridgeGridTileHeight = 70.dp
+private val WidgetFridgeGridImageSize = 64.dp
+private val WidgetFridgeGridImageCorner = 16.dp
+
+private val WidgetFridgeTimelineTopSpacing = 10.dp
+private val WidgetFridgeTimelineHeight = 34.dp
+private val WidgetFridgeTimelineLineHeight = 2.dp
+private val WidgetFridgeTimelineDotSize = 8.dp
+private val WidgetFridgeTimelineLabelTopSpacing = 3.dp
+
+/* CONSTANTEs SHOPPING LIST */
 
 private const val WidgetShoppingMaxItems = 14
 private const val WidgetShoppingOneColumnMaxItems = 7
@@ -547,9 +560,11 @@ private fun WidgetShoppingListContent(
 
         Spacer(
             modifier = GlanceModifier
-                .width(1.dp)
-                .fillMaxHeight()
+                .fillMaxWidth()
+                .padding(top = 6.dp)
+                .height(WidgetFridgeTimelineLineHeight)
                 .background(colors.text.copy(alpha = 0.14f))
+                .cornerRadius(99.dp)
         )
 
         Spacer(modifier = GlanceModifier.width(14.dp))
@@ -780,44 +795,144 @@ private fun WidgetFridgeImageGrid(
     colors: WidgetPalette
 ) {
     val visibleItems = items.take(WidgetFridgeGridMaxItems)
-    val rows = visibleItems
-        .chunked(WidgetFridgeGridColumns)
-        .take(WidgetFridgeGridRows)
 
     Column(
         modifier = GlanceModifier
             .fillMaxWidth()
             .fillMaxHeight(),
-        verticalAlignment = Alignment.Vertical.Top,
+        verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.Start
     ) {
-        rows.forEachIndexed { rowIndex, rowItems ->
-            Row(
-                modifier = GlanceModifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Vertical.CenterVertically,
-                horizontalAlignment = Alignment.Horizontal.Start
-            ) {
-                rowItems.forEach { item ->
-                    WidgetFridgeImageTile(
-                        item = item,
-                        bitmap = imageBitmaps[item.id],
-                        colors = colors,
-                        modifier = GlanceModifier.defaultWeight()
-                    )
-                }
-
-                repeat(WidgetFridgeGridColumns - rowItems.size) {
-                    Spacer(
-                        modifier = GlanceModifier
-                            .defaultWeight()
-                            .height(54.dp)
-                    )
-                }
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Vertical.CenterVertically,
+            horizontalAlignment = Alignment.Horizontal.Start
+        ) {
+            visibleItems.forEach { item ->
+                WidgetFridgeImageTile(
+                    item = item,
+                    bitmap = imageBitmaps[item.id],
+                    colors = colors,
+                    modifier = GlanceModifier.defaultWeight()
+                )
             }
 
-            if (rowIndex < rows.lastIndex) {
-                Spacer(modifier = GlanceModifier.height(7.dp))
+            repeat(WidgetFridgeGridColumns - visibleItems.size) {
+                Spacer(
+                    modifier = GlanceModifier
+                        .defaultWeight()
+                        .height(WidgetFridgeGridTileHeight)
+                )
             }
+        }
+
+        Spacer(modifier = GlanceModifier.height(WidgetFridgeTimelineTopSpacing))
+
+        WidgetFridgeTimeline(
+            items = visibleItems,
+            colors = colors
+        )
+    }
+}
+
+@Composable
+private fun WidgetFridgeTimeline(
+    items: List<ItemEntity>,
+    colors: WidgetPalette
+) {
+    Box(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(WidgetFridgeTimelineHeight),
+        contentAlignment = Alignment.TopStart
+    ) {
+        /* Décalage ligne de la timeline par rapport aux images items */
+        Column(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .height(WidgetFridgeTimelineDotSize),
+            verticalAlignment = Alignment.Vertical.Top,
+            horizontalAlignment = Alignment.Horizontal.Start
+        ) {
+            Spacer(modifier = GlanceModifier.height(3.dp))
+
+            Spacer(
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .height(WidgetFridgeTimelineLineHeight)
+                    .background(colors.text.copy(alpha = 0.14f))
+                    .cornerRadius(99.dp)
+            )
+        }
+
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Vertical.Top,
+            horizontalAlignment = Alignment.Horizontal.Start
+        ) {
+            items.forEachIndexed { index, item ->
+                val showMarker = item.shouldShowTimelineMarker(items, index)
+
+                WidgetFridgeTimelineSlot(
+                    item = item,
+                    showMarker = showMarker,
+                    colors = colors,
+                    modifier = GlanceModifier.defaultWeight()
+                )
+            }
+
+            repeat(WidgetFridgeGridColumns - items.size) {
+                Spacer(modifier = GlanceModifier.defaultWeight())
+            }
+        }
+    }
+}
+
+@Composable
+private fun WidgetFridgeTimelineSlot(
+    item: ItemEntity,
+    showMarker: Boolean,
+    colors: WidgetPalette,
+    modifier: GlanceModifier = GlanceModifier
+) {
+    val markerColor = item.expiryDate.toWidgetExpiryColor(colors)
+
+    Column(
+        modifier = modifier,
+        verticalAlignment = Alignment.Vertical.Top,
+        horizontalAlignment = Alignment.Horizontal.CenterHorizontally
+    ) {
+        if (showMarker) {
+            Spacer(
+                modifier = GlanceModifier
+                    .size(WidgetFridgeTimelineDotSize)
+                    .background(markerColor)
+                    .cornerRadius(99.dp)
+            )
+
+            Spacer(modifier = GlanceModifier.height(WidgetFridgeTimelineLabelTopSpacing))
+
+            Text(
+                text = item.expiryDate.toWidgetTimelineLabel(),
+                maxLines = 1,
+                style = TextStyle(
+                    color = markerColor.toColorProvider(),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            )
+        } else {
+            Spacer(modifier = GlanceModifier.size(WidgetFridgeTimelineDotSize))
+            Spacer(modifier = GlanceModifier.height(WidgetFridgeTimelineLabelTopSpacing))
+
+            Text(
+                text = "",
+                maxLines = 1,
+                style = TextStyle(
+                    color = colors.muted.toColorProvider(),
+                    fontSize = 9.sp
+                )
+            )
         }
     }
 }
@@ -841,16 +956,16 @@ private fun WidgetFridgeImageTile(
 
     Column(
         modifier = modifier
-            .height(54.dp)
-            .padding(horizontal = 2.dp),
+            .height(WidgetFridgeGridTileHeight)
+            .padding(horizontal = 3.dp),
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally
     ) {
         Box(
             modifier = GlanceModifier
-                .size(50.dp)
+                .size(WidgetFridgeGridImageSize)
                 .background(outerBackground)
-                .cornerRadius(13.dp)
+                .cornerRadius(WidgetFridgeGridImageCorner)
                 .padding(1.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -861,8 +976,8 @@ private fun WidgetFridgeImageTile(
                     modifier = GlanceModifier
                         .fillMaxSize()
                         .background(imageBackground)
-                        .cornerRadius(12.dp)
-                        .padding(3.dp),
+                        .cornerRadius(15.dp)
+                        .padding(4.dp),
                     contentScale = ContentScale.Fit
                 )
             } else {
@@ -901,7 +1016,7 @@ private fun WidgetFridgeImageFallback(
             maxLines = 1,
             style = TextStyle(
                 color = colors.primary.toColorProvider(),
-                fontSize = 18.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
         )
@@ -1062,4 +1177,40 @@ private fun Long?.toWidgetExpiryAlertColor(
         ExpiryLevel.OK,
         ExpiryLevel.NONE -> null
     }
+}
+
+private fun ItemEntity.shouldShowTimelineMarker(
+    items: List<ItemEntity>,
+    index: Int,
+    policy: ExpiryPolicy = ExpiryPolicy()
+): Boolean {
+    if (index == 0) return true
+
+    val current = this.expiryDate.toWidgetTimelineDayOffset(policy)
+    val previous = items[index - 1].expiryDate.toWidgetTimelineDayOffset(policy)
+
+    return current != previous
+}
+
+
+private fun Long?.toWidgetTimelineLabel(
+    policy: ExpiryPolicy = ExpiryPolicy()
+): String {
+    val days = this.toWidgetTimelineDayOffset(policy) ?: return "—"
+
+    return when {
+        days <= -2 -> "- ${-days} j"
+        days == -1 -> "hier"
+        days == 0 -> "auj."
+        days == 1 -> "demain"
+        days == 2 -> "+ 2 j"
+        else -> "+ $days j"
+    }
+}
+
+private fun Long?.toWidgetTimelineDayOffset(
+    policy: ExpiryPolicy = ExpiryPolicy()
+): Int? {
+    val value = this?.takeIf { it > 0L } ?: return null
+    return daysUntilExpiry(value, policy)
 }
