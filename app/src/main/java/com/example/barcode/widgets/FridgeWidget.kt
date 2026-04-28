@@ -79,6 +79,14 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.min
 import kotlin.math.roundToInt
+import android.graphics.BlurMaskFilter
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
+import androidx.compose.ui.graphics.toArgb
+
+
 
 /* CONSTANTEs FRIGO */
 private const val WidgetFridgeTextListMaxItems = 6
@@ -87,8 +95,8 @@ private const val WidgetFridgeGridColumns = 5
 private const val WidgetFridgeGridRows = 1
 private const val WidgetFridgeGridMaxItems = WidgetFridgeGridColumns * WidgetFridgeGridRows
 
-private val WidgetFridgeGridTileHeight = 70.dp
-private val WidgetFridgeGridImageSize = 64.dp
+private val WidgetFridgeGridTileHeight = 86.dp
+private val WidgetFridgeGridImageSize = 82.dp
 private val WidgetFridgeGridImageCorner = 16.dp
 
 private val WidgetFridgeTimelineTopSpacing = 10.dp
@@ -97,12 +105,27 @@ private val WidgetFridgeTimelineLineHeight = 2.dp
 private val WidgetFridgeTimelineDotSize = 8.dp
 private val WidgetFridgeTimelineLabelTopSpacing = 3.dp
 
+
+/* HALO BORDER-BLURRED images item (display grid) */
+private const val WidgetProductGlowCanvasPx = 360
+
+private const val WidgetProductGlowBodyScale = 0.70f
+
+private const val WidgetProductGlowFarBlurPx = 54f
+private const val WidgetProductGlowOuterBlurPx = 34f
+private const val WidgetProductGlowInnerBlurPx = 14f
+
+private const val WidgetProductGlowFarAlpha = 0.22f
+private const val WidgetProductGlowOuterAlpha = 0.48f
+private const val WidgetProductGlowInnerAlpha = 0.88f
+
+
 /* CONSTANTEs SHOPPING LIST */
 
 private const val WidgetShoppingMaxItems = 14
 private const val WidgetShoppingOneColumnMaxItems = 7
 
-private const val WidgetProductBitmapMaxPx = 180
+private const val WidgetProductBitmapMaxPx = 260
 
 class FridgeWidget : GlanceAppWidget() {
 
@@ -129,7 +152,8 @@ class FridgeWidget : GlanceAppWidget() {
 
         val fridgeImageBitmaps = loadWidgetProductBitmaps(
             context = appContext,
-            items = initialFridgeItems
+            items = initialFridgeItems,
+            colors = colors
         )
 
         provideContent {
@@ -946,46 +970,47 @@ private fun WidgetFridgeImageTile(
 ) {
     val alertColor = item.expiryDate.toWidgetExpiryAlertColor(colors)
 
-    val outerBackground = alertColor
+    val fallbackBorderBackground = alertColor
         ?.copy(alpha = 0.70f)
         ?: colors.background
 
-    val imageBackground = alertColor
-        ?.copy(alpha = 0.16f)
+    val fallbackInnerBackground = alertColor
+        ?.copy(alpha = 0.08f)
         ?: colors.background
 
     Column(
         modifier = modifier
             .height(WidgetFridgeGridTileHeight)
-            .padding(horizontal = 3.dp),
+            .padding(horizontal = 1.dp),
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally
     ) {
         Box(
-            modifier = GlanceModifier
-                .size(WidgetFridgeGridImageSize)
-                .background(outerBackground)
-                .cornerRadius(WidgetFridgeGridImageCorner)
-                .padding(1.dp),
+            modifier = GlanceModifier.size(WidgetFridgeGridImageSize),
             contentAlignment = Alignment.Center
         ) {
             if (bitmap != null) {
                 Image(
                     provider = ImageProvider(bitmap),
                     contentDescription = item.name ?: "Produit",
-                    modifier = GlanceModifier
-                        .fillMaxSize()
-                        .background(imageBackground)
-                        .cornerRadius(15.dp)
-                        .padding(4.dp),
+                    modifier = GlanceModifier.fillMaxSize(),
                     contentScale = ContentScale.Fit
                 )
             } else {
-                WidgetFridgeImageFallback(
-                    item = item,
-                    colors = colors,
-                    background = imageBackground
-                )
+                Box(
+                    modifier = GlanceModifier
+                        .fillMaxSize()
+                        .background(fallbackBorderBackground)
+                        .cornerRadius(WidgetFridgeGridImageCorner)
+                        .padding(1.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    WidgetFridgeImageFallback(
+                        item = item,
+                        colors = colors,
+                        background = fallbackInnerBackground
+                    )
+                }
             }
         }
     }
@@ -1075,7 +1100,8 @@ private fun Long?.toWidgetExpiryColor(
 
 private suspend fun loadWidgetProductBitmaps(
     context: Context,
-    items: List<ItemEntity>
+    items: List<ItemEntity>,
+    colors: WidgetPalette
 ): Map<String, Bitmap> {
     val imageLoader = ImageLoader(context)
 
@@ -1129,10 +1155,146 @@ private suspend fun loadWidgetProductBitmaps(
                     config = Bitmap.Config.ARGB_8888
                 )
 
-                item.id to bitmap
+                val glowColor = item.expiryDate.toWidgetExpiryAlertColor(colors)
+
+                item.id to bitmap.withWidgetExpiryGlow(glowColor)
             }.getOrNull()
         }
         .toMap()
+}
+
+
+private fun Bitmap.withWidgetExpiryGlow(
+    glowColor: Color?
+): Bitmap {
+    if (glowColor == null) {
+        return this
+    }
+
+    val source = if (config == Bitmap.Config.ARGB_8888) {
+        this
+    } else {
+        copy(Bitmap.Config.ARGB_8888, false)
+    }
+
+    val canvasSize = WidgetProductGlowCanvasPx
+
+    val output = Bitmap.createBitmap(
+        canvasSize,
+        canvasSize,
+        Bitmap.Config.ARGB_8888
+    )
+
+    val canvas = Canvas(output)
+
+    val maxBodySize = (canvasSize * WidgetProductGlowBodyScale)
+        .roundToInt()
+        .coerceAtLeast(1)
+
+    val sourceMaxSide = maxOf(source.width, source.height).coerceAtLeast(1)
+
+    val bodyScale = maxBodySize.toFloat() / sourceMaxSide.toFloat()
+
+    val scaledWidth = (source.width * bodyScale)
+        .roundToInt()
+        .coerceAtLeast(1)
+
+    val scaledHeight = (source.height * bodyScale)
+        .roundToInt()
+        .coerceAtLeast(1)
+
+    val scaledBitmap = Bitmap.createScaledBitmap(
+        source,
+        scaledWidth,
+        scaledHeight,
+        true
+    )
+
+    val left = (canvasSize - scaledWidth) / 2f
+    val top = (canvasSize - scaledHeight) / 2f
+
+    canvas.drawBitmapGlowLayer(
+        source = scaledBitmap,
+        glowColor = glowColor,
+        left = left,
+        top = top,
+        blurRadius = WidgetProductGlowFarBlurPx,
+        alpha = WidgetProductGlowFarAlpha
+    )
+
+    canvas.drawBitmapGlowLayer(
+        source = scaledBitmap,
+        glowColor = glowColor,
+        left = left,
+        top = top,
+        blurRadius = WidgetProductGlowOuterBlurPx,
+        alpha = WidgetProductGlowOuterAlpha
+    )
+
+    canvas.drawBitmapGlowLayer(
+        source = scaledBitmap,
+        glowColor = glowColor,
+        left = left,
+        top = top,
+        blurRadius = WidgetProductGlowInnerBlurPx,
+        alpha = WidgetProductGlowInnerAlpha
+    )
+
+    val imagePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+    canvas.drawBitmap(
+        scaledBitmap,
+        left,
+        top,
+        imagePaint
+    )
+
+    if (scaledBitmap !== source) {
+        scaledBitmap.recycle()
+    }
+
+    return output
+}
+
+
+
+private fun Canvas.drawBitmapGlowLayer(
+    source: Bitmap,
+    glowColor: Color,
+    left: Float,
+    top: Float,
+    blurRadius: Float,
+    alpha: Float
+) {
+    val offset = IntArray(2)
+
+    val blurPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+        maskFilter = BlurMaskFilter(
+            blurRadius,
+            BlurMaskFilter.Blur.NORMAL
+        )
+    }
+
+    val alphaMask = source.extractAlpha(
+        blurPaint,
+        offset
+    )
+
+    val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+        colorFilter = PorterDuffColorFilter(
+            glowColor.copy(alpha = alpha).toArgb(),
+            PorterDuff.Mode.SRC_IN
+        )
+    }
+
+    drawBitmap(
+        alphaMask,
+        left + offset[0],
+        top + offset[1],
+        glowPaint
+    )
+
+    alphaMask.recycle()
 }
 
 private fun openAppIntent(
