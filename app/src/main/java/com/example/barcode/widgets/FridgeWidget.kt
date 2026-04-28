@@ -82,9 +82,11 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
 import androidx.compose.ui.graphics.toArgb
@@ -872,6 +874,13 @@ private fun WidgetFridgeTimeline(
         contentAlignment = Alignment.TopStart
     ) {
         /* Décalage ligne de la timeline par rapport aux images items */
+        val timelineLineBitmap = remember(items, colors) {
+            createWidgetTimelineLineBitmap(
+                items = items,
+                colors = colors
+            )
+        }
+
         Column(
             modifier = GlanceModifier
                 .fillMaxWidth()
@@ -879,14 +888,13 @@ private fun WidgetFridgeTimeline(
             verticalAlignment = Alignment.Vertical.Top,
             horizontalAlignment = Alignment.Horizontal.Start
         ) {
-            Spacer(modifier = GlanceModifier.height(3.dp))
-
-            Spacer(
+            Image(
+                provider = ImageProvider(timelineLineBitmap),
+                contentDescription = null,
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .height(WidgetFridgeTimelineLineHeight)
-                    .background(colors.text.copy(alpha = 0.14f))
-                    .cornerRadius(99.dp)
+                    .height(WidgetFridgeTimelineDotSize),
+                contentScale = ContentScale.FillBounds
             )
         }
 
@@ -1045,6 +1053,116 @@ private fun WidgetFridgeImageFallback(
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
+        )
+    }
+}
+
+
+private fun createWidgetTimelineLineBitmap(
+    items: List<ItemEntity>,
+    colors: WidgetPalette
+): Bitmap {
+    val width = 1200
+    val height = 48
+
+    val output = Bitmap.createBitmap(
+        width,
+        height,
+        Bitmap.Config.ARGB_8888
+    )
+
+    val canvas = Canvas(output)
+
+    val centerY = height / 2f
+    val lineHeight = 10f
+    val lineRadius = lineHeight / 2f
+
+    val lineRect = RectF(
+        0f,
+        centerY - lineHeight / 2f,
+        width.toFloat(),
+        centerY + lineHeight / 2f
+    )
+
+    val basePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = colors.text.copy(alpha = 0.14f).toArgb()
+    }
+
+    canvas.drawRoundRect(
+        lineRect,
+        lineRadius,
+        lineRadius,
+        basePaint
+    )
+
+    val markerData = items
+        .take(WidgetFridgeGridColumns)
+        .mapIndexedNotNull { index, item ->
+            val showMarker = item.shouldShowTimelineMarker(items, index)
+
+            if (!showMarker) {
+                null
+            } else {
+                val slotWidth = width.toFloat() / WidgetFridgeGridColumns.toFloat()
+                val x = slotWidth * index + slotWidth / 2f
+                val color = item.expiryDate.toWidgetExpiryColor(colors)
+
+                TimelineMarkerRenderData(
+                    x = x,
+                    color = color
+                )
+            }
+        }
+
+
+    drawTimelineMarkerHalos(
+        canvas = canvas,
+        markers = markerData,
+        lineRect = lineRect,
+        centerY = centerY
+    )
+
+    return output
+}
+
+private data class TimelineMarkerRenderData(
+    val x: Float,
+    val color: Color
+)
+
+private fun drawTimelineMarkerHalos(
+    canvas: Canvas,
+    markers: List<TimelineMarkerRenderData>,
+    lineRect: RectF,
+    centerY: Float
+) {
+    markers.forEach { marker ->
+        val haloRadius = 170f
+
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = RadialGradient(
+                marker.x,
+                centerY,
+                haloRadius,
+                intArrayOf(
+                    marker.color.copy(alpha = 0.80f).toArgb(),
+                    marker.color.copy(alpha = 0.28f).toArgb(),
+                    marker.color.copy(alpha = 0.00f).toArgb()
+                ),
+                floatArrayOf(
+                    0f,
+                    0.38f,
+                    1f
+                ),
+                Shader.TileMode.CLAMP
+            )
+        }
+
+        canvas.drawRoundRect(
+            lineRect,
+            lineRect.height() / 2f,
+            lineRect.height() / 2f,
+            paint
         )
     }
 }
