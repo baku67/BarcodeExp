@@ -102,7 +102,7 @@ private val WidgetFridgeGridTileHeight = 90.dp
 private val WidgetFridgeGridImageSize = 86.dp
 private val WidgetFridgeGridImageCorner = 16.dp
 
-private val WidgetFridgeTimelineTopSpacing = 10.dp
+private val WidgetFridgeTimelineTopSpacing = 1.dp
 private val WidgetFridgeTimelineHeight = 34.dp
 private val WidgetFridgeTimelineLineHeight = 2.dp
 private val WidgetFridgeTimelineDotSize = 8.dp
@@ -111,18 +111,14 @@ private val WidgetFridgeTimelineLabelTopSpacing = 3.dp
 
 /* HALO BORDER-BLURRED images item (display grid) */
 private const val WidgetProductGlowCanvasPx = 420
-private const val WidgetProductGlowBodyScale = 0.62f
+private const val WidgetProductGlowBodyScaleRemote = 0.58f
+private const val WidgetProductGlowBodyScaleTaxonomy = 0.48f
 private const val WidgetProductGlowImageCornerRadiusPx = 26f
 
 private const val WidgetProductGlowUltraFarBlurPx = 84f
 private const val WidgetProductGlowFarBlurPx = 58f
 private const val WidgetProductGlowOuterBlurPx = 36f
 private const val WidgetProductGlowInnerBlurPx = 16f
-
-private const val WidgetProductGlowUltraFarAlpha = 0.10f
-private const val WidgetProductGlowFarAlpha = 0.24f
-private const val WidgetProductGlowOuterAlpha = 0.56f
-private const val WidgetProductGlowInnerAlpha = 0.96f
 
 private const val WidgetProductBitmapMaxPx = 320
 
@@ -1053,6 +1049,16 @@ private fun WidgetFridgeImageFallback(
     }
 }
 
+private enum class WidgetImageSourceKind {
+    REMOTE,
+    LOCAL_TAXONOMY
+}
+
+private data class WidgetResolvedImageData(
+    val data: Any,
+    val sourceKind: WidgetImageSourceKind
+)
+
 private data class WidgetGlowSpec(
     val color: Color,
     val ultraFarAlpha: Float,
@@ -1154,14 +1160,12 @@ private suspend fun loadWidgetProductBitmaps(
     return items
         .take(WidgetFridgeGridMaxItems)
         .mapNotNull { item ->
-            val imageUrl = item.imageUrl
-                ?.trim()
-                ?.takeIf { it.isNotBlank() }
+            val resolvedImage = item.resolveWidgetImageData(context)
                 ?: return@mapNotNull null
 
             runCatching {
                 val request = ImageRequest.Builder(context)
-                    .data(imageUrl)
+                    .data(resolvedImage.data)
                     .size(WidgetProductBitmapMaxPx, WidgetProductBitmapMaxPx)
                     .allowHardware(false)
                     .build()
@@ -1201,19 +1205,122 @@ private suspend fun loadWidgetProductBitmaps(
                     config = Bitmap.Config.ARGB_8888
                 )
 
-                val glowSpec = item.expiryDate.toWidgetExpiryGlowSpec(colors)
+                val expiryGlowSpec = item.expiryDate.toWidgetExpiryGlowSpec(colors)
+                val baseGlowSpec = resolvedImage.sourceKind.toWidgetBaseGlowSpec(colors)
+                val bodyScale = resolvedImage.sourceKind.toWidgetBodyScale()
 
-                item.id to bitmap.withWidgetExpiryGlow(glowSpec)
+                item.id to bitmap.withWidgetGlow(
+                    expiryGlowSpec = expiryGlowSpec,
+                    baseGlowSpec = baseGlowSpec,
+                    bodyScale = bodyScale
+                )
+            }.onFailure { error ->
+                Log.e(
+                    "FridgeWidget",
+                    "Image load failed for item=${item.id}, name=${item.name}, imageData=${resolvedImage.data}",
+                    error
+                )
             }.getOrNull()
         }
         .toMap()
 }
 
 
-private fun Bitmap.withWidgetExpiryGlow(
-    glowSpec: WidgetGlowSpec?
+private fun ItemEntity.resolveWidgetImageData(
+    context: Context
+): WidgetResolvedImageData? {
+    val remoteImageUrl = imageUrl
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+
+    if (remoteImageUrl != null) {
+        return WidgetResolvedImageData(
+            data = remoteImageUrl,
+            sourceKind = WidgetImageSourceKind.REMOTE
+        )
+    }
+
+    val localDrawableRes = resolveManualWidgetDrawableRes(context)
+        ?: return null
+
+    return WidgetResolvedImageData(
+        data = localDrawableRes,
+        sourceKind = WidgetImageSourceKind.LOCAL_TAXONOMY
+    )
+}
+
+private fun ItemEntity.resolveManualWidgetDrawableRes(
+    context: Context
+): Int? {
+    if (addMode != "manual") {
+        return null
+    }
+
+    val candidates = buildList {
+        manualSubtype
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { subtype ->
+                add(subtype)
+                add(subtype.lowercase(Locale.ROOT))
+                add("manual_subtype_${subtype.lowercase(Locale.ROOT)}")
+            }
+
+        manualType
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { type ->
+                add(type)
+                add(type.lowercase(Locale.ROOT))
+                add("manual_type_${type.lowercase(Locale.ROOT)}")
+            }
+    }
+        .map { it.replace("-", "_") }
+        .distinct()
+
+    return candidates
+        .firstNotNullOfOrNull { drawableName ->
+            context.resources.getIdentifier(
+                drawableName,
+                "drawable",
+                context.packageName
+            ).takeIf { it != 0 }
+        }
+}
+
+private fun WidgetImageSourceKind.toWidgetBodyScale(): Float {
+    return when (this) {
+        WidgetImageSourceKind.REMOTE -> WidgetProductGlowBodyScaleRemote
+        WidgetImageSourceKind.LOCAL_TAXONOMY -> WidgetProductGlowBodyScaleTaxonomy
+    }
+}
+
+private fun WidgetImageSourceKind.toWidgetBaseGlowSpec(
+    colors: WidgetPalette
+): WidgetGlowSpec? {
+    return when (this) {
+        WidgetImageSourceKind.REMOTE -> null
+
+        WidgetImageSourceKind.LOCAL_TAXONOMY -> WidgetGlowSpec(
+            color = colors.primary,
+            ultraFarAlpha = 0.04f,
+            farAlpha = 0.09f,
+            outerAlpha = 0.18f,
+            innerAlpha = 0.30f,
+            blurMultiplier = 0.92f
+        )
+    }
+}
+
+
+private fun Bitmap.withWidgetGlow(
+    expiryGlowSpec: WidgetGlowSpec?,
+    baseGlowSpec: WidgetGlowSpec?,
+    bodyScale: Float
 ): Bitmap {
-    if (glowSpec == null) {
+    val shouldUseGlowCanvas = expiryGlowSpec != null || baseGlowSpec != null
+
+    if (!shouldUseGlowCanvas) {
         return this.toRoundedBitmap(WidgetProductGlowImageCornerRadiusPx)
     }
 
@@ -1233,19 +1340,21 @@ private fun Bitmap.withWidgetExpiryGlow(
 
     val canvas = Canvas(output)
 
-    val maxBodySize = (canvasSize * WidgetProductGlowBodyScale)
+    val effectiveBodyScale = bodyScale.coerceIn(0.20f, 1f)
+
+    val maxBodySize = (canvasSize * effectiveBodyScale)
         .roundToInt()
         .coerceAtLeast(1)
 
     val sourceMaxSide = maxOf(source.width, source.height).coerceAtLeast(1)
 
-    val bodyScale = maxBodySize.toFloat() / sourceMaxSide.toFloat()
+    val bitmapScale = maxBodySize.toFloat() / sourceMaxSide.toFloat()
 
-    val scaledWidth = (source.width * bodyScale)
+    val scaledWidth = (source.width * bitmapScale)
         .roundToInt()
         .coerceAtLeast(1)
 
-    val scaledHeight = (source.height * bodyScale)
+    val scaledHeight = (source.height * bitmapScale)
         .roundToInt()
         .coerceAtLeast(1)
 
@@ -1263,41 +1372,43 @@ private fun Bitmap.withWidgetExpiryGlow(
     val left = (canvasSize - roundedBitmap.width) / 2f
     val top = (canvasSize - roundedBitmap.height) / 2f
 
-    canvas.drawBitmapGlowLayer(
-        source = roundedBitmap,
-        glowColor = glowSpec.color,
-        left = left,
-        top = top,
-        blurRadius = WidgetProductGlowUltraFarBlurPx * glowSpec.blurMultiplier,
-        alpha = glowSpec.ultraFarAlpha
-    )
+    listOfNotNull(baseGlowSpec, expiryGlowSpec).forEach { glowSpec ->
+        canvas.drawBitmapGlowLayer(
+            source = roundedBitmap,
+            glowColor = glowSpec.color,
+            left = left,
+            top = top,
+            blurRadius = WidgetProductGlowUltraFarBlurPx * glowSpec.blurMultiplier,
+            alpha = glowSpec.ultraFarAlpha
+        )
 
-    canvas.drawBitmapGlowLayer(
-        source = roundedBitmap,
-        glowColor = glowSpec.color,
-        left = left,
-        top = top,
-        blurRadius = WidgetProductGlowFarBlurPx * glowSpec.blurMultiplier,
-        alpha = glowSpec.farAlpha
-    )
+        canvas.drawBitmapGlowLayer(
+            source = roundedBitmap,
+            glowColor = glowSpec.color,
+            left = left,
+            top = top,
+            blurRadius = WidgetProductGlowFarBlurPx * glowSpec.blurMultiplier,
+            alpha = glowSpec.farAlpha
+        )
 
-    canvas.drawBitmapGlowLayer(
-        source = roundedBitmap,
-        glowColor = glowSpec.color,
-        left = left,
-        top = top,
-        blurRadius = WidgetProductGlowOuterBlurPx * glowSpec.blurMultiplier,
-        alpha = glowSpec.outerAlpha
-    )
+        canvas.drawBitmapGlowLayer(
+            source = roundedBitmap,
+            glowColor = glowSpec.color,
+            left = left,
+            top = top,
+            blurRadius = WidgetProductGlowOuterBlurPx * glowSpec.blurMultiplier,
+            alpha = glowSpec.outerAlpha
+        )
 
-    canvas.drawBitmapGlowLayer(
-        source = roundedBitmap,
-        glowColor = glowSpec.color,
-        left = left,
-        top = top,
-        blurRadius = WidgetProductGlowInnerBlurPx * glowSpec.blurMultiplier,
-        alpha = glowSpec.innerAlpha
-    )
+        canvas.drawBitmapGlowLayer(
+            source = roundedBitmap,
+            glowColor = glowSpec.color,
+            left = left,
+            top = top,
+            blurRadius = WidgetProductGlowInnerBlurPx * glowSpec.blurMultiplier,
+            alpha = glowSpec.innerAlpha
+        )
+    }
 
     val imagePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
 
