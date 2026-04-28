@@ -867,20 +867,19 @@ private fun WidgetFridgeTimeline(
     items: List<ItemEntity>,
     colors: WidgetPalette
 ) {
+    val timelineBitmap = remember(items, colors) {
+        createWidgetTimelineLineBitmap(
+            items = items,
+            colors = colors
+        )
+    }
+
     Box(
         modifier = GlanceModifier
             .fillMaxWidth()
             .height(WidgetFridgeTimelineHeight),
         contentAlignment = Alignment.TopStart
     ) {
-        /* Décalage ligne de la timeline par rapport aux images items */
-        val timelineLineBitmap = remember(items, colors) {
-            createWidgetTimelineLineBitmap(
-                items = items,
-                colors = colors
-            )
-        }
-
         Column(
             modifier = GlanceModifier
                 .fillMaxWidth()
@@ -889,7 +888,7 @@ private fun WidgetFridgeTimeline(
             horizontalAlignment = Alignment.Horizontal.Start
         ) {
             Image(
-                provider = ImageProvider(timelineLineBitmap),
+                provider = ImageProvider(timelineBitmap),
                 contentDescription = null,
                 modifier = GlanceModifier
                     .fillMaxWidth()
@@ -1095,34 +1094,166 @@ private fun createWidgetTimelineLineBitmap(
         basePaint
     )
 
-    val markerData = items
-        .take(WidgetFridgeGridColumns)
-        .mapIndexedNotNull { index, item ->
-            val showMarker = item.shouldShowTimelineMarker(items, index)
-
-            if (!showMarker) {
-                null
-            } else {
-                val slotWidth = width.toFloat() / WidgetFridgeGridColumns.toFloat()
-                val x = slotWidth * index + slotWidth / 2f
-                val color = item.expiryDate.toWidgetExpiryColor(colors)
-
-                TimelineMarkerRenderData(
-                    x = x,
-                    color = color
-                )
-            }
-        }
-
-
-    drawTimelineMarkerHalos(
-        canvas = canvas,
-        markers = markerData,
-        lineRect = lineRect,
-        centerY = centerY
+    val groups = buildWidgetTimelineGroups(
+        items = items.take(WidgetFridgeGridMaxItems),
+        colors = colors,
+        totalWidth = width.toFloat()
     )
 
+    groups.forEach { group ->
+        drawWidgetTimelineGroupTrail(
+            canvas = canvas,
+            group = group,
+            centerY = centerY,
+            lineRect = lineRect
+        )
+    }
+
+    groups.forEach { group ->
+        drawWidgetTimelineMarkerHalo(
+            canvas = canvas,
+            markerX = group.markerX,
+            centerY = centerY,
+            lineRect = lineRect,
+            color = group.color
+        )
+    }
+
     return output
+}
+
+private fun buildWidgetTimelineGroups(
+    items: List<ItemEntity>,
+    colors: WidgetPalette,
+    totalWidth: Float,
+    policy: ExpiryPolicy = ExpiryPolicy()
+): List<WidgetTimelineGroupRenderData> {
+    if (items.isEmpty()) return emptyList()
+
+    val slotWidth = totalWidth / WidgetFridgeGridColumns.toFloat()
+    val groups = mutableListOf<WidgetTimelineGroupRenderData>()
+
+    var start = 0
+
+    while (start < items.size) {
+        val currentOffset = items[start].expiryDate.toWidgetTimelineDayOffset(policy)
+        var end = start
+
+        while (
+            end + 1 < items.size &&
+            items[end + 1].expiryDate.toWidgetTimelineDayOffset(policy) == currentOffset
+        ) {
+            end++
+        }
+
+        val markerX = slotWidth * start + slotWidth / 2f
+
+        val trailEndX = if (end > start) {
+            (slotWidth * (end + 1) - slotWidth * 0.18f)
+                .coerceAtMost(totalWidth)
+        } else {
+            markerX
+        }
+
+        groups += WidgetTimelineGroupRenderData(
+            startIndex = start,
+            endIndex = end,
+            markerX = markerX,
+            trailEndX = trailEndX,
+            color = items[start].expiryDate.toWidgetExpiryColor(colors)
+        )
+
+        start = end + 1
+    }
+
+    return groups
+}
+
+private fun drawWidgetTimelineGroupTrail(
+    canvas: Canvas,
+    group: WidgetTimelineGroupRenderData,
+    centerY: Float,
+    lineRect: RectF
+) {
+    if (group.endIndex <= group.startIndex) {
+        return
+    }
+
+    val trailRect = RectF(
+        group.markerX,
+        lineRect.top,
+        group.trailEndX,
+        lineRect.bottom
+    )
+
+    if (trailRect.width() <= 1f) {
+        return
+    }
+
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = LinearGradient(
+            group.markerX,
+            centerY,
+            group.trailEndX,
+            centerY,
+            intArrayOf(
+                group.color.copy(alpha = 0.82f).toArgb(),
+                group.color.copy(alpha = 0.46f).toArgb(),
+                group.color.copy(alpha = 0.16f).toArgb(),
+                Color.Transparent.toArgb()
+            ),
+            floatArrayOf(
+                0f,
+                0.35f,
+                0.82f,
+                1f
+            ),
+            Shader.TileMode.CLAMP
+        )
+    }
+
+    canvas.drawRoundRect(
+        trailRect,
+        lineRect.height() / 2f,
+        lineRect.height() / 2f,
+        paint
+    )
+}
+
+private fun drawWidgetTimelineMarkerHalo(
+    canvas: Canvas,
+    markerX: Float,
+    centerY: Float,
+    lineRect: RectF,
+    color: Color
+) {
+    val haloRadius = 150f
+
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = RadialGradient(
+            markerX,
+            centerY,
+            haloRadius,
+            intArrayOf(
+                color.copy(alpha = 0.82f).toArgb(),
+                color.copy(alpha = 0.28f).toArgb(),
+                color.copy(alpha = 0.00f).toArgb()
+            ),
+            floatArrayOf(
+                0f,
+                0.40f,
+                1f
+            ),
+            Shader.TileMode.CLAMP
+        )
+    }
+
+    canvas.drawRoundRect(
+        lineRect,
+        lineRect.height() / 2f,
+        lineRect.height() / 2f,
+        paint
+    )
 }
 
 private data class TimelineMarkerRenderData(
@@ -1656,6 +1787,14 @@ suspend fun updateFridgeWidgets(context: Context) {
         FridgeWidget().update(appContext, glanceId)
     }
 }
+
+private data class WidgetTimelineGroupRenderData(
+    val startIndex: Int,
+    val endIndex: Int,
+    val markerX: Float,
+    val trailEndX: Float,
+    val color: Color
+)
 
 private fun Long?.toWidgetExpiryAlertColor(
     colors: WidgetPalette,
